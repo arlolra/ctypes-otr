@@ -17,7 +17,7 @@ function libOTR() {
   // proto.h
 
   // Initialize the OTR library. Pass the version of the API you are using.
-	this.otrl_init = libotr.declare(
+  this.otrl_init = libotr.declare(
     "otrl_init", abi,
     gcry_error_t,
     ctypes.uint32_t,
@@ -33,7 +33,7 @@ function libOTR() {
   this.OtrlUserState_t = new ctypes.PointerType(this.s_OtrlUserState);
 
   // Create a new OtrlUserState.
-	this.otrl_userstate_create = libotr.declare(
+  this.otrl_userstate_create = libotr.declare(
     "otrl_userstate_create", abi,
     this.OtrlUserState_t
   );
@@ -71,7 +71,7 @@ function libOTR() {
   // Convert a 20-byte hash value to a 45-byte human-readable value.
   this.otrl_privkey_hash_to_human = libotr.declare(
     "otrl_privkey_hash_to_human", abi,
-  	ctypes.void_t,
+    ctypes.void_t,
     ctypes.ArrayType(ctypes.char, this.OTRL_PRIVKEY_FPRINT_HUMAN_LEN),
     ctypes.ArrayType(ctypes.unsigned_char, 20)
   );
