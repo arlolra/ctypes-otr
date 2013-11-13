@@ -1,0 +1,6 @@
+content otr chrome/content/
+locale otr en chrome/locale/en/
+skin otr classic/1.0 chrome/skin/
+
+overlay chrome://browser/content/browser.xul chrome://otr/content/otr.xul
+resource libotr libotr.dylib

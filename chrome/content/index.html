@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+  <head>
+    <title>ctypes-otr</title>
+  </head>
+  <body>
+    <form>
+      <label for="genKey">Generate a key:</label>
+      <button id="genKey">Go</button>
+    </form>
+    <p id="result"></p>
+    <script>
+      document.getElementById("genKey").addEventListener("click", function (e) {
+        e.preventDefault();
+        var event = new Event('genKey');
+        document.dispatchEvent(event);
+      });
+    </script>
+  </body>
+</html>

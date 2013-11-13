@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<?xml-stylesheet href="chrome://otr/skin/otr.css" type="text/css" ?>
+<!DOCTYPE overlay SYSTEM "chrome://otr/locale/otr.dtd">
+<overlay id="otr"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <script src="libotr.js" />
+  <script src="otr.js" />
+
+  <menupopup id="menu_ToolsPopup">
+    <menuitem label="ctypes-otr" key="otrTab" oncommand="otr.tab()" />
+  </menupopup>
+
+</overlay>
