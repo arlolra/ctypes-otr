@@ -1,83 +1,70 @@
+let EXPORTED_SYMBOLS = ["OTR"];
+
+// Alias components
+const Cu = Components.utils;
+
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/FileUtils.jsm");
 
-let otr = (function () {
+// load libOTR
+Cu.import("chrome://otr/content/libotr.js");
+let libotr = new libOTR();
 
-  let libotr = new libOTR();
+// defaults
+const account = "default_account";
+const protocol = "default_protocol";
 
-  const otrl_version = [4, 0, 0];
-  const account = "default_account";
-  const protocol = "default_protocol";
+// error type
+function OTRError(message) {
+  this.message = message;
+}
+Object.create(Error.prototype, {
+  name: { value: "OTR Error" },
+  constructor: { value: OTRError }
+});
 
-  return {
+// otr constructor
+// initializes a new userstate
+// an sets the private key file
+function OTR() {
+  this.userState = libotr.otrl_userstate_create();
+  this.privKey = FileUtils.getFile("ProfD", ["otr.privKey"]);
+}
 
-    userState: null,
-    privKey: null,
+OTR.prototype = {
 
-    init: function () {
+  constructor: OTR,
+  userState: null,
+  privKey: null,
 
-      if (libotr.otrl_init.apply(libotr.libotr, otrl_version))
-        return console.error("Couldn't initialize OTR.");
+};
 
-      this.userState = libotr.otrl_userstate_create();
-      this.privKey = FileUtils.getFile("ProfD", ["otr.privKey"]);
+// generate a private key
+// TODO: maybe move this to a ChromeWorker
+OTR.prototype.genKey = function (cb) {
 
-      if (Services.prefs.getBoolPref("extensions.ctypes-otr.autorun"))
-        setTimeout(this.tab.bind(this), 1 * 1000);
+  let err = libotr.otrl_privkey_generate(
+    this.userState,
+    this.privKey.path,
+    account,
+    protocol
+  );
 
-    },
+  if (err)
+    return cb(new OTRError("Returned code: " + err));
 
-    // generate a private key
-    // TODO: maybe move this to a ChromeWorker
-    genKey: function (doc) {
+  let fingerprint = new libotr.fingerprint_t();
 
-      function render(err, fingerprint) {
-        let html = err
-          ? "Oh no! libotr returned an error: " + err
-          : "Your fingerprint is: " + fingerprint;
-        doc.getElementById("result").innerHTML = html;
-      }
+  err = libotr.otrl_privkey_fingerprint(
+    this.userState,
+    fingerprint,
+    account,
+    protocol
+  );
 
-      let err = libotr.otrl_privkey_generate(
-        this.userState,
-        this.privKey.path,
-        account,
-        protocol
-      );
+  if (err.isNull())
+    return cb(new OTRError("Returned a null pointer."));
 
-      if (err)
-        return render(new Error("code: " + err));
+  cb(null, fingerprint.readString());
 
-      let fingerprint = new ctypes.ArrayType(
-        ctypes.char, libotr.OTRL_PRIVKEY_FPRINT_HUMAN_LEN
-      )();
-
-      err = libotr.otrl_privkey_fingerprint(
-        this.userState,
-        fingerprint,
-        account,
-        protocol
-      );
-
-      if (err.isNull())
-        render(new Error("null pointer."));
-      else
-        render(null, fingerprint.readString());
-
-    },
-
-    tab: function () {
-      let tab = gBrowser.addTab("chrome://otr/content/index.html");
-      let tabBrowser = gBrowser.getBrowserForTab(tab);
-      tabBrowser.addEventListener("load", function () {
-        gBrowser.selectedTab = tab;
-        let doc = tabBrowser.contentDocument;
-        doc.addEventListener("genKey", this.genKey.bind(this, doc));
-      }.bind(this), true);
-    }
-
-  };
-
-}());
-
-window.addEventListener("load", otr.init.bind(otr));
+};

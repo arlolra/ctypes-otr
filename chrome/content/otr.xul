@@ -4,11 +4,10 @@
 <overlay id="otr"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-  <script src="libotr.js" />
-  <script src="otr.js" />
+  <script src="ui.js" />
 
   <menupopup id="menu_ToolsPopup">
-    <menuitem label="ctypes-otr" key="otrTab" oncommand="otr.tab()" />
+    <menuitem label="ctypes-otr" key="otrTab" oncommand="UI.tab()" />
   </menupopup>
 
 </overlay>
