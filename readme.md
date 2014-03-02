@@ -4,10 +4,10 @@ ctypes-otr
 Intro
 -----
 
-Part 2 of the [plan][1] for [Attentive Otter][2].
+[Part][1] of the plan for the [TIMB][2].
 
-[1]: https://gist.github.com/arlolra/6969273
-[2]: https://trac.torproject.org/projects/tor/wiki/org/sponsors/Otter/Attentive
+[1]: https://trac.torproject.org/projects/tor/ticket/10210
+[2]: https://trac.torproject.org/projects/tor/wiki/org/sponsors/SponsorO/TIMB
 
 Dev Env
 -------
