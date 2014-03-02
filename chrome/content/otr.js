@@ -16,9 +16,17 @@ const protocol = "default_protocol";
 
 // error type
 function OTRError(message) {
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(this, this.constructor);
+  } else {
+    var err = new Error();
+    err.toString = this.toString.bind(this);
+    this.stack = err.stack;
+  }
   this.message = message;
 }
-Object.create(Error.prototype, {
+
+OTRError.prototype = Object.create(Error.prototype, {
   name: { value: "OTR Error" },
   constructor: { value: OTRError }
 });
@@ -32,11 +40,9 @@ function OTR() {
 }
 
 OTR.prototype = {
-
   constructor: OTR,
   userState: null,
-  privKey: null,
-
+  privKey: null
 };
 
 // generate a private key
