@@ -33,16 +33,13 @@ let UI = (function () {
     },
 
     tab: function () {
-      tabAdded = gBrowser.addTab("chrome://otr/content/index.html");
+      tabAdded = gBrowser.addTab("chrome://otr/content/firefox/index.html");
       tabBrowser = gBrowser.getBrowserForTab(tabAdded);
       tabBrowser.addEventListener("load", this.tabLoaded, true);
     },
 
     init: function() {
       window.removeEventListener("load", this.init);
-      if (Services.prefs.getBoolPref("extensions.ctypes-otr.autorun"))
-        // delay to avoid conflict with start page
-        setTimeout(this.tab, 1 * 1000);
     }
 
   }

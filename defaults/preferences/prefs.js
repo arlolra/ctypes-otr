@@ -1,1 +1,0 @@
-pref("extensions.ctypes-otr.autorun", false);

@@ -5,7 +5,7 @@
   <Description about="urn:mozilla:install-manifest">
     
     <!-- required -->
-    <em:id>ctypes-otr@timbb</em:id>
+    <em:id>ctypes-otr@timb</em:id>
     <em:name>ctypes-otr</em:name>
     <em:version>0.0.0</em:version>
     <em:type>2</em:type>

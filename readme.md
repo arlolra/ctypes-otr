@@ -20,10 +20,8 @@ brew install libgcrypt
 git clone https://github.com/arlolra/ctypes-otr.git
 cd ctypes-otr
 make
-pwd > ~/Library/Application\ Support/Firefox/Profiles/<profile>/extensions/ctypes-otr@timbb
+pwd > ~/Library/Application\ Support/Instantbird/Profiles/<profile>/extensions/ctypes-otr@timb
 ```
-
-Open FireFox and under the Tools menu, you should see `ctypes-otr`.
 
 Credits
 -------

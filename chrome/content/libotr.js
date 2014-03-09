@@ -1,8 +1,7 @@
 let EXPORTED_SYMBOLS = ["libOTR"];
 
 // Alias components
-const Cu = Components.utils;
-const Ci = Components.interfaces;
+const { interfaces: Ci, utils: Cu } = Components;
 
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
