@@ -4,20 +4,33 @@
 
   <Description about="urn:mozilla:install-manifest">
     
-    <!-- required -->
+    <!-- Required -->
     <em:id>ctypes-otr@timb</em:id>
     <em:name>ctypes-otr</em:name>
     <em:version>0.0.0</em:version>
     <em:type>2</em:type>
+    <em:unpack>true</em:unpack>
+    <em:bootstrap>true</em:bootstrap>
+
+    <!-- Firefox -->
     <em:targetApplication>
       <Description>
-        <em:id>toolkit@mozilla.org</em:id>
+        <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
         <em:minVersion>0</em:minVersion>
         <em:maxVersion>*</em:maxVersion>
       </Description>
     </em:targetApplication>
 
-    <!-- optional -->
+    <!-- Instantbird -->
+    <em:targetApplication>
+      <Description>
+        <em:id>{33cb9019-c295-46dd-be21-8c4936574bee}</em:id>
+        <em:minVersion>0</em:minVersion>
+        <em:maxVersion>*</em:maxVersion>
+      </Description>
+    </em:targetApplication>
+
+    <!-- Optional -->
     <em:creator>Arlo Breault</em:creator>
     <em:description>js-ctypes wrapper for libotr</em:description>
     <em:homepageURL>https://github.com/arlolra/ctypes-otr</em:homepageURL>

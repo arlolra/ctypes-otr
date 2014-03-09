@@ -3,27 +3,24 @@ let EXPORTED_SYMBOLS = ["libOTR"];
 // Alias components
 const { interfaces: Ci, utils: Cu } = Components;
 
+let Cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                   .getService(Ci.nsIXULChromeRegistry);
+
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
 // Load the library
-let uri = Services.io.newURI("resource://libotr", null, null);
+let uri = "chrome://otr/content/" + ctypes.libraryName("otr");
+uri = Cr.convertChromeURL(Services.io.newURI(uri, null, null));
 let libotr = ctypes.open(uri.QueryInterface(Ci.nsIFileURL).file.path);
 
 // libotr API version
 const otrl_version = [4, 0, 0];
 
-// Has libotr been initialized?
-let initialized = false;
-
 function libOTR() {
-  if (!initialized) {
-    // Apply version array as arguments to init function
-    if (this.otrl_init.apply(this, otrl_version))
-      throw new Error("Couldn't initialize libotr.");
-    else
-      initialized = true;
-  }
+  // Apply version array as arguments to init function
+  if (this.otrl_init.apply(this, otrl_version))
+    throw new Error("Couldn't initialize libotr.");
 }
 
 // Alias prototype

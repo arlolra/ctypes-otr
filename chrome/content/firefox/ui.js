@@ -1,6 +1,5 @@
 // just something to play with
 
-Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("chrome://otr/content/otr.js");
 
 let UI = (function () {
