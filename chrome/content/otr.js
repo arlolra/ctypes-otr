@@ -47,6 +47,10 @@ OTR.prototype = {
   privKey: null
 };
 
+OTR.prototype.close = function () {
+  libotr.close();
+};
+
 // generate a private key
 // TODO: maybe move this to a ChromeWorker
 OTR.prototype.genKey = function (cb) {
