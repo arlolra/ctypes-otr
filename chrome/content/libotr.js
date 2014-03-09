@@ -1,21 +1,29 @@
 let EXPORTED_SYMBOLS = ["libOTR"];
 
 // Alias components
-const { interfaces: Ci, utils: Cu } = Components;
+const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
-let Cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
-                   .getService(Ci.nsIXULChromeRegistry);
+let Cr = Cc["@mozilla.org/chrome/chrome-registry;1"]
+           .getService(Ci.nsIXULChromeRegistry);
 
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
+const CHROME_URI = "chrome://otr/content/";
+
 // Load the library
-let uri = "chrome://otr/content/" + ctypes.libraryName("otr");
+let uri = CHROME_URI + ctypes.libraryName("otr");
 uri = Cr.convertChromeURL(Services.io.newURI(uri, null, null));
 let libotr = ctypes.open(uri.QueryInterface(Ci.nsIFileURL).file.path);
 
 // libotr API version
 const otrl_version = [4, 0, 0];
+
+// ABI used to call native functions in the library
+const abi = ctypes.default_abi;
+
+// libotr error type
+const gcry_error_t = ctypes.uint32_t;
 
 function libOTR() {
   // Apply version array as arguments to init function
@@ -26,16 +34,14 @@ function libOTR() {
 // Alias prototype
 let lop = libOTR.prototype;
 
-// ABI used to call native functions in the library
-const abi = ctypes.default_abi;
-
-// libotr error type
-const gcry_error_t = ctypes.uint32_t;
+lop.close = function () {
+  libotr.close();
+};
 
 // proto.h
 
 // Initialize the OTR library. Pass the version of the API you are using.
-libOTR.prototype.otrl_init = libotr.declare(
+lop.otrl_init = libotr.declare(
   "otrl_init", abi,
   gcry_error_t,
   ctypes.uint32_t,
@@ -47,11 +53,11 @@ libOTR.prototype.otrl_init = libotr.declare(
 
 // A OtrlUserState encapsulates the list of known fingerprints and the list
 // of private keys.
-libOTR.prototype.s_OtrlUserState = new ctypes.StructType("s_OtrlUserState");
-libOTR.prototype.OtrlUserState_t = new ctypes.PointerType(lop.s_OtrlUserState);
+lop.s_OtrlUserState = new ctypes.StructType("s_OtrlUserState");
+lop.OtrlUserState_t = new ctypes.PointerType(lop.s_OtrlUserState);
 
 // Create a new OtrlUserState.
-libOTR.prototype.otrl_userstate_create = libotr.declare(
+lop.otrl_userstate_create = libotr.declare(
   "otrl_userstate_create", abi,
   lop.OtrlUserState_t
 );
@@ -61,7 +67,7 @@ libOTR.prototype.otrl_userstate_create = libotr.declare(
 // Generate a private DSA key for a given account, storing it into a file on
 // disk, and loading it into the given OtrlUserState. Overwrite any
 // previously generated keys for that account in that OtrlUserState.
-libOTR.prototype.otrl_privkey_generate = libotr.declare(
+lop.otrl_privkey_generate = libotr.declare(
   "otrl_privkey_generate", abi,
   gcry_error_t,
   lop.OtrlUserState_t,
@@ -72,17 +78,17 @@ libOTR.prototype.otrl_privkey_generate = libotr.declare(
 
 // The length of a string representing a human-readable version of a
 // fingerprint (including the trailing NUL).
-libOTR.prototype.OTRL_PRIVKEY_FPRINT_HUMAN_LEN = 45;
+lop.OTRL_PRIVKEY_FPRINT_HUMAN_LEN = 45;
 
 // Human readable fingerprint type
-libOTR.prototype.fingerprint_t = ctypes.ArrayType(
+lop.fingerprint_t = ctypes.ArrayType(
   ctypes.char, lop.OTRL_PRIVKEY_FPRINT_HUMAN_LEN
 );
 
 // Calculate a human-readable hash of our DSA public key. Return it in the
 // passed fingerprint buffer. Return NULL on error, or a pointer to the given
 // buffer on success.
-libOTR.prototype.otrl_privkey_fingerprint = libotr.declare(
+lop.otrl_privkey_fingerprint = libotr.declare(
   "otrl_privkey_fingerprint", abi,
   ctypes.char.ptr,
   lop.OtrlUserState_t,

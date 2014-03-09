@@ -6,8 +6,10 @@ const Cu = Components.utils;
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/FileUtils.jsm");
 
+const CHROME_URI = "chrome://otr/content/";
+
 // load libOTR
-Cu.import("chrome://otr/content/libotr.js");
+Cu.import(CHROME_URI + "libotr.js");
 let libotr = new libOTR();
 
 // defaults
@@ -33,7 +35,7 @@ OTRError.prototype = Object.create(Error.prototype, {
 
 // otr constructor
 // initializes a new userstate
-// an sets the private key file
+// and sets the private key file
 function OTR() {
   this.userState = libotr.otrl_userstate_create();
   this.privKey = FileUtils.getFile("ProfD", ["otr.privKey"]);
