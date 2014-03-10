@@ -1,4 +1,1 @@
 content otr chrome/content/
-
-# Firefox
-# overlay chrome://browser/content/browser.xul chrome://otr/content/firefox/otr.xul application={ec8030f7-c20a-464f-9b0e-13a3a9e97384}
