@@ -76,6 +76,26 @@ lop.otrl_privkey_generate = libotr.declare(
   ctypes.char.ptr
 );
 
+// Read a sets of private DSA keys from a file on disk into the given
+// OtrlUserState.
+lop.otrl_privkey_read = libotr.declare(
+  "otrl_privkey_read", abi,
+  gcry_error_t,
+  lop.OtrlUserState_t,
+  ctypes.char.ptr
+);
+
+// Read the fingerprint store from a file on disk into the given
+// OtrlUserState.
+lop.otrl_privkey_read_fingerprints = libotr.declare(
+  "otrl_privkey_read_fingerprints", abi,
+  gcry_error_t,
+  lop.OtrlUserState_t,
+  ctypes.char.ptr,
+  ctypes.void_t.ptr,
+  ctypes.void_t.ptr
+);
+
 // The length of a string representing a human-readable version of a
 // fingerprint (including the trailing NUL).
 lop.OTRL_PRIVKEY_FPRINT_HUMAN_LEN = 45;
