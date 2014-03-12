@@ -63,42 +63,37 @@ function OTR() {
     this.instance_tags.create(Ci.nsIFile.NORMAL_FILE_TYPE, 0600);
 
 
-  if (this.private_key_fingerprint() === null)
-    this.generate_private_key();
+  if (this.privateKeyFingerprint() === null)
+    this.generatePrivateKey();
 }
 
 OTR.prototype = {
+
   constructor: OTR,
-  userstate: null,
-  private_key: null,
-  fingerprints: null,
-  instance_tags: null
-};
+  close: function () libotr.close(),
+  
+  // generate a private key
+  // TODO: maybe move this to a ChromeWorker
+  generatePrivateKey: function (account, protocol) {
+    let err = libotr.otrl_privkey_generate(
+      this.userstate,
+      this.private_key.path,
+      account || default_account,
+      protocol || default_protocol
+    );
+    if (err)
+      throw new OTRError("Returned code: " + err);
+  },
 
-OTR.prototype.close = function () {
-  libotr.close();
-};
+  // get my fingerprint
+  privateKeyFingerprint: function (account, protocol) {
+    let fingerprint = libotr.otrl_privkey_fingerprint(
+      this.userstate,
+      new libotr.fingerprint_t(),
+      account || default_account,
+      protocol || default_protocol
+    );
+    return fingerprint.isNull() ? null : fingerprint.readString();
+  }
 
-// generate a private key
-// TODO: maybe move this to a ChromeWorker
-OTR.prototype.generate_private_key = function (account, protocol) {
-  let err = libotr.otrl_privkey_generate(
-    this.userstate,
-    this.private_key.path,
-    account || default_account,
-    protocol || default_protocol
-  );
-  if (err)
-    throw new OTRError("Returned code: " + err);
-};
-
-// get my fingerprint
-OTR.prototype.private_key_fingerprint = function (account, protocol) {
-  let fingerprint = libotr.otrl_privkey_fingerprint(
-    this.userstate,
-    new libotr.fingerprint_t(),
-    account || default_account,
-    protocol || default_protocol
-  );
-  return fingerprint.isNull() ? null : fingerprint.readString();
 };
