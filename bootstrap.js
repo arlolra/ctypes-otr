@@ -13,10 +13,16 @@ function log(msg) {
 
 let otr;
 function startup(data, reason) {
+
   Cu.import(CHROME_URI + "otr.js");
   otr = new OTR();
-  otr.genKey(function (err, fingerprint) {
-    log(fingerprint);
+
+  otr.loadFiles().then(() => {
+    if (otr.privateKeyFingerprint() === null)
+      otr.generatePrivateKey();
+  }).then(null, function (reason) {
+    log("we have an error")
+    log(reason)
   });
 }
 

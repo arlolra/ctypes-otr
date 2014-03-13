@@ -1,6 +1,5 @@
 let EXPORTED_SYMBOLS = ["libOTR"];
 
-// Alias components
 const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
 let Cr = Cc["@mozilla.org/chrome/chrome-registry;1"]
@@ -11,7 +10,7 @@ Cu.import("resource://gre/modules/Services.jsm");
 
 const CHROME_URI = "chrome://otr/content/";
 
-// Load the library
+// load libotr
 let uri = CHROME_URI + ctypes.libraryName("otr");
 uri = Cr.convertChromeURL(Services.io.newURI(uri, null, null));
 let libotr = ctypes.open(uri.QueryInterface(Ci.nsIFileURL).file.path);
@@ -40,7 +39,7 @@ const fingerprint_t = ctypes.ArrayType(
 libOTR.prototype = {
 
   constructor: libOTR,
-  close: function () libotr.close(),
+  close: () => libotr.close(),
 
   // proto.h
 

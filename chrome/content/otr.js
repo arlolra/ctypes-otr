@@ -1,10 +1,9 @@
 let EXPORTED_SYMBOLS = ["OTR"];
 
-// Alias components
 const { interfaces: Ci, utils: Cu } = Components;
 
 Cu.import("resource://gre/modules/Services.jsm");
-Cu.import("resource://gre/modules/FileUtils.jsm");
+Cu.import("resource://gre/modules/osfile.jsm");
 
 const CHROME_URI = "chrome://otr/content/";
 
@@ -33,51 +32,52 @@ OTRError.prototype = Object.create(Error.prototype, {
   constructor: { value: OTRError }
 });
 
+function ensureFileExists(path) {
+  return OS.File.exists(path).then(exists => {
+    if (!exists)
+      return OS.File.open(path, { create: true }).then(file => {
+        return file.close()
+      });
+  });
+}
+
+function profilePath(filename) {
+  return OS.Path.join(OS.Constants.Path.profileDir, filename);
+}
+
 function OTR() {
-  // initialize a new userstate
   this.userstate = libotr.otrl_userstate_create();
-
-  // load private key
-  this.private_key = FileUtils.getFile("ProfD", ["otr.private_key"]);
-  if (!this.private_key.exists())
-    this.private_key.create(Ci.nsIFile.NORMAL_FILE_TYPE, 0600);
-
-  let err = libotr.otrl_privkey_read(this.userstate, this.private_key.path);
-  if (err)
-    throw new OTRError("Returned code: " + err);
-
-  // load fingerprints
-  this.fingerprints = FileUtils.getFile("ProfD", ["otr.fingerprints"]);
-  if (!this.fingerprints.exists())
-    this.fingerprints.create(Ci.nsIFile.NORMAL_FILE_TYPE, 0600);
-
-  err = libotr.otrl_privkey_read_fingerprints(
-    this.userstate, this.fingerprints.path, null, null
-  );
-  if (err)
-    throw new OTRError("Returned code: " + err);
-
-  // load instance tags
-  this.instance_tags = FileUtils.getFile("ProfD", ["otr.instance_tags"]);
-  if (!this.instance_tags.exists())
-    this.instance_tags.create(Ci.nsIFile.NORMAL_FILE_TYPE, 0600);
-
-
-  if (this.privateKeyFingerprint() === null)
-    this.generatePrivateKey();
+  this.privateKeyPath = profilePath("otr.private_key")
+  this.fingerprintsPath = profilePath("otr.fingerprints");
+  this.instanceTagsPath = profilePath("otr.instance_tags");
 }
 
 OTR.prototype = {
 
   constructor: OTR,
-  close: function () libotr.close(),
+  close: () => libotr.close(),
+
+  // load stored files from my profile
+  loadFiles: function () {
+    return ensureFileExists(this.privateKeyPath).then(() => {
+      let err = libotr.otrl_privkey_read(this.userstate, this.privateKeyPath);
+      if (err)
+        throw new OTRError("Returned code: " + err);
+    }).then(() => ensureFileExists(this.fingerprintsPath)).then(() => {
+      let err = libotr.otrl_privkey_read_fingerprints(
+        this.userstate, this.fingerprintsPath, null, null
+      );
+      if (err)
+        throw new OTRError("Returned code: " + err);
+    }).then(() => ensureFileExists(this.instanceTagsPath));
+  },
   
   // generate a private key
   // TODO: maybe move this to a ChromeWorker
   generatePrivateKey: function (account, protocol) {
     let err = libotr.otrl_privkey_generate(
       this.userstate,
-      this.private_key.path,
+      this.privateKeyPath,
       account || default_account,
       protocol || default_protocol
     );
