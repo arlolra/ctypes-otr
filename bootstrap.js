@@ -1,7 +1,6 @@
 const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
 Cu.import("resource:///modules/imServices.jsm");
-Cu.import("resource:///modules/jsProtoHelper.jsm");
 
 const CHROME_URI = "chrome://otr/content/";
 
@@ -12,59 +11,36 @@ function log(msg) {
   consoleService.logStringMessage(msg);
 }
 
-function ConversationWrapper(prplIConvIM) {
-  this._account = prplIConvIM.wrappedJSObject._account;
-  this._name = prplIConvIM.name;
-  this._observers = [];
-  this._conv = prplIConvIM;
+function asyncErr(reason) {
+  throw new Error(reason);
 }
-
-ConversationWrapper.prototype = {
-  __proto__: GenericConvIMPrototype,
-  constructor: ConversationWrapper,
-  get id() this._conv.id,
-  set id(aId) this._conv.id = aId,
-  sendMsg: function (aMsg) {
-    this._conv.sendMsg(aMsg);
-  },
-  notifyObservers: function(aSubject, aTopic, aData) {
-    for each (let observe in this._observers)
-      observe(aSubject, aTopic, aData);
-  },
-  observe: function (aSubject, aTopic, aData) {
-    this.notifyObservers(aSubject, aTopic, aData);
-  }
-};
 
 let otr, originalAddConversation;
 function startup(data, reason) {
   Cu.import(CHROME_URI + "otr.js");
   otr = new OTR();
-
-  otr.loadFiles().then(() => {
-    if (otr.privateKeyFingerprint() === null)
-      otr.generatePrivateKey();
-  }).then(null, function (reason) {
-    log("we have an error")
-    log(reason)
-  });
-
-  let cs = Services.conversations.wrappedJSObject;
-  originalAddConversation = cs.addConversation;
-  cs.addConversation = function (prplIConvIM) {
-    let wrapper = new ConversationWrapper(prplIConvIM);
-    prplIConvIM.addObserver(wrapper.observe.bind(wrapper));
-    originalAddConversation.call(cs, wrapper);
-  };
+  otr.loadFiles().then(function() {
+    let cs = Services.conversations.wrappedJSObject;
+    originalAddConversation = cs.addConversation;
+    cs.addConversation = function(prplIConvIM) {
+      otr.addConversation(prplIConvIM);
+      originalAddConversation.call(cs, prplIConvIM);
+    };
+  }, asyncErr);
 }
 
 function shutdown(data, reason) {
-  if (reason === APP_SHUTDOWN) return;
-  if (otr) otr.close();
-  Cu.unload(CHROME_URI + "otr.js");
+  if (reason === APP_SHUTDOWN)
+    return;
+
+  otr.close();
 
   let cs = Services.conversations.wrappedJSObject;
+  for each (let prplIConvIM in cs.getUIConversations())
+    otr.removeTransform(prplIConvIM);
   cs.addConversation = originalAddConversation;
+
+  Cu.unload(CHROME_URI + "otr.js");
 }
 
 function install(data, reason) {}

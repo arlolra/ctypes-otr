@@ -4,10 +4,10 @@ ctypes-otr
 Intro
 -----
 
-[Part][1] of the plan for the [TIMB][2].
+[Part][1] of the plan for the [TorMessenger][2].
 
 [1]: https://trac.torproject.org/projects/tor/ticket/10210
-[2]: https://trac.torproject.org/projects/tor/wiki/org/sponsors/SponsorO/TIMB
+[2]: https://trac.torproject.org/projects/tor/wiki/doc/TorMessenger
 
 Dev Env
 -------
