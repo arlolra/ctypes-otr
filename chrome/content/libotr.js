@@ -199,6 +199,14 @@ libOTR.prototype = {
     ctypes.uint32_t, ctypes.uint32_t, ctypes.uint32_t
   ),
 
+  // instag.h
+
+  // Get a new instance tag for the given account and write to file.
+  otrl_instag_generate: libotr.declare(
+    "otrl_instag_generate", abi, gcry_error_t,
+    OtrlUserState, ctypes.char.ptr, ctypes.char.ptr, ctypes.char.ptr
+  ),
+
   // userstate.h
 
   // Create a new OtrlUserState.
@@ -227,6 +235,12 @@ libOTR.prototype = {
   otrl_privkey_read_fingerprints: libotr.declare(
     "otrl_privkey_read_fingerprints", abi, gcry_error_t,
     OtrlUserState, ctypes.char.ptr, ctypes.void_t.ptr, ctypes.void_t.ptr
+  ),
+
+  // Write the fingerprint store from a given OtrlUserState to a file on disk.
+  otrl_privkey_write_fingerprints: libotr.declare(
+    "otrl_privkey_write_fingerprints", abi, gcry_error_t,
+    OtrlUserState, ctypes.char.ptr
   ),
 
   // The length of a string representing a human-readable version of a

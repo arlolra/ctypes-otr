@@ -120,6 +120,28 @@ OTR.prototype = {
     return fingerprint.isNull() ? null : fingerprint.readString();
   },
 
+  // write fingerprints to file synchronously
+  writeFingerprints: function() {
+    let err = libotr.otrl_privkey_write_fingerprints(
+      this.userstate,
+      this.fingerprintsPath
+    )
+    if (err)
+      throw new OTRError("Returned code: " + err);
+  },
+
+  // write fingerprints to file synchronously
+  genInstag: function(account, protocol) {
+    let err = libotr.otrl_instag_generate(
+      this.userstate,
+      this.instanceTagsPath,
+      account,
+      protocol
+    )
+    if (err)
+      throw new OTRError("Returned code: " + err);
+  },
+
   // ui callbacks
 
   policy_cb: function(opdata, context) {
@@ -127,7 +149,7 @@ OTR.prototype = {
   },
 
   create_privkey_cb: function(opdata, accountname, protocol) {
-    log("create_privkey_cb")
+    this.generatePrivateKey(accountname.readString(), protocol.readString());
   },
 
   is_logged_in_cb: function(opdata, accountname, protocol, recipient) {
@@ -151,7 +173,7 @@ OTR.prototype = {
   },
 
   write_fingerprint_cb: function(opdata) {
-    log("write_fingerprint_cb")
+    this.writeFingerprints();
   },
 
   gone_secure_cb: function(opdata, context) {
@@ -203,11 +225,17 @@ OTR.prototype = {
   },
 
   handle_msg_event_cb: function(opdata, msg_event, context, message, err) {
-    log("msg event: " + msg_event)
+    switch(msg_event) {
+    case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
+      log("received encrypted message but not currently communicating privately.")
+      break
+    default:
+      log("msg event: " + msg_event)
+    }
   },
 
   create_instag_cb: function(opdata, accountname, protocol) {
-    log("create_instag_cb")
+    this.genInstag(accountname.readString(), protocol.readString())
   },
 
   convert_msg_cb: function(opdata, context, convert_type, dest, src) {
