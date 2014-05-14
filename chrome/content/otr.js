@@ -123,7 +123,7 @@ OTR.prototype = {
   // ui callbacks
 
   policy_cb: function(opdata, context) {
-    return libotr.OTRL_POLICY_REQUIRE_ENCRYPTION;
+    return libotr.OTRL_POLICY_OPPORTUNISTIC;
   },
 
   create_privkey_cb: function(opdata, accountname, protocol) {

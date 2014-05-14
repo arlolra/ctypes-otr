@@ -184,7 +184,7 @@ libOTR.prototype = {
 
   // proto.h
 
-  OTRL_POLICY_REQUIRE_ENCRYPTION: new ctypes.unsigned_int(118),
+  OTRL_POLICY_OPPORTUNISTIC: new ctypes.unsigned_int(118),
 
   fragPolicy: {
     OTRL_FRAGMENT_SEND_SKIP: 0,
