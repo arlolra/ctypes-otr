@@ -32,6 +32,10 @@ function getProtocol(aConv) {
   return aConv.wrappedJSObject._account.protocol.normalizedName;
 }
 
+function getAccount(aConv) {
+  return aConv.wrappedJSObject._account.normalizedName;
+}
+
 // error type
 function OTRError(message) {
   if (Error.captureStackTrace) {
@@ -265,15 +269,16 @@ OTR.prototype = {
   addConversation: function(prplIConvIM) {
     prplIConvIM.addTransform(this);
     let protocol = getProtocol(prplIConvIM);
-    let id = protocol + ":" + default_account;
+    let account = getAccount(prplIConvIM);
+    let id = protocol + ":" + account;
     this.convos.set(id, prplIConvIM);
-    if (this.privateKeyFingerprint(default_account, protocol) === null)
-      this.generatePrivateKey(default_account, protocol);
+    if (this.privateKeyFingerprint(account, protocol) === null)
+      this.generatePrivateKey(account, protocol);
   },
 
   removeConversation: function(prplIConvIM) {
     prplIConvIM.removeTransform(this);
-    let id = getProtocol(prplIConvIM) + ":" + default_account;
+    let id = getProtocol(prplIConvIM) + ":" + getAccount(prplIConvIM);
     this.convos.delete(id);
   },
 
@@ -286,7 +291,7 @@ OTR.prototype = {
       this.userstate,
       this.uiOps.address(),
       null,
-      default_account,
+      getAccount(aConv),
       getProtocol(aConv),
       aConv.normalizedName,
       this.instag,
@@ -314,14 +319,12 @@ OTR.prototype = {
     let newMessage = new ctypes.char.ptr();
 
     log("pre receiving: " + tMsg.toSend)
-    log(getProtocol(aConv))
-    log(aConv.normalizedName)
 
     let res = libotr.otrl_message_receiving(
       this.userstate,
       this.uiOps.address(),
       null,
-      default_account,
+      getAccount(aConv),
       getProtocol(aConv),
       aConv.normalizedName,
       tMsg.toSend,
