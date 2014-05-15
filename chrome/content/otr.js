@@ -177,11 +177,11 @@ OTR.prototype = {
   },
 
   gone_secure_cb: function(opdata, context) {
-    log("gone_secure_cb")
+    this.sendAlert(context, "gone secure!");
   },
 
   gone_insecure_cb: function(opdata, context) {
-    log("gone_insecure_cb")
+    this.sendAlert(context, "oh no, insecure");
   },
 
   still_secure_cb: function(opdata, context, is_reply) {
@@ -227,7 +227,8 @@ OTR.prototype = {
   handle_msg_event_cb: function(opdata, msg_event, context, message, err) {
     switch(msg_event) {
     case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
-      log("received encrypted message but not currently communicating privately.")
+      this.sendAlert(context, "received encrypted message but not currently" +
+                              " communicating privately.");
       break
     default:
       log("msg event: " + msg_event)
@@ -308,6 +309,14 @@ OTR.prototype = {
     prplIConvIM.removeTransform(this);
     let id = getProtocol(prplIConvIM) + ":" + getAccount(prplIConvIM);
     this.convos.delete(id);
+  },
+
+  sendAlert: function(context, msg) {
+    let id = context.contents.protocol.readString() + ":" +
+             context.contents.accountname.readString();
+    let target = this.convos.get(id);
+    let flags = { system: true, noLog: true, error: false };
+    target.wrappedJSObject.writeMessage("system", msg, flags);
   },
 
   onSend: function(tMsg, aConv, aCb) {

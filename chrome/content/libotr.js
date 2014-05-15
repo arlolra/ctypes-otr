@@ -29,14 +29,30 @@ function libOTR() {
 
 // type defs
 
+const time_t = ctypes.long;
 const gcry_error_t = ctypes.unsigned_int;
+const gcry_cipher_hd_t = ctypes.StructType("gcry_cipher_handle").ptr;
+const gcry_md_hd_t = ctypes.StructType("gcry_md_handle").ptr
+const gcry_mpi_t = ctypes.StructType("gcry_mpi").ptr;
+
 const otrl_instag_t = ctypes.unsigned_int;
 const OtrlPolicy = ctypes.unsigned_int;
 const OtrlTLV = ctypes.StructType("s_OtrlTLV");
 const ConnContext = ctypes.StructType("context");
+const ConnContextPriv = ctypes.StructType("context_priv");
+const OtrlMessageAppOps = ctypes.StructType("s_OtrlMessageAppOps");
+const OtrlAuthInfo = ctypes.StructType("OtrlAuthInfo");
+const Fingerprint = ctypes.StructType("s_fingerprint");
 const OtrlUserState = ctypes.StructType("s_OtrlUserState").ptr;
+const OtrlSMState = ctypes.StructType("OtrlSMState");
+const DH_keypair = ctypes.StructType("DH_keypair");
+
 const OTRL_PRIVKEY_FPRINT_HUMAN_LEN = 45;
 const fingerprint_t = ctypes.char.array(OTRL_PRIVKEY_FPRINT_HUMAN_LEN);
+
+const app_data_free_t = ctypes.FunctionType(abi, ctypes.void_t, [
+  ctypes.void_t.ptr
+]).ptr;
 
 // enums
 
@@ -45,6 +61,11 @@ const OtrlSMPEvent = ctypes.int;
 const OtrlMessageEvent = ctypes.int;
 const OtrlFragmentPolicy = ctypes.int;
 const OtrlConvertType = ctypes.int;
+const OtrlMessageState = ctypes.int;
+const OtrlAuthState = ctypes.int;
+const OtrlSessionIdHalf = ctypes.int;
+const OtrlSMProgState = ctypes.int;
+const NextExpectedSMP = ctypes.int;
 
 // callback signatures
 
@@ -150,7 +171,94 @@ const timer_control_cb_t = ctypes.FunctionType(abi, ctypes.void_t, [
   ctypes.void_t.ptr, ctypes.unsigned_int
 ]).ptr;
 
-const OtrlMessageAppOps = ctypes.StructType("s_OtrlMessageAppOps", [
+// defines
+
+Fingerprint.define([
+  { next: Fingerprint.ptr },
+  { tous: Fingerprint.ptr.ptr },
+  { fingerprint: ctypes.unsigned_char.ptr },
+  { context: ConnContext.ptr },
+  { trust: ctypes.char.ptr }
+]);
+
+DH_keypair.define([
+  { groupid: ctypes.unsigned_int },
+  { priv: gcry_mpi_t },
+  { pub: gcry_mpi_t }
+]);
+
+OtrlSMState.define([
+  { secret: gcry_mpi_t },
+  { x2: gcry_mpi_t },
+  { x3: gcry_mpi_t },
+  { g1: gcry_mpi_t },
+  { g2: gcry_mpi_t },
+  { g3: gcry_mpi_t },
+  { g3o: gcry_mpi_t },
+  { p: gcry_mpi_t },
+  { q: gcry_mpi_t },
+  { pab: gcry_mpi_t },
+  { qab: gcry_mpi_t },
+  { nextExpected: NextExpectedSMP },
+  { received_question: ctypes.int },
+  { sm_prog_state: OtrlSMProgState }
+]);
+
+OtrlAuthInfo.define([
+  { authstate: OtrlAuthState },
+  { context: ConnContext.ptr },
+  { our_dh: DH_keypair },
+  { our_keyid: ctypes.unsigned_int },
+  { encgx: ctypes.unsigned_int.ptr },
+  { encgx_len: ctypes.size_t },
+  { r: ctypes.unsigned_char.array(16) },
+  { hashgx: ctypes.unsigned_char.array(32) },
+  { their_pub: gcry_mpi_t },
+  { their_keyid: ctypes.unsigned_int },
+  { enc_c: gcry_cipher_hd_t },
+  { enc_cp: gcry_cipher_hd_t },
+  { mac_m1: gcry_md_hd_t },
+  { mac_m1p: gcry_md_hd_t },
+  { mac_m2: gcry_md_hd_t },
+  { mac_m2p: gcry_md_hd_t },
+  { their_fingerprint: ctypes.unsigned_char.array(20) },
+  { initiated: ctypes.int },
+  { protocol_version: ctypes.unsigned_int },
+  { secure_session_id: ctypes.unsigned_char.array(20) },
+  { secure_session_id_len: ctypes.size_t },
+  { session_id_half: OtrlSessionIdHalf },
+  { lastauthmsg: ctypes.char.ptr },
+  { commit_sent_time: time_t }
+]);
+
+ConnContext.define([
+  { next: ConnContext.ptr },
+  { tous: ConnContext.ptr.ptr },
+  { context_priv: ConnContextPriv.ptr },
+  { username: ctypes.char.ptr },
+  { accountname: ctypes.char.ptr },
+  { protocol: ctypes.char.ptr },
+  { m_context: ConnContext.ptr },
+  { recent_rcvd_child: ConnContext.ptr },
+  { recent_sent_child: ConnContext.ptr },
+  { recent_child: ConnContext.ptr },
+  { our_instance: otrl_instag_t },
+  { their_instance: otrl_instag_t },
+  { msgstate: OtrlMessageState },
+  { auth: OtrlAuthInfo },
+  { fingerprint_root: Fingerprint },
+  { active_fingerprint: Fingerprint.ptr },
+  { sessionid: ctypes.unsigned_char.array(20) },
+  { sessionid_len: ctypes.size_t },
+  { sessionid_half: OtrlSessionIdHalf },
+  { protocol_version: ctypes.unsigned_int },
+  { otr_offer: ctypes.int },
+  { app_data: ctypes.void_t.ptr },
+  { app_data_free: app_data_free_t },
+  { smstate: OtrlSMState.ptr }
+]);
+
+OtrlMessageAppOps.define([
   { policy: policy_cb_t },
   { create_privkey: create_privkey_cb_t },
   { is_logged_in: is_logged_in_cb_t },
@@ -206,6 +314,48 @@ libOTR.prototype = {
     "otrl_instag_generate", abi, gcry_error_t,
     OtrlUserState, ctypes.char.ptr, ctypes.char.ptr, ctypes.char.ptr
   ),
+
+  // auth.h
+
+  authState: {
+    OTRL_AUTHSTATE_NONE: 0,
+    OTRL_AUTHSTATE_AWAITING_DHKEY: 1,
+    OTRL_AUTHSTATE_AWAITING_REVEALSIG: 2,
+    OTRL_AUTHSTATE_AWAITING_SIG: 3,
+    OTRL_AUTHSTATE_V1_SETUP: 4
+  },
+
+  // context.h
+
+  messageState: {
+    OTRL_MSGSTATE_PLAINTEXT: 0,
+    OTRL_MSGSTATE_ENCRYPTED: 1,
+    OTRL_MSGSTATE_FINISHED: 2
+  },
+
+  // dh.h
+
+  sessionIdHalf: {
+    OTRL_SESSIONID_FIRST_HALF_BOLD: 0,
+    OTRL_SESSIONID_SECOND_HALF_BOLD: 1
+  },
+
+  // sm.h
+
+  nextExpectedSMP: {
+    OTRL_SMP_EXPECT1: 0,
+    OTRL_SMP_EXPECT2: 1,
+    OTRL_SMP_EXPECT3: 2,
+    OTRL_SMP_EXPECT4: 3,
+    OTRL_SMP_EXPECT5: 4
+  },
+
+  smProgState: {
+    OTRL_SMP_PROG_OK: 0,
+    OTRL_SMP_PROG_CHEATED: -2,
+    OTRL_SMP_PROG_FAILED: -1,
+    OTRL_SMP_PROG_SUCCEEDED: 1
+  },
 
   // userstate.h
 
