@@ -285,6 +285,16 @@ OtrlMessageAppOps.define([
   { timer_control: timer_control_cb_t }
 ]);
 
+// policies
+
+const OTRL_POLICY_ALLOW_V1 = 0x01;
+const OTRL_POLICY_ALLOW_V2 = 0x02;
+const OTRL_POLICY_ALLOW_V3 = 0x04;
+const OTRL_POLICY_REQUIRE_ENCRYPTION = 0x08;
+const OTRL_POLICY_SEND_WHITESPACE_TAG = 0x10;
+const OTRL_POLICY_WHITESPACE_START_AKE = 0x20;
+const OTRL_POLICY_ERROR_START_AKE = 0x40;
+
 libOTR.prototype = {
 
   constructor: libOTR,
@@ -292,7 +302,21 @@ libOTR.prototype = {
 
   // proto.h
 
-  OTRL_POLICY_OPPORTUNISTIC: new ctypes.unsigned_int(118),
+  OTRL_POLICY_OPPORTUNISTIC: new ctypes.unsigned_int(
+    OTRL_POLICY_ALLOW_V2 |
+    OTRL_POLICY_ALLOW_V3 |
+    OTRL_POLICY_SEND_WHITESPACE_TAG |
+    OTRL_POLICY_WHITESPACE_START_AKE |
+    OTRL_POLICY_ERROR_START_AKE
+  ),
+
+  OTRL_POLICY_ALWAYS: new ctypes.unsigned_int(
+    OTRL_POLICY_ALLOW_V2 |
+    OTRL_POLICY_ALLOW_V3 |
+    OTRL_POLICY_REQUIRE_ENCRYPTION |
+    OTRL_POLICY_WHITESPACE_START_AKE |
+    OTRL_POLICY_ERROR_START_AKE
+  ),
 
   fragPolicy: {
     OTRL_FRAGMENT_SEND_SKIP: 0,
