@@ -26,7 +26,7 @@ pwd > ~/Library/Application\ Support/Instantbird/Profiles/<profile>/extensions/c
 Trying it out
 -------------
 
-Let's you're Karsten and you want to try it out.
+Let's say you're Karsten and you want to try it out.
 
 First, install some dependencies,
 
