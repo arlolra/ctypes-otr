@@ -19,9 +19,14 @@ libotr: build
 	rm -rf build/$(OTR);
 	tar -xzvf $(OTR).tar.gz -C build/;
 	cd build/$(OTR); ./configure; make;
-	cp build/$(OTR)/src/.libs/libotr.dylib chrome/content/
 
 clean:
 	rm -rf build/
 
-.PHONY: all build xpi libotr clean
+osx: all
+	cp build/$(OTR)/src/.libs/libotr.dylib chrome/content/
+
+linux: all
+	cp build/$(OTR)/src/.libs/libotr.so.5.0.0 chrome/content/libotr.so
+
+.PHONY: all build xpi libotr clean linux osx
