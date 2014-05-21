@@ -333,6 +333,8 @@ libOTR.prototype = {
 
   // instag.h
 
+  OTRL_INSTAG_BEST: new ctypes.unsigned_int(1),
+
   // Get a new instance tag for the given account and write to file.
   otrl_instag_generate: libotr.declare(
     "otrl_instag_generate", abi, gcry_error_t,

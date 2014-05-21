@@ -72,7 +72,6 @@ function OTR() {
   this.fingerprintsPath = profilePath("otr.fingerprints");
   this.instanceTagsPath = profilePath("otr.instance_tags");
   this.uiOps = this.initUiOps();
-  this.instag = 0;
   this.convos = new Map();
 }
 
@@ -331,7 +330,7 @@ OTR.prototype = {
       getAccount(aConv),
       getProtocol(aConv),
       aConv.normalizedName,
-      this.instag,
+      libotr.OTRL_INSTAG_BEST,
       tMsg.toSend,
       null,
       newMessage.address(),
