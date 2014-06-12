@@ -292,25 +292,6 @@ OTR.prototype = {
     return uiOps;
   },
 
-  // below implements the observer interface
-
-  addConversation: function(prplIConvIM) {
-    this.boundObserver = this.observe.bind(this, prplIConvIM);
-    prplIConvIM.addObserver(this.boundObserver);
-    let protocol = getProtocol(prplIConvIM);
-    let account = getAccount(prplIConvIM);
-    let id = protocol + ":" + account;
-    this.convos.set(id, prplIConvIM);
-    if (this.privateKeyFingerprint(account, protocol) === null)
-      this.generatePrivateKey(account, protocol);
-  },
-
-  removeConversation: function(prplIConvIM) {
-    prplIConvIM.removeTransform(this.boundObserver);
-    let id = getProtocol(prplIConvIM) + ":" + getAccount(prplIConvIM);
-    this.convos.delete(id);
-  },
-
   sendAlert: function(context, msg) {
     let id = context.contents.protocol.readString() + ":" +
              context.contents.accountname.readString();
@@ -319,21 +300,46 @@ OTR.prototype = {
     target.wrappedJSObject.writeMessage("system", msg, flags);
   },
 
-  boundObserver: null,
-  observe: function(aConv, aSubject, aTopic, aData) {
-    switch(aTopic) {
-    case "sending-message":
-      this.onSend(aConv, aSubject);
-      break;
-    case "receiving-message":
-      this.onReceive(aConv, aSubject);
-      break;
-    }
+  // below implements the wrapped observer interface
+
+  addConversation: function(prplIConvIM) {
+    // add sending observer
+    if (!this.boundSend)
+      this.boundSend = this.onSend.bind(this, prplIConvIM);
+    prplIConvIM.addObserver(this.boundSend, -999);
+
+    // add receiving observer
+    if (!this.boundReceive)
+      this.boundReceive = this.onReceive.bind(this, prplIConvIM);
+    prplIConvIM.addObserver(this.boundReceive, 999);
+
+    let protocol = getProtocol(prplIConvIM);
+    let account = getAccount(prplIConvIM);
+    let id = protocol + ":" + account;
+    this.convos.set(id, prplIConvIM);
+
+    // generate a pk if necessary
+    if (this.privateKeyFingerprint(account, protocol) === null)
+      this.generatePrivateKey(account, protocol);
   },
 
-  onSend: function(aConv, aMsg) {
+  removeConversation: function(prplIConvIM) {
+    prplIConvIM.removeTransform(this.boundSend);
+    prplIConvIM.removeTransform(this.boundReceive);
+    let id = getProtocol(prplIConvIM) + ":" + getAccount(prplIConvIM);
+    this.convos.delete(id);
+  },
+
+  boundSend: null,
+  onSend: function(aConv, aSubject, aTopic, aData) {
+    if (aTopic !== "sending-message")
+      return;
+
+    if (aSubject.cancel)
+      return;
+
     let newMessage = new ctypes.char.ptr();
-    log("pre sending: " + aMsg.message)
+    log("pre sending: " + aSubject.message)
 
     let err = libotr.otrl_message_sending(
       this.userstate,
@@ -343,7 +349,7 @@ OTR.prototype = {
       getProtocol(aConv),
       aConv.normalizedName,
       libotr.OTRL_INSTAG_BEST,
-      aMsg.message,
+      aSubject.message,
       null,
       newMessage.address(),
       libotr.fragPolicy.OTRL_FRAGMENT_SEND_SKIP,
@@ -356,17 +362,24 @@ OTR.prototype = {
       throw new OTRError("Returned code: " + err);
 
     if (newMessage.isNull())
-      aMsg.cancel = true;  // cancel, but should we ever get here?
+      aSubject.cancel = true;  // cancel, but should we ever get here?
     else
-      aMsg.message = newMessage.readString();
+      aSubject.message = newMessage.readString();
 
-    log("post sending: " + aMsg.message)
+    log("post sending: " + aSubject.message)
     libotr.otrl_message_free(newMessage);
   },
 
-  onReceive: function(aConv, aMsg) {
+  boundReceive: null,
+  onReceive: function(aConv, aSubject, aTopic, aData) {
+    if (aTopic !== "receiving-message")
+      return;
+
+    if (aSubject.cancel)
+      return;
+
     let newMessage = new ctypes.char.ptr();
-    log("pre receiving: " + aMsg.message)
+    log("pre receiving: " + aSubject.message)
 
     let res = libotr.otrl_message_receiving(
       this.userstate,
@@ -375,7 +388,7 @@ OTR.prototype = {
       getAccount(aConv),
       getProtocol(aConv),
       aConv.normalizedName,
-      aMsg.message,
+      aSubject.message,
       newMessage.address(),
       null,
       null,
@@ -384,17 +397,17 @@ OTR.prototype = {
     );
 
     if (!newMessage.isNull()) {
-      aMsg.originalMessage = newMessage.readString();
+      aSubject.originalMessage = newMessage.readString();
       libotr.otrl_message_free(newMessage);
     }
 
     log(res)
 
     if (res) {
-      aMsg.cancel = true;  // ignore
+      aSubject.cancel = true;  // ignore
     }
 
-    log("post receiving: " + aMsg.originalMessage)
+    log("post receiving: " + aSubject.originalMessage)
   }
 
 };

@@ -19,13 +19,24 @@ diff --git a/chat/components/public/prplIConversation.idl b/chat/components/publ
  [scriptable, uuid(e40dc3e5-c9ff-457b-a6cc-655cce81042c)]
  interface prplIConversation: nsISupports {
  
-@@ -57,18 +58,29 @@ interface prplIConversation: nsISupports
+@@ -53,22 +54,38 @@ interface prplIConversation: nsISupports
+   /* Un-initialize the conversation. Will be called by
+      purpleCoreService::RemoveConversation when the conversation is
+      closed or by purpleCoreService::Quit while exiting. */
+   void unInit();
  
    /* When the conversation is closed from the UI. */
    void close();
  
-   /* Method to add or remove an observer */
-   void addObserver(in nsIObserver aObserver);
+-  /* Method to add or remove an observer */
+-  void addObserver(in nsIObserver aObserver);
++  /* Methods to add or remove an observer. Priority determines the order
++   * in which they are invoked. Any integer value is usable as a priority.
++   *    0 is the default priority.
++   *  < 0 is lower priority.
++   *  > 0 is higher priority.
++   */
++  void addObserver(in nsIObserver aObserver, [optional] in long aPriority);
    void removeObserver(in nsIObserver aObserver);
  
 -  /* Observers will be all receive new-text notifications.
@@ -149,7 +160,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
    get startDate() this.target.startDate,
 -  sendMsg: function (aMsg) { this.target.sendMsg(aMsg); },
 +
-+  sendMsg: function (aMsg) {
++  sendMsg: function(aMsg) {
 +    // Create a new message with aMsg to satisfy the observer interface.
 +    let nMsg = new Message(this.target.name, aMsg, { outgoing: true });
 +
@@ -221,6 +232,300 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
        delete this._observedContact;
      }
      this._prplConv = {}; // Prevent .close from failing.
+diff --git a/chat/modules/jsProtoHelper.jsm b/chat/modules/jsProtoHelper.jsm
+--- a/chat/modules/jsProtoHelper.jsm
++++ b/chat/modules/jsProtoHelper.jsm
+@@ -450,27 +450,35 @@ const GenericConversationPrototype = {
+   _id: 0,
+   get id() this._id,
+   set id(aId) {
+     if (this._id)
+       throw Cr.NS_ERROR_ALREADY_INITIALIZED;
+     this._id = aId;
+   },
+ 
+-  addObserver: function(aObserver) {
+-    if (this._observers.indexOf(aObserver) == -1)
+-      this._observers.push(aObserver);
++  // Observers are run in descending order.
++  addObserver: function(aObserver, aPriority) {
++    let wrap = {
++      observer: aObserver,
++      priority: aPriority || 0
++    };
++    for (var i = 0; i < this._observers.length; i++)
++      if (wrap.priority > this._observers[i].priority) break;
++    this._observers.splice(i, 0, wrap);
+   },
+   removeObserver: function(aObserver) {
+-    this._observers = this._observers.filter(function(o) o !== aObserver);
++    this._observers = this._observers.filter(function(w) {
++      return w.observer !== aObserver;
++    });
+   },
+   notifyObservers: function(aSubject, aTopic, aData) {
+-    for each (let observer in this._observers) {
++    for each (let wrap in this._observers) {
+       try {
+-        observer.observe(aSubject, aTopic, aData);
++        wrap.observer.observe(aSubject, aTopic, aData);
+       } catch(e) {
+         this.ERROR(e);
+       }
+     }
+   },
+ 
+   sendMsg: function (aMsg) {
+     throw Cr.NS_ERROR_NOT_IMPLEMENTED;
+diff --git a/chat/protocols/irc/irc.js b/chat/protocols/irc/irc.js
+--- a/chat/protocols/irc/irc.js
++++ b/chat/protocols/irc/irc.js
+@@ -129,22 +129,41 @@ const GenericIRCConversation = {
+   getMaxMessageLength: function() {
+     // Build the shortest possible message that could be sent to other users.
+     let baseMessage = ":" + this._account._nickname + this._account.prefix +
+                       " " + this._account.buildMessage("PRIVMSG", this.name) +
+                       " :\r\n";
+     return this._account.maxMessageLength -
+            this._account.countBytes(baseMessage);
+   },
+-  sendMsg: function(aMessage) {
+-    // Split the message by line breaks and send each one individually.
+-    let messages = aMessage.split(/[\r\n]+/);
++
++  // Apply CTCP formatting before display
++  applyCTCP: function(aSubject, aTopic, aData) {
++    if (aTopic !== "sending-message")
++      return;
++
++    aSubject.originalMessage = ctcpFormatToHTML(aSubject.originalMessage);
++  },
++
++  splitMsg: function(aSubject, aTopic, aData) {
++    if (aTopic !== "sending-message")
++      return;
+ 
+     let maxLength = this.getMaxMessageLength();
+ 
++    // Ensure the message is an appropriate length.
++    if (aSubject.message.length <= maxLength)
++      return;
++
++    // Cancel the message and split it.
++    aSubject.cancel = true;
++
++    // Split the message by line breaks and send each one individually.
++    let messages = aSubject.message.split(/[\r\n]+/);
++
+     // Attempt to smartly split a string into multiple lines (based on the
+     // maximum number of characters the message can contain).
+     for (let i = 0; i < messages.length; ++i) {
+       let message = messages[i];
+       let length = this._account.countBytes(message);
+       // The message is short enough.
+       if (length <= maxLength)
+         continue;
+@@ -154,35 +173,42 @@ const GenericIRCConversation = {
+ 
+       // Remove the current message and insert the two new ones. If no space was
+       // found, cut the first message to the maximum length and start the second
+       // message one character after that. If a space was found, exclude it.
+       messages.splice(i, 1, message.substr(0, index == -1 ? maxLength : index),
+                       message.substr((index + 1) || maxLength));
+     }
+ 
++    // Get the UIConversation to re-send the messages.
++    let UIConv = Services.conversations.getUIConversation(this);
++
+     // Send each message and display it in the conversation.
+     for (let message of messages) {
+       if (!message.length)
+         return;
+-
+-      if (!this._account.sendMessage("PRIVMSG", [this.name, message])) {
+-        this.writeMessage(this._account._currentServerName,
+-                          _("error.sendMessageFailed"),
+-                          {error: true, system: true});
+-        break;
+-      }
+-
+-      // Since the server doesn't send us a message back, just assume the
+-      // message was received and immediately show it.
+-      this.writeMessage(this._account._nickname, message, {outgoing: true});
+-
+-      this._pendingMessage = true;
++      UIConv.sendMsg(message);
+     }
+   },
++
++  sendMsg: function(aMessage) {
++    if (!this._account.sendMessage("PRIVMSG", [this.name, aMessage])) {
++      this.writeMessage(this._account._currentServerName,
++                        _("error.sendMessageFailed"),
++                        {error: true, system: true});
++      return;
++    }
++
++    // Since the server doesn't send us a message back, just assume the
++    // message was received and immediately show it.
++    this.writeMessage(this._account._nickname, aMessage, {outgoing: true});
++
++    this._pendingMessage = true;
++  },
++
+   // IRC doesn't support typing notifications, but it does have a maximum
+   // message length.
+   sendTyping: function(aString) {
+     let longestLineLength =
+       Math.max.apply(null, aString.split("\n").map(this._account.countBytes,
+                                                    this._account));
+     return this.getMaxMessageLength() - longestLineLength;
+   },
+@@ -275,22 +301,20 @@ ircChannel.prototype = {
+   _receivedInitialMode: false,
+   // For IRC you're not in a channel until the JOIN command is received, open
+   // all channels (initially) as left.
+   _left: true,
+   // True until successfully joined for the first time.
+   _firstJoin: false,
+   banMasks: [],
+ 
+-  // Overwrite the writeMessage function to apply CTCP formatting before
+-  // display.
+-  writeMessage: function(aWho, aText, aProperties) {
+-    GenericConvChatPrototype.writeMessage.call(this, aWho,
+-                                               ctcpFormatToHTML(aText),
+-                                               aProperties);
++  _init: function() {
++    GenericConvChatPrototype._init.call(this, aAccount, aName, aNick);
++    this.addObserver({ observe: this.splitMsg.bind(this) }, 999);
++    this.addObserver({ observe: this.applyCTCP.bind(this) });
+   },
+ 
+   // Stores the prplIChatRoomFieldValues required to join this channel
+   // to enable later reconnections. If absent, the MUC will not be reconnected
+   // automatically after disconnections.
+   _chatRoomFields: null,
+ 
+   // Section 3.2.2 of RFC 2812.
+@@ -601,22 +625,20 @@ function ircConversation(aAccount, aName
+   // Always request the info as it may be out of date.
+   this._waitingForNick = true;
+   this.requestBuddyInfo(aName);
+ }
+ ircConversation.prototype = {
+   __proto__: GenericConvIMPrototype,
+   get buddy() this._account.buddies.get(this.name),
+ 
+-  // Overwrite the writeMessage function to apply CTCP formatting before
+-  // display.
+-  writeMessage: function(aWho, aText, aProperties) {
+-    GenericConvIMPrototype.writeMessage.call(this, aWho,
+-                                             ctcpFormatToHTML(aText),
+-                                             aProperties);
++  _init: function(aAccount, aName) {
++    GenericConvIMPrototype._init.call(this, aAccount, aName);
++    this.addObserver({ observe: this.splitMsg.bind(this) }, 999);
++    this.addObserver({ observe: this.applyCTCP.bind(this) });
+   },
+ 
+   unInit: function() {
+     this.unInitIRCConversation();
+     GenericConvIMPrototype.unInit.call(this);
+   },
+ 
+   updateNick: function(aNewNick) {
+diff --git a/chat/protocols/xmpp/xmpp.jsm b/chat/protocols/xmpp/xmpp.jsm
+--- a/chat/protocols/xmpp/xmpp.jsm
++++ b/chat/protocols/xmpp/xmpp.jsm
+@@ -28,16 +28,21 @@ XPCOMUtils.defineLazyModuleGetter(this, 
+ XPCOMUtils.defineLazyServiceGetter(this, "imgTools",
+                                    "@mozilla.org/image/tools;1",
+                                    "imgITools");
+ 
+ XPCOMUtils.defineLazyGetter(this, "_", function()
+   l10nHelper("chrome://chat/locale/xmpp.properties")
+ );
+ 
++XPCOMUtils.defineLazyGetter(this, "TXTToHTML", function() {
++  let cs = Cc["@mozilla.org/txttohtmlconv;1"].getService(Ci.mozITXTToHTMLConv);
++  return function(aTXT) cs.scanTXT(aTXT, cs.kEntities);
++});
++
+ /* This is an ordered list, used to determine chat buddy flags:
+  *  index < member    -> noFlags
+  *  index = member    -> voiced
+  *          moderator -> halfOp
+  *          admin     -> op
+  *          owner     -> founder
+  */
+ const kRoles = ["outcast", "visitor", "participant", "member", "moderator",
+@@ -177,16 +182,22 @@ const XMPPConversationPrototype = {
+ 
+   _typingTimer: null,
+   supportChatStateNotifications: true,
+   _typingState: "active",
+ 
+   _init: function(aAccount, aBuddy) {
+     this.buddy = aBuddy;
+     GenericConvIMPrototype._init.call(this, aAccount, aBuddy.normalizedName);
++    this.addObserver(this);
++  },
++
++  observe: function(aSubject, aTopic, aData) {
++    if (aTopic === "sending-message")
++      aSubject.originalMessage = TXTToHTML(aSubject.originalMessage);
+   },
+ 
+   get title() this.buddy.contactDisplayName,
+   get normalizedName() this.buddy.normalizedName,
+ 
+   get shouldSendTypingNotifications()
+     this._supportChatStateNotifications &&
+     Services.prefs.getBoolPref("purple.conversations.im.send_typing"),
+@@ -245,20 +256,17 @@ const XMPPConversationPrototype = {
+     let s = Stanza.message(this.to, aMsg, cs);
+     this._account.sendStanza(s);
+     let who;
+     if (this._account._connection)
+       who = this._account._connection._jid.jid;
+     if (!who)
+       who = this._account.name;
+     let alias = this.account.alias || this.account.statusInfo.displayName;
+-    let msg = Cc["@mozilla.org/txttohtmlconv;1"]
+-                .getService(Ci.mozITXTToHTMLConv)
+-                .scanTXT(aMsg, Ci.mozITXTToHTMLConv.kEntities);
+-    this.writeMessage(who, msg, {outgoing: true, _alias: alias});
++    this.writeMessage(who, aMsg, {outgoing: true, _alias: alias});
+     delete this._typingState;
+   },
+ 
+   /* Called by the account when a messsage is received from the buddy */
+   incomingMessage: function(aMsg, aStanza, aDate) {
+     let from = aStanza.attributes["from"];
+     this._targetResource = this._account._parseJID(from).resource;
+     let flags = {};
+@@ -876,19 +884,17 @@ const XMPPAccountPrototype = {
+       // Prefer HTML (in <html><body>) and use plain text (<body>) as fallback.
+       let htmlBody = aStanza.getElement(["html", "body"]);
+       if (htmlBody)
+         body = htmlBody.innerXML;
+       else {
+         // Even if the message is in plain text, the prplIMessage
+         // should contain a string that's correctly escaped for
+         // insertion in an HTML document.
+-        body = Cc["@mozilla.org/txttohtmlconv;1"]
+-                 .getService(Ci.mozITXTToHTMLConv)
+-                 .scanTXT(b.innerText, Ci.mozITXTToHTMLConv.kEntities);
++        body = TXTToHTML(b.innerText);
+       }
+     }
+     if (body) {
+       let date;
+       let delay = aStanza.getElement(["delay"]);
+       if (delay && delay.uri == Stanza.NS.delay) {
+         if (delay.attributes["stamp"])
+           date = new Date(delay.attributes["stamp"]);
 diff --git a/im/config/mozconfigs/macosx/mozconfig b/im/config/mozconfigs/macosx/mozconfig
 --- a/im/config/mozconfigs/macosx/mozconfig
 +++ b/im/config/mozconfigs/macosx/mozconfig
