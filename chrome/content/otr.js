@@ -2,41 +2,15 @@ let EXPORTED_SYMBOLS = ["OTR"];
 
 const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
-let timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
-let consoleService = Cc["@mozilla.org/consoleservice;1"]
-                       .getService(Ci.nsIConsoleService);
-
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/osfile.jsm");
+Cu.import("chrome://otr/content/libotr.js");
 
-const CHROME_URI = "chrome://otr/content/";
-
-// load libOTR
-Cu.import(CHROME_URI + "libotr.js");
 let libotr = new libOTR();
 
-// defaults
-const default_account = "default_account";
-const default_protocol = "default_protocol";
-
-function setTimeout(fn, delay) {
-  timer.initWithCallback({ notify: fn }, delay, Ci.nsITimer.TYPE_ONE_SHOT);
-}
-
-function log(msg) {
-  consoleService.logStringMessage(msg);
-}
-
-function getProtocol(aConv) {
-  return aConv.wrappedJSObject._account.protocol.normalizedName;
-}
-
-function getAccount(aConv) {
-  return aConv.wrappedJSObject._account.normalizedName;
-}
-
 // error type
+
 function OTRError(message) {
   if (Error.captureStackTrace) {
     Error.captureStackTrace(this, this.constructor);
@@ -53,6 +27,11 @@ OTRError.prototype = Object.create(Error.prototype, {
   constructor: { value: OTRError }
 });
 
+// some helpers
+
+let cs = Cc["@mozilla.org/consoleservice;1"].getService(Ci.nsIConsoleService);
+function log(msg) cs.logStringMessage(msg);
+
 function ensureFileExists(path) {
   return OS.File.exists(path).then(exists => {
     if (!exists)
@@ -65,6 +44,36 @@ function ensureFileExists(path) {
 function profilePath(filename) {
   return OS.Path.join(OS.Constants.Path.profileDir, filename);
 }
+
+// context wrapper
+
+function Context(context) {
+  this.context = context;
+}
+
+Context.prototype = {
+  constructor: Context,
+  get id() this.protocol + ":" + this.account,
+  get account() this.context.contents.accountname.readString(),
+  get protocol() this.context.contents.protocol.readString(),
+};
+
+// conversation wrapper
+
+function Conv(conv) {
+  this.conv = conv;
+  this._account = conv.wrappedJSObject._account;
+}
+
+Conv.prototype = {
+  constructor: Conv,
+  get id() this.protocol + ":" + this.account,
+  get name() this.conv.normalizedName,
+  get account() this._account.normalizedName,
+  get protocol() this._account.protocol.normalizedName
+};
+
+// otr constructor
 
 function OTR() {
   this.userstate = libotr.otrl_userstate_create();
@@ -99,10 +108,7 @@ OTR.prototype = {
   // TODO: maybe move this to a ChromeWorker
   generatePrivateKey: function(account, protocol) {
     let err = libotr.otrl_privkey_generate(
-      this.userstate,
-      this.privateKeyPath,
-      account || default_account,
-      protocol || default_protocol
+      this.userstate, this.privateKeyPath, account, protocol
     );
     if (err)
       throw new OTRError("Returned code: " + err);
@@ -111,10 +117,7 @@ OTR.prototype = {
   // get my fingerprint
   privateKeyFingerprint: function(account, protocol) {
     let fingerprint = libotr.otrl_privkey_fingerprint(
-      this.userstate,
-      new libotr.fingerprint_t(),
-      account || default_account,
-      protocol || default_protocol
+      this.userstate, new libotr.fingerprint_t(), account, protocol
     );
     return fingerprint.isNull() ? null : fingerprint.readString();
   },
@@ -122,9 +125,8 @@ OTR.prototype = {
   // write fingerprints to file synchronously
   writeFingerprints: function() {
     let err = libotr.otrl_privkey_write_fingerprints(
-      this.userstate,
-      this.fingerprintsPath
-    )
+      this.userstate, this.fingerprintsPath
+    );
     if (err)
       throw new OTRError("Returned code: " + err);
   },
@@ -132,11 +134,8 @@ OTR.prototype = {
   // write fingerprints to file synchronously
   genInstag: function(account, protocol) {
     let err = libotr.otrl_instag_generate(
-      this.userstate,
-      this.instanceTagsPath,
-      account,
-      protocol
-    )
+      this.userstate, this.instanceTagsPath, account, protocol
+    );
     if (err)
       throw new OTRError("Returned code: " + err);
   },
@@ -188,7 +187,13 @@ OTR.prototype = {
   },
 
   max_message_size_cb: function(opdata, context) {
-    return 0;
+    context = new Context(context);
+    switch(context.protocol) {
+    case "irc":
+      return 400;
+    default:
+      return 0;
+    }
   },
 
   account_name_cb: function(opdata, account, protocol) {
@@ -293,9 +298,8 @@ OTR.prototype = {
   },
 
   sendAlert: function(context, msg) {
-    let id = context.contents.protocol.readString() + ":" +
-             context.contents.accountname.readString();
-    let target = this.convos.get(id);
+    context = new Context(context);
+    let target = this.convos.get(context.id);
     let flags = { system: true, noLog: true, error: false };
     target.wrappedJSObject.writeMessage("system", msg, flags);
   },
@@ -313,21 +317,19 @@ OTR.prototype = {
       this.boundReceive = this.onReceive.bind(this, prplIConvIM);
     prplIConvIM.addObserver(this.boundReceive, 999);
 
-    let protocol = getProtocol(prplIConvIM);
-    let account = getAccount(prplIConvIM);
-    let id = protocol + ":" + account;
-    this.convos.set(id, prplIConvIM);
+    let conv = new Conv(prplIConvIM);
+    this.convos.set(conv.id, prplIConvIM);
 
     // generate a pk if necessary
-    if (this.privateKeyFingerprint(account, protocol) === null)
-      this.generatePrivateKey(account, protocol);
+    if (this.privateKeyFingerprint(conv.account, conv.protocol) === null)
+      this.generatePrivateKey(conv.account, conv.protocol);
   },
 
   removeConversation: function(prplIConvIM) {
     prplIConvIM.removeTransform(this.boundSend);
     prplIConvIM.removeTransform(this.boundReceive);
-    let id = getProtocol(prplIConvIM) + ":" + getAccount(prplIConvIM);
-    this.convos.delete(id);
+    let conv = new Conv(prplIConvIM);
+    this.convos.delete(conv.id);
   },
 
   boundSend: null,
@@ -338,6 +340,7 @@ OTR.prototype = {
     if (aSubject.cancel)
       return;
 
+    let conv = new Conv(aConv);
     let newMessage = new ctypes.char.ptr();
     log("pre sending: " + aSubject.message)
 
@@ -345,14 +348,14 @@ OTR.prototype = {
       this.userstate,
       this.uiOps.address(),
       null,
-      getAccount(aConv),
-      getProtocol(aConv),
-      aConv.normalizedName,
+      conv.account,
+      conv.protocol,
+      conv.name,
       libotr.OTRL_INSTAG_BEST,
       aSubject.message,
       null,
       newMessage.address(),
-      libotr.fragPolicy.OTRL_FRAGMENT_SEND_SKIP,
+      libotr.fragPolicy.OTRL_FRAGMENT_SEND_ALL_BUT_LAST,
       null,
       null,
       null
@@ -378,6 +381,7 @@ OTR.prototype = {
     if (aSubject.cancel)
       return;
 
+    let conv = new Conv(aConv);
     let newMessage = new ctypes.char.ptr();
     log("pre receiving: " + aSubject.message)
 
@@ -385,9 +389,9 @@ OTR.prototype = {
       this.userstate,
       this.uiOps.address(),
       null,
-      getAccount(aConv),
-      getProtocol(aConv),
-      aConv.normalizedName,
+      conv.account,
+      conv.protocol,
+      conv.name,
       aSubject.message,
       newMessage.address(),
       null,
