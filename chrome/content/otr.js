@@ -331,7 +331,7 @@ OTR.prototype = {
     let conv = new Conv(prplIConvIM);
     conv = this.convos.get(conv.id);
     conv.observers.forEach(function(o) {
-      prplIConvIM.removeTransform(o);
+      prplIConvIM.removeObserver(o);
     });
     this.convos.delete(conv.id);
   },

@@ -37,7 +37,7 @@ function shutdown(data, reason) {
 
   let cs = Services.conversations.wrappedJSObject;
   for each (let prplIConvIM in cs.getUIConversations())
-    otr.removeTransform(prplIConvIM);
+    otr.removeConversation(prplIConvIM);
   cs.addConversation = originalAddConversation;
 
   Cu.unload(CHROME_URI + "otr.js");
