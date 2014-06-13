@@ -60,9 +60,11 @@ Context.prototype = {
 
 // conversation wrapper
 
-function Conv(conv) {
+function Conv(conv, observers) {
   this.conv = conv;
-  this._account = conv.wrappedJSObject._account;
+  this.observers = observers;
+  this._jsObj = conv.wrappedJSObject;
+  this._account = this._jsObj._account;
 }
 
 Conv.prototype = {
@@ -70,7 +72,9 @@ Conv.prototype = {
   get id() this.protocol + ":" + this.account,
   get name() this.conv.normalizedName,
   get account() this._account.normalizedName,
-  get protocol() this._account.protocol.normalizedName
+  get protocol() this._account.protocol.normalizedName,
+  get sendMsg() this.conv.sendMsg.bind(this.conv),
+  get writeMsg() this._jsObj.writeMessage.bind(this._jsObj)
 };
 
 // otr constructor
@@ -158,8 +162,8 @@ OTR.prototype = {
     let aMsg = message.readString();
     log("inject_message_cb: " + aMsg);
     let id = protocol.readString() + ":" + accountname.readString();
-    let target = this.convos.get(id);
-    target.sendMsg(aMsg);
+    let conv = this.convos.get(id);
+    conv.sendMsg(aMsg);
   },
 
   update_context_list_cb: function(opdata) {
@@ -299,26 +303,24 @@ OTR.prototype = {
 
   sendAlert: function(context, msg) {
     context = new Context(context);
-    let target = this.convos.get(context.id);
+    let conv = this.convos.get(context.id);
     let flags = { system: true, noLog: true, error: false };
-    target.wrappedJSObject.writeMessage("system", msg, flags);
+    conv.writeMsg("system", msg, flags);
   },
 
   // below implements the wrapped observer interface
 
   addConversation: function(prplIConvIM) {
     // add sending observer
-    if (!this.boundSend)
-      this.boundSend = this.onSend.bind(this, prplIConvIM);
-    prplIConvIM.addObserver(this.boundSend, -999);
+    let onSend = this.onSend.bind(this, prplIConvIM);
+    prplIConvIM.addObserver(onSend, -999);
 
     // add receiving observer
-    if (!this.boundReceive)
-      this.boundReceive = this.onReceive.bind(this, prplIConvIM);
-    prplIConvIM.addObserver(this.boundReceive, 999);
+    let onReceive = this.onReceive.bind(this, prplIConvIM);
+    prplIConvIM.addObserver(onReceive, 999);
 
-    let conv = new Conv(prplIConvIM);
-    this.convos.set(conv.id, prplIConvIM);
+    let conv = new Conv(prplIConvIM, [onSend, onReceive]);
+    this.convos.set(conv.id, conv);
 
     // generate a pk if necessary
     if (this.privateKeyFingerprint(conv.account, conv.protocol) === null)
@@ -326,13 +328,14 @@ OTR.prototype = {
   },
 
   removeConversation: function(prplIConvIM) {
-    prplIConvIM.removeTransform(this.boundSend);
-    prplIConvIM.removeTransform(this.boundReceive);
     let conv = new Conv(prplIConvIM);
+    conv = this.convos.get(conv.id);
+    conv.observers.forEach(function(o) {
+      prplIConvIM.removeTransform(o);
+    });
     this.convos.delete(conv.id);
   },
 
-  boundSend: null,
   onSend: function(aConv, aSubject, aTopic, aData) {
     if (aTopic !== "sending-message")
       return;
@@ -373,7 +376,6 @@ OTR.prototype = {
     libotr.otrl_message_free(newMessage);
   },
 
-  boundReceive: null,
   onReceive: function(aConv, aSubject, aTopic, aData) {
     if (aTopic !== "receiving-message")
       return;
