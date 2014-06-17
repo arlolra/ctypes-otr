@@ -25,6 +25,7 @@
     <em:creator>Arlo Breault</em:creator>
     <em:description>js-ctypes wrapper for libotr</em:description>
     <em:homepageURL>https://github.com/arlolra/ctypes-otr</em:homepageURL>
+    <em:optionsURL>chrome://otr/content/prefs.xul</em:optionsURL>
 
   </Description>
 

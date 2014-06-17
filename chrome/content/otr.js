@@ -79,7 +79,9 @@ Conv.prototype = {
 
 // otr constructor
 
-function OTR() {
+function OTR(opts) {
+  opts = opts || {};
+  this.setPolicy(opts.requireEncryption);
   this.userstate = libotr.otrl_userstate_create();
   this.privateKeyPath = profilePath("otr.private_key")
   this.fingerprintsPath = profilePath("otr.fingerprints");
@@ -92,6 +94,12 @@ OTR.prototype = {
 
   constructor: OTR,
   close: () => libotr.close(),
+
+  setPolicy: function(requireEncryption) {
+    this.policy = requireEncryption
+      ? libotr.OTRL_POLICY_ALWAYS
+      : libotr.OTRL_POLICY_OPPORTUNISTIC;
+  },
 
   // load stored files from my profile
   loadFiles: function() {
@@ -147,7 +155,7 @@ OTR.prototype = {
   // ui callbacks
 
   policy_cb: function(opdata, context) {
-    return libotr.OTRL_POLICY_OPPORTUNISTIC;
+    return this.policy;
   },
 
   create_privkey_cb: function(opdata, accountname, protocol) {

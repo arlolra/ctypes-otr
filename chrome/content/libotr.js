@@ -8,10 +8,8 @@ let Cr = Cc["@mozilla.org/chrome/chrome-registry;1"]
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
-const CHROME_URI = "chrome://otr/content/";
-
 // load libotr
-let uri = CHROME_URI + ctypes.libraryName("otr");
+let uri = "chrome://otr/content/" + ctypes.libraryName("otr");
 uri = Cr.convertChromeURL(Services.io.newURI(uri, null, null));
 let libotr = ctypes.open(uri.QueryInterface(Ci.nsIFileURL).file.path);
 

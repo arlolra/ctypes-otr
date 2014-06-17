@@ -1,0 +1,20 @@
+<?xml version="1.0" ?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css" ?>
+
+<prefwindow id="otr-prefwindow"
+            title="OTR Preferences"
+            xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <prefpane id="otr-pane">
+    <preferences id="otr-preferences">
+      <preference id="pref_require_encryption" name="extensions.otr.requireEncryption" type="bool" />
+    </preferences>
+    <vbox>
+      <groupbox>
+        <caption label="OTR Settings" />
+        <checkbox id="requireencryption" label="Require Encryption" preference="pref_require_encryption" />
+      </groupbox>
+    </vbox>
+  </prefpane>
+
+</prefwindow>
