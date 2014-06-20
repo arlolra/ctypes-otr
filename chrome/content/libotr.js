@@ -357,6 +357,21 @@ libOTR.prototype = {
     OTRL_MSGSTATE_FINISHED: 2
   },
 
+  // Look up a connection context by name/account/protocol/instance from the
+  // given OtrlUserState.
+  otrl_context_find: libotr.declare(
+    "otrl_context_find", abi, ConnContext.ptr,
+    OtrlUserState,
+    ctypes.char.ptr,
+    ctypes.char.ptr,
+    ctypes.char.ptr,
+    otrl_instag_t,
+    ctypes.int,
+    ctypes.int.ptr,
+    ctypes.void_t.ptr,
+    ctypes.void_t.ptr
+  ),
+
   // dh.h
 
   sessionIdHalf: {

@@ -54,8 +54,10 @@ function Context(context) {
 Context.prototype = {
   constructor: Context,
   get id() this.protocol + ":" + this.account,
+  get username() this.context.contents.username.readString(),
   get account() this.context.contents.accountname.readString(),
   get protocol() this.context.contents.protocol.readString(),
+  get msgState() this.context.contents.msgstate
 };
 
 // conversation wrapper
@@ -88,6 +90,7 @@ function OTR(opts) {
   this.instanceTagsPath = profilePath("otr.instance_tags");
   this.uiOps = this.initUiOps();
   this.convos = new Map();
+  this.observers = [];
 }
 
 OTR.prototype = {
@@ -152,7 +155,20 @@ OTR.prototype = {
       throw new OTRError("Returned code: " + err);
   },
 
-  // ui callbacks
+  // expose message states
+  messageState: libotr.messageState,
+
+  // get the current message state
+  getMsgState: function(user, account, protocol) {
+    let context = libotr.otrl_context_find(
+      this.userstate, user, account, protocol,
+      libotr.OTRL_INSTAG_BEST, 0, null, null, null
+    );
+    context = new Context(context);
+    return context.msgState;
+  },
+
+  // uiOps callbacks
 
   policy_cb: function(opdata, context) {
     return this.policy;
@@ -187,10 +203,14 @@ OTR.prototype = {
   },
 
   gone_secure_cb: function(opdata, context) {
+    context = new Context(context);
+    this.notifyObservers(context, "msg-state");
     this.sendAlert(context, "gone secure!");
   },
 
   gone_insecure_cb: function(opdata, context) {
+    context = new Context(context);
+    this.notifyObservers(context, "msg-state");
     this.sendAlert(context, "oh no, insecure");
   },
 
@@ -241,11 +261,22 @@ OTR.prototype = {
   },
 
   handle_msg_event_cb: function(opdata, msg_event, context, message, err) {
+    context = new Context(context);
     switch(msg_event) {
     case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
-      this.sendAlert(context, "received encrypted message but not currently" +
+      this.sendAlert(context, "Received encrypted message but not currently" +
                               " communicating privately.");
-      break
+      break;
+    case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
+      this.sendAlert(context, "The following message was received" +
+                              " unencrypted: " + message.readString());
+      break;
+    case libotr.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_RCVD:
+      log("Heartbeat received from " + context.username + ".");
+      break;
+    case libotr.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_SENT:
+      log("Heartbeat send to " + context.username + ".");
+      break;
     default:
       log("msg event: " + msg_event)
     }
@@ -310,7 +341,6 @@ OTR.prototype = {
   },
 
   sendAlert: function(context, msg) {
-    context = new Context(context);
     let conv = this.convos.get(context.id);
     let flags = { system: true, noLog: true, error: false };
     conv.writeMsg("system", msg, flags);
@@ -422,6 +452,23 @@ OTR.prototype = {
     }
 
     log("post receiving: " + aSubject.originalMessage)
+  },
+
+  // observer interface
+
+  addObserver: function(aObserver) {
+    if (this.observers.indexOf(aObserver) == -1)
+      this.observers.push(aObserver);
+  },
+
+  removeObserver: function(aObserver) {
+    this.observers = this.observers.filter(function(o) o !== aObserver);
+  },
+
+  notifyObservers: function(aSubject, aTopic, aData) {
+    for each (let observer in this.observers) {
+      observer.observe(aSubject, aTopic, aData);
+    }
   }
 
 };
