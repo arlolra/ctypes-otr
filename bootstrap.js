@@ -89,25 +89,12 @@ let ui = {
     let broadcastID = "brID_" + uniqueId.next();
     broadcaster.setAttribute("id", broadcastID);
     broadcaster.setAttribute("isBroadcaster", "true");
+    smElt.setAttribute("observes", broadcastID);
 
     let hboxElt = smElt.parentNode.appendChild(doc.createElement("xul:hbox"));
     hboxElt.setAttribute("flex", "1");
     hboxElt.setAttribute("anonid", "otr:hbox");
     hboxElt.appendChild(smElt);
-
-    // reinitialize presence flags
-    smElt.removeAttribute("noTopic");
-    smElt.removeAttribute("editing");
-    smElt.setAttribute("observes", broadcastID);
-
-    if (convTop.hasAttribute("noTopic")) {
-      convTop.removeAttribute("noTopic");
-      convTop.setAttribute("noTopic", "true");
-    }
-    if (convTop.hasAttribute("editing")) {
-      convTop.removeAttribute("editing");
-      convTop.setAttribute("editing", "true");
-    }
 
     let tbb = doc.createElement("toolbarbutton");
     tbb.setAttribute("anonid", "otr:button");
