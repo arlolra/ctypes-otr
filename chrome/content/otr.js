@@ -162,7 +162,7 @@ OTR.prototype = {
   getMsgState: function(user, account, protocol) {
     let context = libotr.otrl_context_find(
       this.userstate, user, account, protocol,
-      libotr.OTRL_INSTAG_BEST, 0, null, null, null
+      libotr.OTRL_INSTAG_BEST, 1, null, null, null
     );
     context = new Context(context);
     return context.msgState;
