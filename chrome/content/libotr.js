@@ -558,6 +558,17 @@ libOTR.prototype = {
     ConnContext.ptr,
     ctypes.void_t.ptr,
     ctypes.void_t.ptr
+  ),
+
+  otrl_message_disconnect: libotr.declare(
+    "otrl_message_disconnect", abi, ctypes.void_t.ptr,
+    OtrlUserState,
+    OtrlMessageAppOps.ptr,
+    ctypes.void_t.ptr,
+    ctypes.char.ptr,
+    ctypes.char.ptr,
+    ctypes.char.ptr,
+    otrl_instag_t
   )
 
 };

@@ -29,8 +29,18 @@ let ui = {
     ui.otr.loadFiles().then(function() {
       Services.obs.addObserver(ui, "conversation-loaded", false);
       Services.obs.addObserver(ui, "new-conversation", false);
+      Services.obs.addObserver(ui, "account-disconnecting", false);
       ui.prefs.addObserver("", ui, false);
     }, function(reason) { throw new Error(reason); });
+  },
+
+  disconnect: function(aAccount) {
+    Conversations._conversations.forEach(function(binding) {
+      let conv = binding._conv;
+      if (conv.isChat || conv.account.id !== aAccount.id)
+        return;
+      ui.otr.disconnect(conv);
+    });
   },
 
   changePref: function(aMsg) {
@@ -99,12 +109,7 @@ let ui = {
     tbb.style.setProperty("padding", "0", "important");
 
     // get otr msg state
-    let account = binding._conv.account;
-    let msgState = ui.otr.getMsgState(
-      binding._conv.normalizedName,
-      account.normalizedName,
-      account.protocol.normalizedName
-    );
+    let msgState = ui.otr.getMsgState(binding._conv);
     ui.setMsgState(msgState, tbb);
 
     hboxElt.appendChild(tbb);
@@ -162,6 +167,9 @@ let ui = {
       break;
     case "new-conversation":
       ui.otr.addConversation(aObject);
+      break;
+    case "account-disconnecting":
+      ui.disconnect(aObject);
       break;
     default:
       log(aTopic)

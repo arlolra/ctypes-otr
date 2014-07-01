@@ -62,11 +62,16 @@ Context.prototype = {
 
 // conversation wrapper
 
-function Conv(conv, observers) {
+function Conv(conv, observers, unwrapped) {
   this.conv = conv;
   this.observers = observers;
-  this._jsObj = conv.wrappedJSObject;
-  this._account = this._jsObj._account;
+  if (unwrapped) {
+    this._jsObj = conv;
+    this._account = conv.account;
+  } else {
+    this._jsObj = conv.wrappedJSObject;
+    this._account = this._jsObj._account;
+  }
 }
 
 Conv.prototype = {
@@ -159,13 +164,27 @@ OTR.prototype = {
   messageState: libotr.messageState,
 
   // get the current message state
-  getMsgState: function(user, account, protocol) {
+  getMsgState: function(aConv) {
+    let conv = new Conv(aConv, null, true);
     let context = libotr.otrl_context_find(
-      this.userstate, user, account, protocol,
+      this.userstate, conv.name, conv.account, conv.protocol,
       libotr.OTRL_INSTAG_BEST, 1, null, null, null
     );
     context = new Context(context);
     return context.msgState;
+  },
+
+  disconnect: function(aConv) {
+    let conv = new Conv(aConv, null, true);
+    libotr.otrl_message_disconnect(
+      this.userstate,
+      this.uiOps.address(),
+      null,
+      conv.account,
+      conv.protocol,
+      conv.name,
+      libotr.OTRL_INSTAG_BEST
+    );
   },
 
   // uiOps callbacks
@@ -179,7 +198,8 @@ OTR.prototype = {
   },
 
   is_logged_in_cb: function(opdata, accountname, protocol, recipient) {
-    log("is_logged_in_cb")
+    // FIXME: ask the ui if this is true
+    return 1;
   },
 
   inject_message_cb: function(opdata, accountname, protocol, recipient, message) {
