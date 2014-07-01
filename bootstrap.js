@@ -27,14 +27,9 @@ let ui = {
     ui.otr = new OTR(opts);
     ui.otr.addObserver(ui);
     ui.otr.loadFiles().then(function() {
-      let cs = Services.conversations.wrappedJSObject;
-      ui.origAddConv = cs.addConversation;
-      cs.addConversation = function(prplIConvIM) {
-        ui.otr.addConversation(prplIConvIM);
-        ui.origAddConv.call(cs, prplIConvIM);
-        Services.obs.addObserver(ui, "conversation-loaded", false);
-        ui.prefs.addObserver("", ui, false);
-      };
+      Services.obs.addObserver(ui, "conversation-loaded", false);
+      Services.obs.addObserver(ui, "new-conversation", false);
+      ui.prefs.addObserver("", ui, false);
     }, function(reason) { throw new Error(reason); });
   },
 
@@ -164,6 +159,9 @@ let ui = {
       break;
     case "msg-state":
       this.updateButton(aObject);
+      break;
+    case "new-conversation":
+      ui.otr.addConversation(aObject);
       break;
     default:
       log(aTopic)
