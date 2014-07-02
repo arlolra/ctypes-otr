@@ -3,6 +3,8 @@ const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imWindows.jsm");
 
+const XULNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+
 let csl = Cc["@mozilla.org/consoleservice;1"].getService(Ci.nsIConsoleService);
 function log(msg) csl.logStringMessage(msg);
 
@@ -90,23 +92,37 @@ let ui = {
     let smElt = doc.getAnonymousElementByAttribute(convTop, "anonid", "statusMessage");
 
     // workaround so status message still gets its attributes updated
-    let broadcaster = smElt.parentNode.appendChild(doc.createElement("xul:broadcaster"));
+    let broadcaster = doc.createElementNS(XULNS, "xul:broadcaster")
     let broadcastID = "brID_" + uniqueId.next();
     broadcaster.setAttribute("id", broadcastID);
     broadcaster.setAttribute("isBroadcaster", "true");
+    smElt.parentNode.appendChild(broadcaster);
     smElt.setAttribute("observes", broadcastID);
 
-    let hboxElt = smElt.parentNode.appendChild(doc.createElement("xul:hbox"));
+    let hboxElt = doc.createElementNS(XULNS, "xul:hbox");
     hboxElt.setAttribute("flex", "1");
     hboxElt.setAttribute("anonid", "otr:hbox");
+    smElt.parentNode.appendChild(hboxElt);
     hboxElt.appendChild(smElt);
 
-    let tbb = doc.createElement("toolbarbutton");
+    let tbb = doc.createElementNS(XULNS, "xul:toolbarbutton");
     tbb.setAttribute("anonid", "otr:button");
     tbb.setAttribute("tooltiptext", "OTR");
+    tbb.setAttribute("type", "button");
+    tbb.addEventListener("command", function(e) {
+      e.preventDefault();
+      menupopup.openPopup(tbb, "after_start");
+    }, false);
 
-    tbb.style.margin = "29px -5px 0px 0px";
+    tbb.style.margin = "29px 0px 0px 0px";
     tbb.style.setProperty("padding", "0", "important");
+
+    let menupopup = doc.createElementNS(XULNS, "xul:menupopup");
+    menupopup.setAttribute("position", "after_end");
+    let menuitem = doc.createElementNS(XULNS, "xul:menuitem");
+    menuitem.setAttribute("label", "Testing");
+    menupopup.appendChild(menuitem);
+    tbb.appendChild(menupopup);
 
     // get otr msg state
     let msgState = ui.otr.getMsgState(binding._conv);
