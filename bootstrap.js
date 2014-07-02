@@ -118,7 +118,6 @@ let ui = {
     tbb.style.setProperty("padding", "0", "important");
 
     let menupopup = doc.createElementNS(XULNS, "xul:menupopup");
-    menupopup.setAttribute("position", "after_end");
     let menuitem = doc.createElementNS(XULNS, "xul:menuitem");
     menuitem.setAttribute("label", "Testing");
     menupopup.appendChild(menuitem);
