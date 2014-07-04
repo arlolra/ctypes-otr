@@ -9,6 +9,11 @@ Cu.import("chrome://otr/content/libotr.js");
 
 let libotr = new libOTR();
 
+// some globals
+let sending = false;
+let sendableMessages = null;
+let nextSent = null;
+
 // error type
 
 function OTRError(message) {
@@ -62,16 +67,10 @@ Context.prototype = {
 
 // conversation wrapper
 
-function Conv(conv, observers, unwrapped) {
+function Conv(conv) {
   this.conv = conv;
-  this.observers = observers;
-  if (unwrapped) {
-    this._jsObj = conv;
-    this._account = conv.account;
-  } else {
-    this._jsObj = conv.wrappedJSObject;
-    this._account = this._jsObj._account;
-  }
+  this._jsObj = conv.wrappedJSObject;
+  this._account = this._jsObj._account;
 }
 
 Conv.prototype = {
@@ -95,7 +94,8 @@ function OTR(opts) {
   this.instanceTagsPath = profilePath("otr.instance_tags");
   this.uiOps = this.initUiOps();
   this.convos = new Map();
-  this.observers = [];
+  this._observers = [];
+  this._buffer = [];
 }
 
 OTR.prototype = {
@@ -165,7 +165,7 @@ OTR.prototype = {
 
   // get the current message state
   getMsgState: function(aConv) {
-    let conv = new Conv(aConv, null, true);
+    let conv = new Conv(aConv);
     let context = libotr.otrl_context_find(
       this.userstate, conv.name, conv.account, conv.protocol,
       libotr.OTRL_INSTAG_BEST, 1, null, null, null
@@ -175,7 +175,7 @@ OTR.prototype = {
   },
 
   disconnect: function(aConv) {
-    let conv = new Conv(aConv, null, true);
+    let conv = new Conv(aConv);
     libotr.otrl_message_disconnect(
       this.userstate,
       this.uiOps.address(),
@@ -204,10 +204,16 @@ OTR.prototype = {
 
   inject_message_cb: function(opdata, accountname, protocol, recipient, message) {
     let aMsg = message.readString();
-    log("inject_message_cb: " + aMsg);
-    let id = protocol.readString() + ":" + accountname.readString();
-    let conv = this.convos.get(id);
-    conv.sendMsg(aMsg);
+    log("inject_message_cb (" + sending + "): " + aMsg);
+    if (sending) {
+      if (nextSent === null)
+        nextSent = aMsg;
+      sendableMessages.push(aMsg);
+    } else {
+      let id = protocol.readString() + ":" + accountname.readString();
+      let conv = this.convos.get(id);
+      conv.sendMsg(aMsg);
+    }
   },
 
   update_context_list_cb: function(opdata) {
@@ -285,7 +291,7 @@ OTR.prototype = {
     switch(msg_event) {
     case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
       this.sendAlert(context, "Received encrypted message but not currently" +
-                              " communicating privately.");
+                              " communicating privately: " + message.readString());
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
       this.sendAlert(context, "The following message was received" +
@@ -296,6 +302,9 @@ OTR.prototype = {
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_SENT:
       log("Heartbeat send to " + context.username + ".");
+      break;
+    case libotr.messageEvent.OTRL_MSGEVENT_ENCRYPTION_REQUIRED:
+      log("Encryption required")
       break;
     default:
       log("msg event: " + msg_event)
@@ -366,84 +375,100 @@ OTR.prototype = {
     conv.writeMsg("system", msg, flags);
   },
 
-  // below implements the wrapped observer interface
-
-  addConversation: function(prplIConvIM) {
-    // add sending observer
-    let onSend = this.onSend.bind(this, prplIConvIM);
-    prplIConvIM.addObserver(onSend, -999);
-
-    // add receiving observer
-    let onReceive = this.onReceive.bind(this, prplIConvIM);
-    prplIConvIM.addObserver(onReceive, 999);
-
-    let conv = new Conv(prplIConvIM, [onSend, onReceive]);
-    this.convos.set(conv.id, conv);
-
-    // generate a pk if necessary
-    if (this.privateKeyFingerprint(conv.account, conv.protocol) === null)
-      this.generatePrivateKey(conv.account, conv.protocol);
+  observe: function(aObject, aTopic, aMsg) {
+    switch(aTopic) {
+    case "sending-message":
+      this.onSend(aObject);
+      break;
+    case "received-message":
+      this.onReceive(aObject);
+      break;
+    case "conversation-loaded":
+      let binding = aObject.ownerDocument.getBindingParent(aObject);
+      let uiConv = binding._conv;
+      let aConv = uiConv.target;
+      let conv = new Conv(aConv);
+      if (!this.convos.get(conv.id)) {
+        this.convos.set(conv.id, conv);
+        uiConv.addObserver(this, "sending-message");
+        uiConv.addObserver(this, "received-message");
+        // generate a pk if necessary
+        if (this.privateKeyFingerprint(conv.account, conv.protocol) === null)
+          this.generatePrivateKey(conv.account, conv.protocol);
+      }
+      break;
+    }
   },
 
-  removeConversation: function(prplIConvIM) {
-    let conv = new Conv(prplIConvIM);
-    conv = this.convos.get(conv.id);
-    conv.observers.forEach(function(o) {
-      prplIConvIM.removeObserver(o);
-    });
+  removeConversation: function(uiConv) {
+    uiConv.removeObserver(this, "sending-message");
+    uiConv.removeObserver(this, "received-message");
+    let conv = new Conv(uiConv.target);
     this.convos.delete(conv.id);
   },
 
-  onSend: function(aConv, aSubject, aTopic, aData) {
-    if (aTopic !== "sending-message")
+  onSend: function(om) {
+    if (om.cancelled || om.system)
       return;
 
-    if (aSubject.cancel)
-      return;
+    let conv = new Conv(om.target);
+    log("pre sending: " + om.originalMessage)
 
-    let conv = new Conv(aConv);
     let newMessage = new ctypes.char.ptr();
-    log("pre sending: " + aSubject.message)
+    sending = true;
+    sendableMessages = [];
 
-    let err = libotr.otrl_message_sending(
-      this.userstate,
-      this.uiOps.address(),
-      null,
-      conv.account,
-      conv.protocol,
-      conv.name,
-      libotr.OTRL_INSTAG_BEST,
-      aSubject.message,
-      null,
-      newMessage.address(),
-      libotr.fragPolicy.OTRL_FRAGMENT_SEND_ALL_BUT_LAST,
-      null,
-      null,
-      null
-    );
+    let sms = om.getSendableMessages();
 
-    if (err)
-      throw new OTRError("Returned code: " + err);
+    for (let msg of sms) {
+      nextSent = null;
+      let err = libotr.otrl_message_sending(
+        this.userstate,
+        this.uiOps.address(),
+        null,
+        conv.account,
+        conv.protocol,
+        conv.name,
+        libotr.OTRL_INSTAG_BEST,
+        msg,
+        null,
+        newMessage.address(),
+        libotr.fragPolicy.OTRL_FRAGMENT_SEND_ALL,
+        null,
+        null,
+        null
+      );
+      if (err)
+        throw new OTRError("Returned code: " + err);
+      if (nextSent === null)
+        throw new OTRError("Hmmmmm")
+      this.bufferMsg(om.target, msg, nextSent);
+      nextSent = null;
+    }
 
-    if (newMessage.isNull())
-      aSubject.cancel = true;  // cancel, but should we ever get here?
-    else
-      aSubject.message = newMessage.readString();
+    om.setSendableMessages(sendableMessages.length, sendableMessages);
 
-    log("post sending: " + aSubject.message)
+    for (let m of sendableMessages)
+      log("post sending: " + m)
+
+    sendableMessages = null;
+    sending = false;
     libotr.otrl_message_free(newMessage);
   },
 
-  onReceive: function(aConv, aSubject, aTopic, aData) {
-    if (aTopic !== "receiving-message")
+  onReceive: function(im) {
+    if (im.cancelled || im.system)
       return;
 
-    if (aSubject.cancel)
+    if (im.outgoing) {
+      log("displaying message: " + im.decodedMessage)
+      this.pluckMsg(im);
       return;
+    }
 
-    let conv = new Conv(aConv);
+    let conv = new Conv(im.conversation);
     let newMessage = new ctypes.char.ptr();
-    log("pre receiving: " + aSubject.message)
+    log("pre receiving: " + im.decodedMessage)
 
     let res = libotr.otrl_message_receiving(
       this.userstate,
@@ -452,7 +477,7 @@ OTR.prototype = {
       conv.account,
       conv.protocol,
       conv.name,
-      aSubject.message,
+      im.decodedMessage,
       newMessage.address(),
       null,
       null,
@@ -461,34 +486,58 @@ OTR.prototype = {
     );
 
     if (!newMessage.isNull()) {
-      aSubject.originalMessage = newMessage.readString();
-      libotr.otrl_message_free(newMessage);
+      im.decodedMessage = newMessage.readString();
     }
-
-    log(res)
 
     if (res) {
-      aSubject.cancel = true;  // ignore
+      log(res)
+      im.cancelled = true;  // ignore
     }
 
-    log("post receiving: " + aSubject.originalMessage)
+    log("post receiving: " + im.decodedMessage)
+    libotr.otrl_message_free(newMessage);
   },
 
   // observer interface
 
   addObserver: function(aObserver) {
-    if (this.observers.indexOf(aObserver) == -1)
-      this.observers.push(aObserver);
+    if (this._observers.indexOf(aObserver) == -1)
+      this._observers.push(aObserver);
   },
 
   removeObserver: function(aObserver) {
-    this.observers = this.observers.filter(function(o) o !== aObserver);
+    this._observers = this._observers.filter(function(o) o !== aObserver);
   },
 
   notifyObservers: function(aSubject, aTopic, aData) {
-    for each (let observer in this.observers) {
+    for each (let observer in this._observers) {
       observer.observe(aSubject, aTopic, aData);
     }
+  },
+
+  // buffer messages
+
+  bufferMsg: function(conv, disp, sent) {
+    this._buffer.push({
+      conv: conv,
+      disp: disp,
+      sent: sent
+    });
+  },
+
+  // set a timer for unplucked msgs
+  pluckMsg: function(im) {
+    let buf = this._buffer;
+    for (let i = 0; i < buf.length; i++) {
+      let b = buf[i];
+      if (b.conv === im.conversation && b.sent === im.decodedMessage) {
+        im.decodedMessage = b.disp;
+        buf.splice(i, 1);
+        return;
+      }
+    }
+    // don't display if it wasn't buffered
+    im.cancelled = true;
   }
 
 };

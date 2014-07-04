@@ -22,6 +22,7 @@ let ui = {
   origAddConv: null,
 
   init: function() {
+    log("init")
     ui.prefs = Services.prefs.getBranch("extensions.otr.");
     let opts = {
       requireEncryption: ui.prefs.getBoolPref("requireEncryption")
@@ -29,8 +30,9 @@ let ui = {
     ui.otr = new OTR(opts);
     ui.otr.addObserver(ui);
     ui.otr.loadFiles().then(function() {
+      log("attach handlers")
+      Services.obs.addObserver(ui.otr, "conversation-loaded", false);
       Services.obs.addObserver(ui, "conversation-loaded", false);
-      Services.obs.addObserver(ui, "new-conversation", false);
       Services.obs.addObserver(ui, "account-disconnecting", false);
       ui.prefs.addObserver("", ui, false);
     }, function(reason) { throw new Error(reason); });
@@ -41,7 +43,7 @@ let ui = {
       let conv = binding._conv;
       if (conv.isChat || conv.account.id !== aAccount.id)
         return;
-      ui.otr.disconnect(conv);
+      ui.otr.disconnect(conv.target);
     });
   },
 
@@ -124,7 +126,7 @@ let ui = {
     tbb.appendChild(menupopup);
 
     // get otr msg state
-    let msgState = ui.otr.getMsgState(binding._conv);
+    let msgState = ui.otr.getMsgState(binding._conv.target);
     ui.setMsgState(msgState, tbb);
 
     hboxElt.appendChild(tbb);
@@ -180,9 +182,6 @@ let ui = {
     case "msg-state":
       this.updateButton(aObject);
       break;
-    case "new-conversation":
-      ui.otr.addConversation(aObject);
-      break;
     case "account-disconnecting":
       ui.disconnect(aObject);
       break;
@@ -192,6 +191,8 @@ let ui = {
   },
 
   resetConv: function(binding) {
+    ui.otr.removeConversation(binding._conv);
+
     let convTop = binding.getElt("conv-top-info");
     let doc = convTop.ownerDocument;
     let window = doc.defaultView;
@@ -211,14 +212,10 @@ let ui = {
   },
 
   destroy: function() {
+    Services.obs.removeObserver(ui.otr, "conversation-loaded");
     Services.obs.removeObserver(ui, "conversation-loaded");
+    Services.obs.removeObserver(ui, "account-disconnecting");
     Conversations._conversations.forEach(ui.resetConv);
-
-    let cs = Services.conversations.wrappedJSObject;
-    for each (let prplIConvIM in cs.getUIConversations())
-      ui.otr.removeConversation(prplIConvIM);
-    cs.addConversation = ui.origAddConv;
-
     ui.prefs.removeObserver("", ui);
     ui.otr.removeObserver(ui);
     // ui.otr.close();
