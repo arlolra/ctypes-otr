@@ -93,10 +93,10 @@ diff --git a/chat/components/public/imILogger.idl b/chat/components/public/imILo
  interface imILogConversation: nsISupports {
    readonly attribute AUTF8String title;
    readonly attribute AUTF8String name;
+   // Value in microseconds.
    readonly attribute PRTime startDate;
  
-   // Simplified account implementation:
-@@ -26,17 +26,17 @@ interface imILogConversation: nsISupport
+@@ -27,17 +27,17 @@ interface imILogConversation: nsISupport
    //  - protocol will only contain a "name" attribute, with the prpl's normalized name.
    // Other methods/attributes aren't implemented.
    readonly attribute imIAccount account;
@@ -114,7 +114,7 @@ diff --git a/chat/components/public/imILogger.idl b/chat/components/public/imILo
    nsISimpleEnumerator getMessagesEnumerator([optional] out unsigned long messageCount);
  };
  
- [scriptable, uuid(164ff6c3-ca64-4880-b8f3-67eb1817955f)]
+ [scriptable, uuid(27712ece-ad2c-4504-87d5-9e2c16d40fef)]
 diff --git a/chat/components/public/prplIConversation.idl b/chat/components/public/prplIConversation.idl
 --- a/chat/components/public/prplIConversation.idl
 +++ b/chat/components/public/prplIConversation.idl
@@ -130,13 +130,13 @@ diff --git a/chat/components/public/prplIConversation.idl b/chat/components/publ
 +interface imIOutgoingMessage;
  interface nsIURI;
  interface nsIDOMDocument;
+ interface prplIChatRoomFieldValues;
  
  /*
   * This is the XPCOM purple conversation component, a proxy for PurpleConversation.
   */
  
- [scriptable, uuid(e40dc3e5-c9ff-457b-a6cc-655cce81042c)]
-@@ -39,16 +40,20 @@ interface prplIConversation: nsISupports
+@@ -40,16 +41,20 @@ interface prplIConversation: nsISupports
    readonly attribute PRTime startDate;
    /* Unique identifier of the conversation */
    /* Setable only once by purpleCoreService while calling addConversation. */
@@ -246,7 +246,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
    this._messages = [];
    this.changeTargetTo(aPrplConversation);
    let iface = Ci["prplIConv" + (aPrplConversation.isChat ? "Chat" : "IM")];
-@@ -261,16 +330,24 @@ UIConversation.prototype = {
+@@ -271,16 +340,24 @@ UIConversation.prototype = {
    },
  
    observeConv: function(aTargetId, aSubject, aTopic, aData) {
@@ -271,7 +271,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
          this.notifyObservers(aSubject, "new-directed-incoming-message", aData);
          Services.obs.notifyObservers(aSubject, "new-directed-incoming-message", aData);
        }
-@@ -284,17 +361,42 @@ UIConversation.prototype = {
+@@ -294,17 +371,42 @@ UIConversation.prototype = {
  
    // prplIConversation
    get isChat() this.target.isChat,
@@ -318,11 +318,11 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
 diff --git a/chat/components/src/logger.js b/chat/components/src/logger.js
 --- a/chat/components/src/logger.js
 +++ b/chat/components/src/logger.js
-@@ -162,32 +162,32 @@ ConversationLog.prototype = {
+@@ -205,32 +205,32 @@ LogWriter.prototype = {
+     return encoder.encodeToString();
+   },
    logMessage: function cl_logMessage(aMessage) {
-     if (!this._log)
-       this._init();
- 
+     let lineToWrite;
      if (this.format == "json") {
        let msg = {
          date: new Date(aMessage.time * 1000),
@@ -337,29 +337,29 @@ diff --git a/chat/components/src/logger.js b/chat/components/src/logger.js
        let alias = aMessage.alias;
        if (alias && alias != msg.who)
          msg.alias = alias;
-       this._log.writeString(JSON.stringify(msg) + "\n");
-       return;
+       lineToWrite = JSON.stringify(msg) + "\n";
      }
- 
-     let date = new Date(aMessage.time * 1000);
-     let line = "(" + date.toLocaleTimeString() + ") ";
--    let msg = this._serialize(aMessage.originalMessage);
-+    let msg = this._serialize(aMessage.decodedMessage);
-     if (aMessage.system)
-       line += msg;
      else {
-       let sender = aMessage.alias || aMessage.who;
-       if (aMessage.autoResponse)
-         line += sender + " <AUTO-REPLY>: " + msg;
+       // Text log.
+       let date = new Date(aMessage.time * 1000);
+       let line = "(" + date.toLocaleTimeString() + ") ";
+-      let msg = this._serialize(aMessage.originalMessage);
++      let msg = this._serialize(aMessage.decodedMessage);
+       if (aMessage.system)
+         line += msg;
        else {
-         if (msg.startsWith("/me "))
-@@ -317,17 +317,21 @@ function LogMessage(aData, aConversation
+         let sender = aMessage.alias || aMessage.who;
+         if (aMessage.autoResponse)
+           line += sender + " <AUTO-REPLY>: " + msg;
+         else {
+           if (msg.startsWith("/me "))
+@@ -368,17 +368,21 @@ function LogMessage(aData, aConversation
    this._init(aData.who, aData.text);
    this._conversation = aConversation;
    this.time = Math.round(new Date(aData.date) / 1000);
    if ("alias" in aData)
      this._alias = aData.alias;
-   for each (let flag in aData.flags)
+   for (let flag of aData.flags)
      this[flag] = true;
  }
 -LogMessage.prototype = GenericMessagePrototype;
@@ -369,13 +369,13 @@ diff --git a/chat/components/src/logger.js b/chat/components/src/logger.js
 +  get decodedMessage() this.originalMessage
 +};
  
- function LogConversation(aLineInputStreams)
- {
-   // If aLineInputStreams isn't an Array, we'll assume that it's a lone
-   // InputStream, and wrap it in an Array.
-   if (!Array.isArray(aLineInputStreams))
-     aLineInputStreams = [aLineInputStreams];
  
+ function LogConversation(aMessages, aProperties) {
+   this._messages = aMessages;
+   for (let property in aProperties)
+     this[property] = aProperties[property];
+ }
+ LogConversation.prototype = {
 diff --git a/chat/content/convbrowser.xml b/chat/content/convbrowser.xml
 --- a/chat/content/convbrowser.xml
 +++ b/chat/content/convbrowser.xml
