@@ -204,7 +204,7 @@ OTR.prototype = {
 
   inject_message_cb: function(opdata, accountname, protocol, recipient, message) {
     let aMsg = message.readString();
-    log("inject_message_cb (" + sending + "): " + aMsg);
+    log("inject_message_cb (" + sending + ") (msglen:" + aMsg.length + "): " + aMsg);
     if (sending) {
       if (nextSent === null)
         nextSent = aMsg;
@@ -305,6 +305,12 @@ OTR.prototype = {
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_ENCRYPTION_REQUIRED:
       log("Encryption required")
+      break;
+    case libotr.messageEvent.OTRL_MSGEVENT_CONNECTION_ENDED:
+      this.sendAlert(context, "The other side ended the OTR session." +
+                              " You should too.");
+      // The message is still being displayed (to investigate). Why does libotr
+      // inject an empty msg at this point? ... and not return an error?
       break;
     default:
       log("msg event: " + msg_event)
@@ -441,7 +447,7 @@ OTR.prototype = {
       if (err)
         throw new OTRError("Returned code: " + err);
       if (nextSent === null)
-        throw new OTRError("Hmmmmm")
+        throw new OTRError("Hmmmmm")  // target.writeMessage
       this.bufferMsg(om.target, msg, nextSent);
       nextSent = null;
     }
@@ -490,11 +496,12 @@ OTR.prototype = {
     }
 
     if (res) {
-      log(res)
+      log("error (" + res + ") ignoring: " + im.decodedMessage)
       im.cancelled = true;  // ignore
+    } else {
+      log("post receiving: " + im.decodedMessage)
     }
 
-    log("post receiving: " + im.decodedMessage)
     libotr.otrl_message_free(newMessage);
   },
 
