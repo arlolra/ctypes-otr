@@ -9,11 +9,6 @@ Cu.import("chrome://otr/content/libotr.js");
 
 let libotr = new libOTR();
 
-// some globals
-let sending = false;
-let sendableMessages = null;
-let nextSent = null;
-
 // error type
 
 function OTRError(message) {
@@ -204,16 +199,10 @@ OTR.prototype = {
 
   inject_message_cb: function(opdata, accountname, protocol, recipient, message) {
     let aMsg = message.readString();
-    log("inject_message_cb (" + sending + ") (msglen:" + aMsg.length + "): " + aMsg);
-    if (sending) {
-      if (nextSent === null)
-        nextSent = aMsg;
-      sendableMessages.push(aMsg);
-    } else {
-      let id = protocol.readString() + ":" + accountname.readString();
-      let conv = this.convos.get(id);
-      conv.sendMsg(aMsg);
-    }
+    log("inject_message_cb (msglen:" + aMsg.length + "): " + aMsg);
+    let id = protocol.readString() + ":" + accountname.readString();
+    let conv = this.convos.get(id);
+    conv.sendMsg(aMsg);
   },
 
   update_context_list_cb: function(opdata) {
@@ -414,51 +403,47 @@ OTR.prototype = {
   },
 
   onSend: function(om) {
-    if (om.cancelled || om.system)
+    if (om.cancelled)
       return;
 
-    let conv = new Conv(om.target);
-    log("pre sending: " + om.originalMessage)
+    let conv = new Conv(om.conversation);
+    log("pre sending: " + om.message)
 
     let newMessage = new ctypes.char.ptr();
-    sending = true;
-    sendableMessages = [];
 
-    let sms = om.getSendableMessages();
+    let err = libotr.otrl_message_sending(
+      this.userstate,
+      this.uiOps.address(),
+      null,
+      conv.account,
+      conv.protocol,
+      conv.name,
+      libotr.OTRL_INSTAG_BEST,
+      om.message,
+      null,
+      newMessage.address(),
+      libotr.fragPolicy.OTRL_FRAGMENT_SEND_ALL_BUT_LAST,
+      null,
+      null,
+      null
+    );
 
-    for (let msg of sms) {
-      nextSent = null;
-      let err = libotr.otrl_message_sending(
-        this.userstate,
-        this.uiOps.address(),
-        null,
-        conv.account,
-        conv.protocol,
-        conv.name,
-        libotr.OTRL_INSTAG_BEST,
-        msg,
-        null,
-        newMessage.address(),
-        libotr.fragPolicy.OTRL_FRAGMENT_SEND_ALL,
-        null,
-        null,
-        null
-      );
-      if (err)
-        throw new OTRError("Returned code: " + err);
-      if (nextSent === null)
-        throw new OTRError("Hmmmmm")  // target.writeMessage
-      this.bufferMsg(om.target, msg, nextSent);
-      nextSent = null;
+    if (err)
+      throw new OTRError("Returned code: " + err);
+
+    let msg = "";
+    if (newMessage.isNull()) {
+      log("null message ... what to do?")  // target.writeMessage
+      // cancel, but should we ever get here?
+      om.cancelled = true;
+    } else {
+      msg = newMessage.readString();
+      // check
+      this.bufferMsg(om.conversation, om.message, msg);
+      om.message = msg;
     }
 
-    om.setSendableMessages(sendableMessages.length, sendableMessages);
-
-    for (let m of sendableMessages)
-      log("post sending: " + m)
-
-    sendableMessages = null;
-    sending = false;
+    log("post sending (" + !om.cancelled + "): " + msg);
     libotr.otrl_message_free(newMessage);
   },
 
@@ -467,7 +452,7 @@ OTR.prototype = {
       return;
 
     if (im.outgoing) {
-      log("displaying message: " + im.decodedMessage)
+      log("outgoing message to display: " + im.decodedMessage)
       this.pluckMsg(im);
       return;
     }
@@ -540,11 +525,13 @@ OTR.prototype = {
       if (b.conv === im.conversation && b.sent === im.decodedMessage) {
         im.decodedMessage = b.disp;
         buf.splice(i, 1);
+        log("displaying: " + b.disp)
         return;
       }
     }
     // don't display if it wasn't buffered
     im.cancelled = true;
+    log("not displaying: " + im.decodedMessage)
   }
 
 };

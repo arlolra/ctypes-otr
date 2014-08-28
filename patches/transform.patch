@@ -40,7 +40,7 @@ diff --git a/chat/components/public/imIConversationsService.idl b/chat/component
    void unInitConversations();
  
    // Register a conversation. This will create a unique id for the
-@@ -62,8 +63,32 @@ interface imIConversationsService: nsISu
+@@ -62,8 +63,28 @@ interface imIConversationsService: nsISu
    imIConversation getUIConversationByContactId(in long aId);
  
    nsISimpleEnumerator getConversations();
@@ -50,24 +50,20 @@ diff --git a/chat/components/public/imIConversationsService.idl b/chat/component
                                                      in boolean aIsChat);
  };
 +
++// A cancellable outgoing message. Before handing a message off to a prpl,
++// the conversation service notifies observers (typically add-ons) of an
++// outgoing message, which can be transformed or cancelled.
 +[scriptable, uuid(4391ba5c-9566-41a9-bb9b-fd0a0a490c2c)]
 +interface imIOutgoingMessage: nsISupports {
 +           attribute AUTF8String message;
 +           attribute boolean cancelled;
-+  readonly attribute imIConversation conversation;
++  readonly attribute prplIConversation conversation;
 +};
 +
-+[scriptable, uuid(0684ed1e-97b7-4eba-bf58-dd9dd81c668c)]
-+interface imISendableMessage: nsISupports {
-+  void getSendableMessages([optional] out unsigned long messageCount,
-+                           [retval, array, size_is(messageCount)] out string messages);
-+  void setSendableMessages(in unsigned long messageCount,
-+                           [array, size_is(messageCount)] in string messages);
-+  readonly attribute AUTF8String originalMessage;
-+           attribute boolean cancelled;
-+  readonly attribute prplIConversation target;
-+};
-+
++// A cancellable message to be displayed. When the conversation service is
++// notified of a new-text (ie. an incoming or outgoing message to be displayed),
++// it in turn notifies observers (again, typically add-ons), which have the
++// opportunity to swap or cancel the message.
 +[scriptable, uuid(bd2f77d4-1fad-432d-a914-6bb5ed5c13d0)]
 +interface imIMessage: prplIMessage {
 +           attribute boolean cancelled;
@@ -160,7 +156,7 @@ diff --git a/chat/components/public/prplIConversation.idl b/chat/components/publ
 diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConversations.js
 --- a/chat/components/src/imConversations.js
 +++ b/chat/components/src/imConversations.js
-@@ -10,16 +10,85 @@ Cu.import("resource:///modules/jsProtoHe
+@@ -10,16 +10,65 @@ Cu.import("resource:///modules/jsProtoHe
  
  var gLastUIConvId = 0;
  var gLastPrplConvId = 0;
@@ -176,26 +172,6 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
 +OutgoingMessage.prototype = {
 +  __proto__: ClassInfo("imIOutgoingMessage", "Outgoing Message"),
 +  cancelled: false
-+};
-+
-+function SendableMessage(message, target) {
-+  this._originalMessage = message;
-+  this.target = target;
-+}
-+SendableMessage.prototype = {
-+  __proto__: ClassInfo("imISendableMessage", "Sendable Message"),
-+  cancelled: false,
-+  get originalMessage() this._originalMessage,
-+  _sendableMessages: null,
-+  getSendableMessages: function(aMessageCount) {
-+    let sms = this._sendableMessages || [this.originalMessage];
-+    if (aMessageCount)
-+      aMessageCount.value = sms.length;
-+    return sms;
-+  },
-+  setSendableMessages: function(aMessageCount, aMessages) {
-+    this._sendableMessages = aMessages;
-+  }
 +};
 +
 +function imMessage(prplMessage) {
@@ -246,7 +222,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
    this._messages = [];
    this.changeTargetTo(aPrplConversation);
    let iface = Ci["prplIConv" + (aPrplConversation.isChat ? "Chat" : "IM")];
-@@ -271,16 +340,24 @@ UIConversation.prototype = {
+@@ -271,16 +320,24 @@ UIConversation.prototype = {
    },
  
    observeConv: function(aTargetId, aSubject, aTopic, aData) {
@@ -271,7 +247,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
          this.notifyObservers(aSubject, "new-directed-incoming-message", aData);
          Services.obs.notifyObservers(aSubject, "new-directed-incoming-message", aData);
        }
-@@ -294,17 +371,42 @@ UIConversation.prototype = {
+@@ -294,17 +351,42 @@ UIConversation.prototype = {
  
    // prplIConversation
    get isChat() this.target.isChat,
@@ -282,7 +258,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
    get startDate() this.target.startDate,
 -  sendMsg: function (aMsg) { this.target.sendMsg(aMsg); },
 +  sendMsg: function(aMsg) {
-+    // add-ons (eg. pastebin) have an opportunity to cancel the message at this
++    // Add-ons (eg. pastebin) have an opportunity to cancel the message at this
 +    // point, or change the text content of the message.
 +    // If an add-on wants to split a message, it should truncate the first
 +    // message, and insert new messages using the conversation's sendMsg method.
@@ -291,20 +267,20 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
 +    if (om.cancelled)
 +      return;
 +
-+    // prpls have an opportunity here to preprocess messages before they are
-+    // sent, eg. split long messages. If a message is split here, the split 
++    // Prpls have an opportunity here to preprocess messages before they are
++    // sent (eg. split long messages). If a message is split here, the split
 +    // will be visible in the UI.
-+    // prpls can return null if they don't need to make any change
++    // Prpls can return null if they don't need to make any changes.
 +    let messages = this.target.prepareForSending(om) || [om.message];
 +
 +    for (let msg of messages) {
-+      // add-ons (eg. OTR) have an opportunity to tweak or cancel the message
-+      // point.
-+      let sm = new SendableMessage(msg, this.target);
-+      this.notifyObservers(sm, "sending-message");
-+      if (sm.cancelled)
++      // Add-ons (eg. OTR) have an opportunity to tweak or cancel the message
++      // at this point.
++      om = new OutgoingMessage(msg, this.target);
++      this.notifyObservers(om, "sending-message");
++      if (om.cancelled)
 +        continue;
-+      sm.getSendableMessages().forEach((m) => this.target.sendMsg(m));
++      this.target.sendMsg(om.message);
 +    }
 +  },
    unInit: function() {
@@ -401,7 +377,7 @@ diff --git a/chat/content/convbrowser.xml b/chat/content/convbrowser.xml
 diff --git a/chat/modules/imThemes.jsm b/chat/modules/imThemes.jsm
 --- a/chat/modules/imThemes.jsm
 +++ b/chat/modules/imThemes.jsm
-@@ -365,17 +365,17 @@ const statusMessageReplacements = {
+@@ -361,17 +361,17 @@ const statusMessageReplacements = {
      else {
        msgClass.push("message");
  
@@ -420,7 +396,7 @@ diff --git a/chat/modules/imThemes.jsm b/chat/modules/imThemes.jsm
  
      if (aMsg.containsNick)
        msgClass.push("nick");
-@@ -490,21 +490,21 @@ function getHTMLForMessage(aMsg, aTheme,
+@@ -486,21 +486,21 @@ function getHTMLForMessage(aMsg, aTheme,
    else {
      html = aMsg.incoming ? "incoming" : "outgoing";
      if (aIsNext)
@@ -444,7 +420,7 @@ diff --git a/chat/modules/imThemes.jsm b/chat/modules/imThemes.jsm
      }
    }
  
-@@ -894,17 +894,17 @@ SelectedMessage.prototype = {
+@@ -890,17 +890,17 @@ SelectedMessage.prototype = {
      let html, replacements;
      if (msg.system) {
        replacements = statusReplacements;
@@ -567,10 +543,10 @@ diff --git a/chat/protocols/irc/irc.js b/chat/protocols/irc/irc.js
 diff --git a/chat/protocols/xmpp/xmpp.jsm b/chat/protocols/xmpp/xmpp.jsm
 --- a/chat/protocols/xmpp/xmpp.jsm
 +++ b/chat/protocols/xmpp/xmpp.jsm
-@@ -28,16 +28,21 @@ XPCOMUtils.defineLazyModuleGetter(this, 
- XPCOMUtils.defineLazyServiceGetter(this, "imgTools",
-                                    "@mozilla.org/image/tools;1",
-                                    "imgITools");
+@@ -32,16 +32,21 @@ XPCOMUtils.defineLazyServiceGetter(this,
+ XPCOMUtils.defineLazyServiceGetter(this, "UuidGenerator",
+                                    "@mozilla.org/uuid-generator;1",
+                                    "nsIUUIDGenerator");
  
  XPCOMUtils.defineLazyGetter(this, "_", function()
    l10nHelper("chrome://chat/locale/xmpp.properties")
@@ -589,7 +565,7 @@ diff --git a/chat/protocols/xmpp/xmpp.jsm b/chat/protocols/xmpp/xmpp.jsm
   *          owner     -> founder
   */
  const kRoles = ["outcast", "visitor", "participant", "member", "moderator",
-@@ -233,32 +238,35 @@ const XMPPConversationPrototype = {
+@@ -239,32 +244,35 @@ const XMPPConversationPrototype = {
    _targetResource: "",
    get to() {
      let to = this.buddy.userName;
