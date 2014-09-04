@@ -1,3 +1,13 @@
+# HG changeset patch
+# User Arlo Breault <arlolra@gmail.com>
+# Date 1409207291 25200
+#      Wed Aug 27 23:28:11 2014 -0700
+# Node ID 956828be4d6f6303c203d15156b42e5729b9cbbc
+# Parent  f54bd01f595b76e980d6661b7316fd8738b10119
+An API to support OTR-like protocols in Instantbird
+
+Bug: 983347
+
 diff --git a/chat/components/public/imIConversationsService.idl b/chat/components/public/imIConversationsService.idl
 --- a/chat/components/public/imIConversationsService.idl
 +++ b/chat/components/public/imIConversationsService.idl
@@ -40,7 +50,7 @@ diff --git a/chat/components/public/imIConversationsService.idl b/chat/component
    void unInitConversations();
  
    // Register a conversation. This will create a unique id for the
-@@ -62,8 +63,28 @@ interface imIConversationsService: nsISu
+@@ -62,8 +63,29 @@ interface imIConversationsService: nsISu
    imIConversation getUIConversationByContactId(in long aId);
  
    nsISimpleEnumerator getConversations();
@@ -63,11 +73,12 @@ diff --git a/chat/components/public/imIConversationsService.idl b/chat/component
 +// A cancellable message to be displayed. When the conversation service is
 +// notified of a new-text (ie. an incoming or outgoing message to be displayed),
 +// it in turn notifies observers (again, typically add-ons), which have the
-+// opportunity to swap or cancel the message.
++// opportunity to swap or cancel the message. The displayMessage field is what
++// eventually gets shown to the user.
 +[scriptable, uuid(bd2f77d4-1fad-432d-a914-6bb5ed5c13d0)]
 +interface imIMessage: prplIMessage {
 +           attribute boolean cancelled;
-+           attribute AUTF8String decodedMessage;
++           attribute AUTF8String displayMessage;
 +};
 diff --git a/chat/components/public/imILogger.idl b/chat/components/public/imILogger.idl
 --- a/chat/components/public/imILogger.idl
@@ -132,7 +143,7 @@ diff --git a/chat/components/public/prplIConversation.idl b/chat/components/publ
   * This is the XPCOM purple conversation component, a proxy for PurpleConversation.
   */
  
-@@ -40,16 +41,20 @@ interface prplIConversation: nsISupports
+@@ -40,16 +41,22 @@ interface prplIConversation: nsISupports
    readonly attribute PRTime startDate;
    /* Unique identifier of the conversation */
    /* Setable only once by purpleCoreService while calling addConversation. */
@@ -141,6 +152,8 @@ diff --git a/chat/components/public/prplIConversation.idl b/chat/components/publ
    /* Send a message in the conversation */
    void sendMsg(in AUTF8String aMsg);
  
++  /* Preprocess messages before they are sent (eg. split long messages).
++     Can return null if no changes are to be made. */
 +  void prepareForSending(in imIOutgoingMessage message,
 +                         [optional] out unsigned long messageCount,
 +                         [retval, array, size_is(messageCount)] out string messages);
@@ -165,30 +178,30 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
    Services.strings.createBundle("chrome://chat/locale/conversations.properties")
  );
  
-+function OutgoingMessage(message, conversation) {
-+  this.message = message;
-+  this.conversation = conversation;
++function OutgoingMessage(aMessage, aConversation) {
++  this.message = aMessage;
++  this.conversation = aConversation;
 +}
 +OutgoingMessage.prototype = {
 +  __proto__: ClassInfo("imIOutgoingMessage", "Outgoing Message"),
 +  cancelled: false
 +};
 +
-+function imMessage(prplMessage) {
-+  this.prplMessage = prplMessage;
++function imMessage(aPrplMessage) {
++  this.prplMessage = aPrplMessage;
 +}
 +imMessage.prototype = {
 +  __proto__: ClassInfo(["imIMessage", "prplIMessage"], "IM Message"),
 +  cancelled: false,
-+  _decodedMessage: null,
++  _displayMessage: null,
 +
-+  get decodedMessage() {
-+    return this._decodedMessage || this.prplMessage.originalMessage;
++  get displayMessage() {
++    return this._displayMessage || this.prplMessage.originalMessage;
 +  },
-+  set decodedMessage(msg) { this._decodedMessage = msg; },
++  set displayMessage(aMsg) { this._displayMessage = aMsg; },
 +
 +  get message() this.prplMessage.message,
-+  set message(msg) { this.prplMessage.message = msg; },
++  set message(aMsg) { this.prplMessage.message = aMsg; },
 +
 +  // from prplIMessage
 +  get who() this.prplMessage.who,
@@ -247,7 +260,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
          this.notifyObservers(aSubject, "new-directed-incoming-message", aData);
          Services.obs.notifyObservers(aSubject, "new-directed-incoming-message", aData);
        }
-@@ -294,17 +351,42 @@ UIConversation.prototype = {
+@@ -294,17 +351,47 @@ UIConversation.prototype = {
  
    // prplIConversation
    get isChat() this.target.isChat,
@@ -267,11 +280,16 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
 +    if (om.cancelled)
 +      return;
 +
-+    // Prpls have an opportunity here to preprocess messages before they are
++    // Protocols have an opportunity here to preprocess messages before they are
 +    // sent (eg. split long messages). If a message is split here, the split
 +    // will be visible in the UI.
-+    // Prpls can return null if they don't need to make any changes.
-+    let messages = this.target.prepareForSending(om) || [om.message];
++    let messages = this.target.prepareForSending(om);
++
++    // Protocols can return null if they don't need to make any changes.
++    // (nb. passing null with retval array results in an empty array)
++    if (messages.length == 0) {
++      messages = [om.message];
++    }
 +
 +    for (let msg of messages) {
 +      // Add-ons (eg. OTR) have an opportunity to tweak or cancel the message
@@ -304,7 +322,7 @@ diff --git a/chat/components/src/logger.js b/chat/components/src/logger.js
          date: new Date(aMessage.time * 1000),
          who: aMessage.who,
 -        text: aMessage.originalMessage,
-+        text: aMessage.decodedMessage,
++        text: aMessage.displayMessage,
          flags: ["outgoing", "incoming", "system", "autoResponse",
                  "containsNick", "error", "delayed",
                  "noFormat", "containsImages", "notification",
@@ -320,7 +338,7 @@ diff --git a/chat/components/src/logger.js b/chat/components/src/logger.js
        let date = new Date(aMessage.time * 1000);
        let line = "(" + date.toLocaleTimeString() + ") ";
 -      let msg = this._serialize(aMessage.originalMessage);
-+      let msg = this._serialize(aMessage.decodedMessage);
++      let msg = this._serialize(aMessage.displayMessage);
        if (aMessage.system)
          line += msg;
        else {
@@ -342,7 +360,7 @@ diff --git a/chat/components/src/logger.js b/chat/components/src/logger.js
 +LogMessage.prototype = {
 +  __proto__: GenericMessagePrototype,
 +  _interfaces: [Ci.imIMessage, Ci.prplIMessage],
-+  get decodedMessage() this.originalMessage
++  get displayMessage() this.originalMessage
 +};
  
  
@@ -365,7 +383,7 @@ diff --git a/chat/content/convbrowser.xml b/chat/content/convbrowser.xml
                this.setUnreadRuler();
  
 -            let msg = aMsg.originalMessage;
-+            let msg = aMsg.decodedMessage;
++            let msg = aMsg.displayMessage;
  
              // The slash of a leading '/me' should not be used to
              // format as italic, so we remove the '/me' text before
@@ -387,7 +405,7 @@ diff --git a/chat/modules/imThemes.jsm b/chat/modules/imThemes.jsm
          msgClass.push("outgoing");
  
 -      if (/^(<[^>]+>)*\/me /.test(aMsg.originalMessage))
-+      if (/^(<[^>]+>)*\/me /.test(aMsg.decodedMessage))
++      if (/^(<[^>]+>)*\/me /.test(aMsg.displayMessage))
          msgClass.push("action");
  
        if (aMsg.autoResponse)
@@ -406,12 +424,12 @@ diff --git a/chat/modules/imThemes.jsm b/chat/modules/imThemes.jsm
      replacements = messageReplacements;
      let meRegExp = /^((<[^>]+>)*)\/me /;
 -    // We must test originalMessage here as aMsg.message loses its /me
-+    // We must test decodedMessage here as aMsg.message loses its /me
++    // We must test displayMessage here as aMsg.message loses its /me
      // in the following, so if getHTMLForMessage is called a second time for
      // the same aMsg (e.g. because it follows the unread ruler), the test
      // would fail otherwise.
 -    if (meRegExp.test(aMsg.originalMessage)) {
-+    if (meRegExp.test(aMsg.decodedMessage)) {
++    if (meRegExp.test(aMsg.displayMessage)) {
        aMsg.message = aMsg.message.replace(meRegExp, "$1");
        let actionMessageTemplate = "* %message% *";
        if (hasMetadataKey(aTheme, "ActionMessageTemplate"))
@@ -430,7 +448,7 @@ diff --git a/chat/modules/imThemes.jsm b/chat/modules/imThemes.jsm
      else {
        replacements = messageReplacements;
 -      if (/^(<[^>]+>)*\/me /.test(msg.originalMessage)) {
-+      if (/^(<[^>]+>)*\/me /.test(msg.decodedMessage)) {
++      if (/^(<[^>]+>)*\/me /.test(msg.displayMessage)) {
          html = getLocalizedPrefWithDefault("actionMessagesTemplate",
                                             "%time% * %sender% %message%");
        }
@@ -543,30 +561,7 @@ diff --git a/chat/protocols/irc/irc.js b/chat/protocols/irc/irc.js
 diff --git a/chat/protocols/xmpp/xmpp.jsm b/chat/protocols/xmpp/xmpp.jsm
 --- a/chat/protocols/xmpp/xmpp.jsm
 +++ b/chat/protocols/xmpp/xmpp.jsm
-@@ -32,16 +32,21 @@ XPCOMUtils.defineLazyServiceGetter(this,
- XPCOMUtils.defineLazyServiceGetter(this, "UuidGenerator",
-                                    "@mozilla.org/uuid-generator;1",
-                                    "nsIUUIDGenerator");
- 
- XPCOMUtils.defineLazyGetter(this, "_", function()
-   l10nHelper("chrome://chat/locale/xmpp.properties")
- );
- 
-+XPCOMUtils.defineLazyGetter(this, "TXTToHTML", function() {
-+  let cs = Cc["@mozilla.org/txttohtmlconv;1"].getService(Ci.mozITXTToHTMLConv);
-+  return function(aTXT) cs.scanTXT(aTXT, cs.kEntities);
-+});
-+
- /* This is an ordered list, used to determine chat buddy flags:
-  *  index < member    -> noFlags
-  *  index = member    -> voiced
-  *          moderator -> halfOp
-  *          admin     -> op
-  *          owner     -> founder
-  */
- const kRoles = ["outcast", "visitor", "participant", "member", "moderator",
-@@ -239,32 +244,35 @@ const XMPPConversationPrototype = {
-   _targetResource: "",
+@@ -240,31 +240,28 @@ const XMPPConversationPrototype = {
    get to() {
      let to = this.buddy.userName;
      if (this._targetResource)
@@ -574,12 +569,6 @@ diff --git a/chat/protocols/xmpp/xmpp.jsm b/chat/protocols/xmpp/xmpp.jsm
      return to;
    },
  
-+  prepareForSending: function(aOm, aCount) {
-+    if (aCount)
-+      aCount.value = 1;
-+    return [TXTToHTML(aOm.message)];
-+  },
-+
    /* Called when the user enters a chat message */
 -  sendMsg: function (aMsg) {
 +  sendMsg: function(aMsg) {

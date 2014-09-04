@@ -452,14 +452,14 @@ OTR.prototype = {
       return;
 
     if (im.outgoing) {
-      log("outgoing message to display: " + im.decodedMessage)
+      log("outgoing message to display: " + im.displayMessage)
       this.pluckMsg(im);
       return;
     }
 
     let conv = new Conv(im.conversation);
     let newMessage = new ctypes.char.ptr();
-    log("pre receiving: " + im.decodedMessage)
+    log("pre receiving: " + im.displayMessage)
 
     let res = libotr.otrl_message_receiving(
       this.userstate,
@@ -468,7 +468,7 @@ OTR.prototype = {
       conv.account,
       conv.protocol,
       conv.name,
-      im.decodedMessage,
+      im.displayMessage,
       newMessage.address(),
       null,
       null,
@@ -477,14 +477,14 @@ OTR.prototype = {
     );
 
     if (!newMessage.isNull()) {
-      im.decodedMessage = newMessage.readString();
+      im.displayMessage = newMessage.readString();
     }
 
     if (res) {
-      log("error (" + res + ") ignoring: " + im.decodedMessage)
+      log("error (" + res + ") ignoring: " + im.displayMessage)
       im.cancelled = true;  // ignore
     } else {
-      log("post receiving: " + im.decodedMessage)
+      log("post receiving: " + im.displayMessage)
     }
 
     libotr.otrl_message_free(newMessage);
@@ -522,8 +522,8 @@ OTR.prototype = {
     let buf = this._buffer;
     for (let i = 0; i < buf.length; i++) {
       let b = buf[i];
-      if (b.conv === im.conversation && b.sent === im.decodedMessage) {
-        im.decodedMessage = b.disp;
+      if (b.conv === im.conversation && b.sent === im.displayMessage) {
+        im.displayMessage = b.disp;
         buf.splice(i, 1);
         log("displaying: " + b.disp)
         return;
@@ -531,7 +531,7 @@ OTR.prototype = {
     }
     // don't display if it wasn't buffered
     im.cancelled = true;
-    log("not displaying: " + im.decodedMessage)
+    log("not displaying: " + im.displayMessage)
   }
 
 };
