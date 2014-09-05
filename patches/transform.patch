@@ -2,7 +2,7 @@
 # User Arlo Breault <arlolra@gmail.com>
 # Date 1409207291 25200
 #      Wed Aug 27 23:28:11 2014 -0700
-# Node ID 0ce7ef712c12473341cb492bba3d0d0d9da1b727
+# Node ID 35b6b091c351165d4a7a21e468d5afe6842efb14
 # Parent  f54bd01f595b76e980d6661b7316fd8738b10119
 An API to support OTR-like protocols in Instantbird
 
@@ -169,7 +169,7 @@ diff --git a/chat/components/public/prplIConversation.idl b/chat/components/publ
 diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConversations.js
 --- a/chat/components/src/imConversations.js
 +++ b/chat/components/src/imConversations.js
-@@ -10,16 +10,65 @@ Cu.import("resource:///modules/jsProtoHe
+@@ -10,16 +10,25 @@ Cu.import("resource:///modules/jsProtoHe
  
  var gLastUIConvId = 0;
  var gLastPrplConvId = 0;
@@ -187,46 +187,6 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
 +  cancelled: false
 +};
 +
-+function imMessage(aPrplMessage) {
-+  this.prplMessage = aPrplMessage;
-+}
-+imMessage.prototype = {
-+  __proto__: ClassInfo(["imIMessage", "prplIMessage"], "IM Message"),
-+  cancelled: false,
-+  _displayMessage: null,
-+
-+  get displayMessage() {
-+    return this._displayMessage || this.prplMessage.originalMessage;
-+  },
-+  set displayMessage(aMsg) { this._displayMessage = aMsg; },
-+
-+  get message() this.prplMessage.message,
-+  set message(aMsg) { this.prplMessage.message = aMsg; },
-+
-+  // from prplIMessage
-+  get who() this.prplMessage.who,
-+  get time() this.prplMessage.time,
-+  get id() this.prplMessage.id,
-+  get alias() this.prplMessage.alias,
-+  get iconURL() this.prplMessage.iconURL,
-+  get conversation() this.prplMessage.conversation,
-+  set conversation(aConv) { this.prplMessage.conversation = aConv; },
-+  get color() this.prplMessage.color,
-+  get outgoing() this.prplMessage.outgoing,
-+  get incoming() this.prplMessage.incoming,
-+  get system() this.prplMessage.system,
-+  get autoResponse() this.prplMessage.autoResponse,
-+  get containsNick() this.prplMessage.containsNick,
-+  get noLog() this.prplMessage.noLog,
-+  get error() this.prplMessage.error,
-+  get delayed() this.prplMessage.delayed,
-+  get noFormat() this.prplMessage.noFormat,
-+  get containsImages() this.prplMessage.containsImages,
-+  get notification() this.prplMessage.notification,
-+  get noLinkification() this.prplMessage.noLinkification,
-+  getActions: function(aCount) this.prplMessage.getActions(aCount)
-+};
-+
  function UIConversation(aPrplConversation)
  {
    this._prplConv = {};
@@ -235,7 +195,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
    this._messages = [];
    this.changeTargetTo(aPrplConversation);
    let iface = Ci["prplIConv" + (aPrplConversation.isChat ? "Chat" : "IM")];
-@@ -271,16 +320,24 @@ UIConversation.prototype = {
+@@ -271,16 +280,23 @@ UIConversation.prototype = {
    },
  
    observeConv: function(aTargetId, aSubject, aTopic, aData) {
@@ -246,7 +206,6 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
        this.target = this._prplConv[aTargetId];
 +
 +    if (aTopic == "new-text") {
-+      aSubject = new imMessage(aSubject);
 +      this.notifyObservers(aSubject, "received-message");
 +      if (aSubject.cancelled)
 +        return;
@@ -260,7 +219,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
          this.notifyObservers(aSubject, "new-directed-incoming-message", aData);
          Services.obs.notifyObservers(aSubject, "new-directed-incoming-message", aData);
        }
-@@ -294,17 +351,47 @@ UIConversation.prototype = {
+@@ -294,17 +310,47 @@ UIConversation.prototype = {
  
    // prplIConversation
    get isChat() this.target.isChat,
@@ -460,7 +419,84 @@ diff --git a/chat/modules/imThemes.jsm b/chat/modules/imThemes.jsm
 diff --git a/chat/modules/jsProtoHelper.jsm b/chat/modules/jsProtoHelper.jsm
 --- a/chat/modules/jsProtoHelper.jsm
 +++ b/chat/modules/jsProtoHelper.jsm
-@@ -467,17 +467,18 @@ const GenericConversationPrototype = {
+@@ -394,17 +394,17 @@ const GenericMessagePrototype = {
+         return buddy.buddyIconFilename;
+     }
+     return "";
+   },
+   _conversation: null,
+   get conversation() this._conversation,
+   set conversation(aConv) {
+     this._conversation = aConv;
+-    aConv.notifyObservers(this, "new-text", null);
++    aConv.notifyObservers(new imMessage(this), "new-text", null);
+   },
+ 
+   color: "",
+ 
+   outgoing: false,
+   incoming: false,
+   system: false,
+   autoResponse: false,
+@@ -425,16 +425,57 @@ const GenericMessagePrototype = {
+ };
+ 
+ function Message(aWho, aMessage, aObject) {
+   this._init(aWho, aMessage, aObject);
+ }
+ Message.prototype = GenericMessagePrototype;
+ 
+ 
++function imMessage(aPrplMessage) {
++  this.prplMessage = aPrplMessage;
++}
++imMessage.prototype = {
++  __proto__: ClassInfo(["imIMessage", "prplIMessage"], "IM Message"),
++  cancelled: false,
++  _displayMessage: null,
++
++  get displayMessage() {
++    return this._displayMessage || this.prplMessage.originalMessage;
++  },
++  set displayMessage(aMsg) { this._displayMessage = aMsg; },
++
++  get message() this.prplMessage.message,
++  set message(aMsg) { this.prplMessage.message = aMsg; },
++
++  // from prplIMessage
++  get who() this.prplMessage.who,
++  get time() this.prplMessage.time,
++  get id() this.prplMessage.id,
++  get alias() this.prplMessage.alias,
++  get iconURL() this.prplMessage.iconURL,
++  get conversation() this.prplMessage.conversation,
++  set conversation(aConv) { this.prplMessage.conversation = aConv; },
++  get color() this.prplMessage.color,
++  get outgoing() this.prplMessage.outgoing,
++  get incoming() this.prplMessage.incoming,
++  get system() this.prplMessage.system,
++  get autoResponse() this.prplMessage.autoResponse,
++  get containsNick() this.prplMessage.containsNick,
++  get noLog() this.prplMessage.noLog,
++  get error() this.prplMessage.error,
++  get delayed() this.prplMessage.delayed,
++  get noFormat() this.prplMessage.noFormat,
++  get containsImages() this.prplMessage.containsImages,
++  get notification() this.prplMessage.notification,
++  get noLinkification() this.prplMessage.noLinkification,
++  getActions: function(aCount) this.prplMessage.getActions(aCount)
++};
++
++
+ const GenericConversationPrototype = {
+   __proto__: ClassInfo("prplIConversation", "generic conversation object"),
+   get wrappedJSObject() this,
+ 
+   get DEBUG() this._account.DEBUG,
+   get LOG() this._account.LOG,
+   get WARN() this._account.WARN,
+   get ERROR() this._account.ERROR,
+@@ -467,17 +508,18 @@ const GenericConversationPrototype = {
        try {
          observer.observe(aSubject, aTopic, aData);
        } catch(e) {
