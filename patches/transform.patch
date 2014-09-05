@@ -2,7 +2,7 @@
 # User Arlo Breault <arlolra@gmail.com>
 # Date 1409207291 25200
 #      Wed Aug 27 23:28:11 2014 -0700
-# Node ID 956828be4d6f6303c203d15156b42e5729b9cbbc
+# Node ID 0ce7ef712c12473341cb492bba3d0d0d9da1b727
 # Parent  f54bd01f595b76e980d6661b7316fd8738b10119
 An API to support OTR-like protocols in Instantbird
 
@@ -60,7 +60,7 @@ diff --git a/chat/components/public/imIConversationsService.idl b/chat/component
                                                      in boolean aIsChat);
  };
 +
-+// A cancellable outgoing message. Before handing a message off to a prpl,
++// A cancellable outgoing message. Before handing a message off to a protocol,
 +// the conversation service notifies observers (typically add-ons) of an
 +// outgoing message, which can be transformed or cancelled.
 +[scriptable, uuid(4391ba5c-9566-41a9-bb9b-fd0a0a490c2c)]
@@ -73,11 +73,11 @@ diff --git a/chat/components/public/imIConversationsService.idl b/chat/component
 +// A cancellable message to be displayed. When the conversation service is
 +// notified of a new-text (ie. an incoming or outgoing message to be displayed),
 +// it in turn notifies observers (again, typically add-ons), which have the
-+// opportunity to swap or cancel the message. The displayMessage field is what
-+// eventually gets shown to the user.
++// opportunity to swap or cancel the message.
 +[scriptable, uuid(bd2f77d4-1fad-432d-a914-6bb5ed5c13d0)]
 +interface imIMessage: prplIMessage {
 +           attribute boolean cancelled;
++           // What eventually gets shown to the user.
 +           attribute AUTF8String displayMessage;
 +};
 diff --git a/chat/components/public/imILogger.idl b/chat/components/public/imILogger.idl
@@ -156,7 +156,7 @@ diff --git a/chat/components/public/prplIConversation.idl b/chat/components/publ
 +     Can return null if no changes are to be made. */
 +  void prepareForSending(in imIOutgoingMessage message,
 +                         [optional] out unsigned long messageCount,
-+                         [retval, array, size_is(messageCount)] out string messages);
++                         [retval, array, size_is(messageCount)] out wstring messages);
 +
    /* Send information about the current typing state to the server.
       aString should contain the content currently in the text field. The
@@ -178,8 +178,8 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
    Services.strings.createBundle("chrome://chat/locale/conversations.properties")
  );
  
-+function OutgoingMessage(aMessage, aConversation) {
-+  this.message = aMessage;
++function OutgoingMessage(aMsg, aConversation) {
++  this.message = aMsg;
 +  this.conversation = aConversation;
 +}
 +OutgoingMessage.prototype = {
@@ -470,7 +470,7 @@ diff --git a/chat/modules/jsProtoHelper.jsm b/chat/modules/jsProtoHelper.jsm
    },
  
 -  sendMsg: function (aMsg) {
-+  prepareForSending: function(aOm, aCount) null,
++  prepareForSending: function(aOutgoingMessage, aCount) null,
 +  sendMsg: function(aMsg) {
      throw Cr.NS_ERROR_NOT_IMPLEMENTED;
    },
@@ -493,10 +493,10 @@ diff --git a/chat/protocols/irc/irc.js b/chat/protocols/irc/irc.js
             this._account.countBytes(baseMessage);
    },
 -  sendMsg: function(aMessage) {
-+  prepareForSending: function(aOm, aCount) {
++  prepareForSending: function(aOutgoingMessage, aCount) {
      // Split the message by line breaks and send each one individually.
 -    let messages = aMessage.split(/[\r\n]+/);
-+    let messages = aOm.message.split(/[\r\n]+/);
++    let messages = aOutgoingMessage.message.split(/[\r\n]+/);
  
      let maxLength = this.getMaxMessageLength();
  
