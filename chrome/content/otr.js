@@ -298,8 +298,6 @@ OTR.prototype = {
     case libotr.messageEvent.OTRL_MSGEVENT_CONNECTION_ENDED:
       this.sendAlert(context, "The other side ended the OTR session." +
                               " You should too.");
-      // The message is still being displayed (to investigate). Why does libotr
-      // inject an empty msg at this point? ... and not return an error?
       break;
     default:
       log("msg event: " + msg_event)
@@ -433,14 +431,16 @@ OTR.prototype = {
 
     let msg = "";
     if (newMessage.isNull()) {
-      log("null message ... what to do?")  // target.writeMessage
-      // cancel, but should we ever get here?
       om.cancelled = true;
     } else {
       msg = newMessage.readString();
-      // check
-      this.bufferMsg(om.conversation, om.message, msg);
-      om.message = msg;
+      if (!msg) {
+        // https://bugs.otr.im/issues/52
+        om.cancelled = true;
+      } else {
+        this.bufferMsg(om.conversation, om.message, msg);
+        om.message = msg;
+      }
     }
 
     log("post sending (" + !om.cancelled + "): " + msg);
