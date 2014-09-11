@@ -1,0 +1,85 @@
+# HG changeset patch
+# User Arlo Breault <arlolra@gmail.com>
+# Date 1410462708 25200
+#      Thu Sep 11 12:11:48 2014 -0700
+# Node ID 3894a28aba5979d311c53c892e896e8fd3085453
+# Parent  ff0c1a9ea8eb1b65c56b9e46f7fd739e8916f7cb
+Add PrepareForSending to purpleConversation
+
+ * Needed for transform API.
+
+Bug: 983347
+
+diff --git a/purplexpcom/src/purpleConvChat.h b/purplexpcom/src/purpleConvChat.h
+--- a/purplexpcom/src/purpleConvChat.h
++++ b/purplexpcom/src/purpleConvChat.h
+@@ -55,16 +55,19 @@ public:
+     return purpleConversation::Close();
+   }
+   NS_IMETHOD AddObserver(nsIObserver *aObserver) {
+     return purpleConversation::AddObserver(aObserver);
+   }
+   NS_IMETHOD RemoveObserver(nsIObserver *aObserver) {
+     return purpleConversation::RemoveObserver(aObserver);
+   }
++  NS_IMETHOD PrepareForSending(imIOutgoingMessage *message, uint32_t *messageCount, char16_t * **messages) {
++    return purpleConversation::PrepareForSending(message, messageCount, messages);
++  }
+ 
+   // Keep the SendMsg method here
+   NS_IMETHOD SendMsg(const nsACString & aMsg);
+ 
+   purpleConvChat();
+ 
+ private:
+   ~purpleConvChat();
+diff --git a/purplexpcom/src/purpleConvIM.h b/purplexpcom/src/purpleConvIM.h
+--- a/purplexpcom/src/purpleConvIM.h
++++ b/purplexpcom/src/purpleConvIM.h
+@@ -50,16 +50,19 @@ public:
+     return purpleConversation::Close();
+   }
+   NS_IMETHOD AddObserver(nsIObserver *aObserver) {
+     return purpleConversation::AddObserver(aObserver);
+   }
+   NS_IMETHOD RemoveObserver(nsIObserver *aObserver) {
+     return purpleConversation::RemoveObserver(aObserver);
+   }
++  NS_IMETHOD PrepareForSending(imIOutgoingMessage *message, uint32_t *messageCount, char16_t * **messages) {
++    return purpleConversation::PrepareForSending(message, messageCount, messages);
++  }
+ 
+   // Keep the SendMsg and SendTyping methods here.
+   NS_IMETHOD SendMsg(const nsACString & aMsg);
+   NS_IMETHODIMP SendTyping(const nsACString & aString, int32_t *_retval);
+ 
+   purpleConvIM();
+ 
+ private:
+diff --git a/purplexpcom/src/purpleConversation.cpp b/purplexpcom/src/purpleConversation.cpp
+--- a/purplexpcom/src/purpleConversation.cpp
++++ b/purplexpcom/src/purpleConversation.cpp
+@@ -146,16 +146,23 @@ NS_IMETHODIMP purpleConversation::SetId(
+ }
+ 
+ /* void sendMsg (in AUTF8String aMsg); */
+ NS_IMETHODIMP purpleConversation::SendMsg(const nsACString& aMsg)
+ {
+   return NS_ERROR_NOT_IMPLEMENTED;
+ }
+ 
++/* void prepareForSending (in imIOutgoingMessage message, [optional] out unsigned long messageCount, [array, size_is (messageCount), retval] out wstring messages); */
++NS_IMETHODIMP purpleConversation::PrepareForSending(imIOutgoingMessage *message, uint32_t *messageCount, char16_t * **messages)
++{
++  messages = NULL;
++  return NS_OK;
++}
++
+ /* void sendTyping (in unsigned long aLength); */
+ NS_IMETHODIMP purpleConversation::SendTyping(const nsACString & aString, int32_t *_retval)
+ {
+   *_retval = purpleConversation::NO_TYPING_LIMIT;
+   return NS_OK;
+ }
+ 
+ /* void close (); */
