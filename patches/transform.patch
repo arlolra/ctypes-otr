@@ -2,8 +2,8 @@
 # User Arlo Breault <arlolra@gmail.com>
 # Date 1409207291 25200
 #      Wed Aug 27 23:28:11 2014 -0700
-# Node ID 6dae77160e64b507ed2e9ec5607da7e21d12917c
-# Parent  f54bd01f595b76e980d6661b7316fd8738b10119
+# Node ID 6f82442fd8398e2aff75ce365cc0206757249a49
+# Parent  d11154756a94ae8e259777a8d476061d5f757a92
 An API to support OTR-like protocols in Instantbird
 
 Bug: 983347
@@ -154,9 +154,9 @@ diff --git a/chat/components/public/prplIConversation.idl b/chat/components/publ
  
 +  /* Preprocess messages before they are sent (eg. split long messages).
 +     Can return null if no changes are to be made. */
-+  void prepareForSending(in imIOutgoingMessage message,
-+                         [optional] out unsigned long messageCount,
-+                         [retval, array, size_is(messageCount)] out wstring messages);
++  void prepareForSending(in imIOutgoingMessage aMsg,
++                         [optional] out unsigned long aMsgCount,
++                         [retval, array, size_is(aMsgCount)] out wstring aMsgs);
 +
    /* Send information about the current typing state to the server.
       aString should contain the content currently in the text field. The
@@ -235,7 +235,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
    this._messages = [];
    this.changeTargetTo(aPrplConversation);
    let iface = Ci["prplIConv" + (aPrplConversation.isChat ? "Chat" : "IM")];
-@@ -271,40 +320,63 @@ UIConversation.prototype = {
+@@ -271,40 +320,62 @@ UIConversation.prototype = {
    },
  
    observeConv: function(aTargetId, aSubject, aTopic, aData) {
@@ -286,9 +286,8 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
 +
 +    // Protocols can return null if they don't need to make any changes.
 +    // (nb. passing null with retval array results in an empty array)
-+    if (messages.length == 0) {
++    if (!messages.length)
 +      messages = [om.message];
-+    }
 +
 +    for (let msg of messages) {
 +      // Add-ons (eg. OTR) have an opportunity to tweak or cancel the message
@@ -308,7 +307,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
        delete this._observedContact;
      }
      this._prplConv = {}; // Prevent .close from failing.
-@@ -324,30 +396,45 @@ UIConversation.prototype = {
+@@ -324,30 +395,45 @@ UIConversation.prototype = {
      if (this._observers.indexOf(aObserver) == -1)
        this._observers.push(aObserver);
    },
@@ -357,7 +356,7 @@ diff --git a/chat/components/src/imConversations.js b/chat/components/src/imConv
 diff --git a/chat/components/src/logger.js b/chat/components/src/logger.js
 --- a/chat/components/src/logger.js
 +++ b/chat/components/src/logger.js
-@@ -205,32 +205,32 @@ LogWriter.prototype = {
+@@ -204,32 +204,32 @@ LogWriter.prototype = {
      return encoder.encodeToString();
    },
    logMessage: function cl_logMessage(aMessage) {
@@ -392,7 +391,7 @@ diff --git a/chat/components/src/logger.js b/chat/components/src/logger.js
            line += sender + " <AUTO-REPLY>: " + msg;
          else {
            if (msg.startsWith("/me "))
-@@ -368,17 +368,21 @@ function LogMessage(aData, aConversation
+@@ -367,17 +367,21 @@ function LogMessage(aData, aConversation
    this._init(aData.who, aData.text);
    this._conversation = aConversation;
    this.time = Math.round(new Date(aData.date) / 1000);
@@ -505,7 +504,7 @@ diff --git a/chat/modules/imThemes.jsm b/chat/modules/imThemes.jsm
 diff --git a/chat/modules/jsProtoHelper.jsm b/chat/modules/jsProtoHelper.jsm
 --- a/chat/modules/jsProtoHelper.jsm
 +++ b/chat/modules/jsProtoHelper.jsm
-@@ -467,17 +467,18 @@ const GenericConversationPrototype = {
+@@ -478,17 +478,18 @@ const GenericConversationPrototype = {
        try {
          observer.observe(aSubject, aTopic, aData);
        } catch(e) {
