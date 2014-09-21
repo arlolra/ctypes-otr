@@ -9,9 +9,16 @@ Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
 // load libotr
-let uri = "chrome://otr/content/" + ctypes.libraryName("otr");
-uri = Cr.convertChromeURL(Services.io.newURI(uri, null, null));
-let libotr = ctypes.open(uri.QueryInterface(Ci.nsIFileURL).file.path);
+let libotr;
+try {
+  // look in standard locations
+  libotr = ctypes.open(ctypes.libraryName("otr"));
+} catch(e) {
+  // try in chrome
+  let uri = "chrome://otr/content/" + ctypes.libraryName("otr");
+  uri = Cr.convertChromeURL(Services.io.newURI(uri, null, null));
+  libotr = ctypes.open(uri.QueryInterface(Ci.nsIFileURL).file.path);
+}
 
 // libotr API version
 const otrl_version = [4, 0, 0];
