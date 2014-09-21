@@ -12,11 +12,8 @@ Intro
 Dev Env
 -------
 
-Download a [nightly build of Instantbird][3].
+Download a [nightly build of Instantbird][3]. And create profile,
 
-[3]: http://ftp.instantbird.com/instantbird/nightly/latest-trunk/
-
-And create proilfe,
 ```
 instantbird -ProfileManager
 ```
@@ -43,7 +40,9 @@ Now launch Instantbird w/ OTR enabled. The default policy is optimistic
 encryption. That means whitespace tags are appended to plaintext messages to
 start OTR. To manually enforce it, try sending a message with just ?OTRv2,3?
 or initiate with another client. Require encryption can be enabled in the
-addon settings.
+add-on settings.
+
+[3]: http://ftp.instantbird.com/instantbird/nightly/latest-trunk/
 
 Credits
 -------
