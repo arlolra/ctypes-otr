@@ -12,8 +12,9 @@ Intro
 Dev Env
 -------
 
-Download a nightly version of Instantbird from,
-http://ftp.instantbird.com/instantbird/nightly/latest-trunk/
+Download a [nightly build of Instantbird][3].
+
+[3]: http://ftp.instantbird.com/instantbird/nightly/latest-trunk/
 
 And create proilfe,
 ```
