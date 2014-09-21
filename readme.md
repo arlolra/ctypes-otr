@@ -12,7 +12,7 @@ Intro
 Dev Env
 -------
 
-Download a [nightly build of Instantbird][3]. And create profile,
+Download a [nightly build of Instantbird][3], and create a profile,
 
 ```
 instantbird -ProfileManager
@@ -47,7 +47,7 @@ add-on settings.
 Credits
 -------
 
-Inspired by [FireOTR](https://gitorious.org/fireotr)
+Inspired by [FireOTR](https://gitorious.org/fireotr).
 
 License
 -------
