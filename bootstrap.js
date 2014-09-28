@@ -31,7 +31,7 @@ let ui = {
     ui.otr.addObserver(ui);
     ui.otr.loadFiles().then(function() {
       log("attach handlers")
-      Services.obs.addObserver(ui.otr, "conversation-loaded", false);
+      Services.obs.addObserver(ui.otr, "new-ui-conversation", false);
       Services.obs.addObserver(ui, "conversation-loaded", false);
       Services.obs.addObserver(ui, "account-disconnecting", false);
       ui.prefs.addObserver("", ui, false);
@@ -212,7 +212,7 @@ let ui = {
   },
 
   destroy: function() {
-    Services.obs.removeObserver(ui.otr, "conversation-loaded");
+    Services.obs.removeObserver(ui.otr, "new-ui-conversation");
     Services.obs.removeObserver(ui, "conversation-loaded");
     Services.obs.removeObserver(ui, "account-disconnecting");
     Conversations._conversations.forEach(ui.resetConv);

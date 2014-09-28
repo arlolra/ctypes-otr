@@ -279,12 +279,14 @@ OTR.prototype = {
     context = new Context(context);
     switch(msg_event) {
     case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
-      this.sendAlert(context, "Received encrypted message but not currently" +
-                              " communicating privately: " + message.readString());
+      if (!message.isNull())
+        this.sendAlert(context, "Received encrypted message but not currently" +
+                                " communicating privately: " + message.readString());
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
-      this.sendAlert(context, "The following message was received" +
-                              " unencrypted: " + message.readString());
+      if (!message.isNull())
+        this.sendAlert(context, "The following message was received" +
+                                " unencrypted: " + message.readString());
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_RCVD:
       log("Heartbeat received from " + context.username + ".");
@@ -376,19 +378,14 @@ OTR.prototype = {
     case "received-message":
       this.onReceive(aObject);
       break;
-    case "conversation-loaded":
-      let binding = aObject.ownerDocument.getBindingParent(aObject);
-      let uiConv = binding._conv;
-      let aConv = uiConv.target;
-      let conv = new Conv(aConv);
-      if (!this.convos.get(conv.id)) {
-        this.convos.set(conv.id, conv);
-        uiConv.addObserver(this, "sending-message");
-        uiConv.addObserver(this, "received-message");
-        // generate a pk if necessary
-        if (this.privateKeyFingerprint(conv.account, conv.protocol) === null)
-          this.generatePrivateKey(conv.account, conv.protocol);
-      }
+    case "new-ui-conversation":
+      let conv = new Conv(aObject.target);
+      this.convos.set(conv.id, conv);
+      aObject.addObserver(this, "sending-message");
+      aObject.addObserver(this, "received-message");
+      // generate a pk if necessary
+      if (this.privateKeyFingerprint(conv.account, conv.protocol) === null)
+        this.generatePrivateKey(conv.account, conv.protocol);
       break;
     }
   },
