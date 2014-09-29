@@ -158,15 +158,14 @@ OTR.prototype = {
   // expose message states
   messageState: libotr.messageState,
 
-  // get the current message state
-  getMsgState: function(aConv) {
+  // get context from conv
+  getContext: function(aConv) {
     let conv = new Conv(aConv);
     let context = libotr.otrl_context_find(
       this.userstate, conv.name, conv.account, conv.protocol,
       libotr.OTRL_INSTAG_BEST, 1, null, null, null
     );
-    context = new Context(context);
-    return context.msgState;
+    return new Context(context);
   },
 
   disconnect: function(aConv) {
@@ -180,6 +179,17 @@ OTR.prototype = {
       conv.name,
       libotr.OTRL_INSTAG_BEST
     );
+    this.notifyObservers(this.getContext(aConv), "msg-state");
+  },
+
+  sendQueryMsg: function(aConv) {
+    let conv = new Conv(aConv);
+    let query = libotr.otrl_proto_default_query_msg(
+      conv.name,
+      this.policy
+    );
+    conv.sendMsg(query.readString());
+    libotr.otrl_message_free(query);
   },
 
   // uiOps callbacks
@@ -292,7 +302,7 @@ OTR.prototype = {
       log("Heartbeat received from " + context.username + ".");
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_SENT:
-      log("Heartbeat send to " + context.username + ".");
+      log("Heartbeat sent to " + context.username + ".");
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_ENCRYPTION_REQUIRED:
       log("Encryption required")

@@ -330,6 +330,15 @@ libOTR.prototype = {
     OTRL_FRAGMENT_SEND_ALL_BUT_LAST: 3
   },
 
+  // Return a pointer to a newly-allocated OTR query message, customized
+  // with our name.  The caller should free() the result when he's done
+  // with it.
+  otrl_proto_default_query_msg: libotr.declare(
+    "otrl_proto_default_query_msg", abi, ctypes.char.ptr,
+    ctypes.char.ptr,
+    OtrlPolicy
+  ),
+
   // Initialize the OTR library. Pass the version of the API you are using.
   otrl_init: libotr.declare(
     "otrl_init", abi, gcry_error_t,

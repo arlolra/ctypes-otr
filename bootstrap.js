@@ -120,20 +120,37 @@ let ui = {
     tbb.style.setProperty("padding", "0", "important");
 
     let menupopup = doc.createElementNS(XULNS, "xul:menupopup");
-    let menuitem = doc.createElementNS(XULNS, "xul:menuitem");
-    menuitem.setAttribute("label", "Testing");
-    menupopup.appendChild(menuitem);
+
+    let start = doc.createElementNS(XULNS, "xul:menuitem");
+    start.setAttribute("label", "Start OTR session");
+    start.setAttribute("anonid", "otr:start");
+    start.addEventListener("click", function(e) {
+      e.preventDefault();
+      if (!e.target.disabled)
+        ui.otr.sendQueryMsg(binding._conv.target);
+    });
+    menupopup.appendChild(start);
+
+    let end = doc.createElementNS(XULNS, "xul:menuitem");
+    end.setAttribute("label", "End OTR session");
+    end.setAttribute("anonid", "otr:end");
+    end.addEventListener("click", function(e) {
+      e.preventDefault();
+      if (!e.target.disabled)
+        ui.otr.disconnect(binding._conv.target);
+    });
+    menupopup.appendChild(end);
+
     tbb.appendChild(menupopup);
 
     // get otr msg state
-    let msgState = ui.otr.getMsgState(binding._conv.target);
-    ui.setMsgState(msgState, tbb);
+    let context = ui.otr.getContext(binding._conv.target);
+    ui.setMsgState(context.msgState, tbb, start, end);
 
     hboxElt.appendChild(tbb);
   },
 
   updateButton: function(context) {
-    log("update button")
     let conv = ui.otr.convos.get(context.id);
     Conversations._conversations.forEach(function(binding) {
       if (binding._conv.id !== conv.conv.id)
@@ -147,28 +164,36 @@ let ui = {
         return;
 
       let tbb = doc.getAnonymousElementByAttribute(convTop, "anonid", "otr:button");
-      ui.setMsgState(context.msgState, tbb);
+      let start = doc.getAnonymousElementByAttribute(convTop, "anonid", "otr:start");
+      let end = doc.getAnonymousElementByAttribute(convTop, "anonid", "otr:end");
+      ui.setMsgState(context.msgState, tbb, start, end);
     });
   },
 
   // set msg state on toolbar button
-  setMsgState: function(msgState, tbb) {
-    let label, color;
+  setMsgState: function(msgState, tbb, start, end) {
+    let label, color, disableStart, disableEnd;
     switch(msgState) {
     case ui.otr.messageState.OTRL_MSGSTATE_ENCRYPTED:
+    case ui.otr.messageState.OTRL_MSGSTATE_FINISHED:
       label = "Private";
       color = "black";
+      disableStart = true;
+      disableEnd = false;
       break;
-    case ui.otr.messageState.OTRL_MSGSTATE_FINISHED:
     case ui.otr.messageState.OTRL_MSGSTATE_PLAINTEXT:
       label = "Not private";
       color = "red";
+      disableStart = false;
+      disableEnd = true;
       break;
     default:
       throw new Error("Shouldn't be here.");
     }
     tbb.setAttribute("label", label);
     tbb.style.color = color;
+    start.setAttribute("disabled", disableStart);
+    end.setAttribute("disabled", disableEnd);
   },
 
   observe: function(aObject, aTopic, aMsg) {
