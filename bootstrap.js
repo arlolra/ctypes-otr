@@ -8,12 +8,7 @@ const XULNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 let csl = Cc["@mozilla.org/consoleservice;1"].getService(Ci.nsIConsoleService);
 function log(msg) csl.logStringMessage(msg);
 
-function getUniqueId() {
-  let counter = 0;
-  while (true)
-    yield counter++;
-}
-var uniqueId = getUniqueId();
+let pre = "extensions.otr.";
 
 let ui = {
 
@@ -23,9 +18,9 @@ let ui = {
 
   init: function() {
     log("init")
-    ui.prefs = Services.prefs.getBranch("extensions.otr.");
+    ui.prefs = Services.prefs.getBranch(pre);
     let opts = {
-      requireEncryption: ui.prefs.getBoolPref("requireEncryption")
+      requireEncryption: Services.prefs.getBoolPref(pre + "requireEncryption")
     };
     ui.otr = new OTR(opts);
     ui.otr.addObserver(ui);
@@ -50,7 +45,7 @@ let ui = {
   changePref: function(aMsg) {
     switch(aMsg) {
     case "requireEncryption":
-      ui.otr.setPolicy(ui.prefs.getBoolPref("requireEncryption"));
+      ui.otr.setPolicy(Services.prefs.getBoolPref(pre + "requireEncryption"));
       break;
     default:
       log(aMsg);
