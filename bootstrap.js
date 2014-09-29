@@ -74,9 +74,9 @@ let ui = {
   },
 
   tabListener: function(aObject) {
-    if (aObject.isChat)
-      return;
     let binding = aObject.ownerDocument.getBindingParent(aObject);
+    if (binding._conv.isChat)
+      return;
     ui.addButton(binding, true);
   },
 
