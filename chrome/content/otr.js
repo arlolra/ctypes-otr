@@ -390,6 +390,8 @@ OTR.prototype = {
       this.onReceive(aObject);
       break;
     case "new-ui-conversation":
+      if (aObject.isChat)
+        return;
       let conv = new Conv(aObject.target);
       this.convos.set(conv.id, conv);
       aObject.addObserver(this, "sending-message");
