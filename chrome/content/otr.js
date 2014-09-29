@@ -29,9 +29,6 @@ OTRError.prototype = Object.create(Error.prototype, {
 
 // some helpers
 
-let cs = Cc["@mozilla.org/consoleservice;1"].getService(Ci.nsIConsoleService);
-function log(msg) cs.logStringMessage(msg);
-
 function ensureFileExists(path) {
   return OS.File.exists(path).then(exists => {
     if (!exists)
@@ -97,6 +94,10 @@ OTR.prototype = {
 
   constructor: OTR,
   close: () => libotr.close(),
+
+  log: function(msg) {
+    this.notifyObservers(msg, "otr:log");
+  },
 
   setPolicy: function(requireEncryption) {
     this.policy = requireEncryption
@@ -179,7 +180,7 @@ OTR.prototype = {
       conv.name,
       libotr.OTRL_INSTAG_BEST
     );
-    this.notifyObservers(this.getContext(aConv), "msg-state");
+    this.notifyObservers(this.getContext(aConv), "otr:msg-state");
   },
 
   sendQueryMsg: function(aConv) {
@@ -209,18 +210,18 @@ OTR.prototype = {
 
   inject_message_cb: function(opdata, accountname, protocol, recipient, message) {
     let aMsg = message.readString();
-    log("inject_message_cb (msglen:" + aMsg.length + "): " + aMsg);
+    this.log("inject_message_cb (msglen:" + aMsg.length + "): " + aMsg);
     let id = protocol.readString() + ":" + accountname.readString();
     let conv = this.convos.get(id);
     conv.sendMsg(aMsg);
   },
 
   update_context_list_cb: function(opdata) {
-    log("update_context_list_cb")
+    this.log("update_context_list_cb");
   },
 
   new_fingerprint_cb: function(opdata, us, accountname, protocol, username, fingerprint) {
-    log("new_fingerprint_cb")
+    this.log("new_fingerprint_cb");
   },
 
   write_fingerprint_cb: function(opdata) {
@@ -229,18 +230,18 @@ OTR.prototype = {
 
   gone_secure_cb: function(opdata, context) {
     context = new Context(context);
-    this.notifyObservers(context, "msg-state");
+    this.notifyObservers(context, "otr:msg-state");
     this.sendAlert(context, "gone secure!");
   },
 
   gone_insecure_cb: function(opdata, context) {
     context = new Context(context);
-    this.notifyObservers(context, "msg-state");
+    this.notifyObservers(context, "otr:msg-state");
     this.sendAlert(context, "oh no, insecure");
   },
 
   still_secure_cb: function(opdata, context, is_reply) {
-    log("still_secure_cb")
+    this.log("still_secure_cb");
   },
 
   max_message_size_cb: function(opdata, context) {
@@ -254,35 +255,35 @@ OTR.prototype = {
   },
 
   account_name_cb: function(opdata, account, protocol) {
-    log("account_name_cb")
+    this.log("account_name_cb")
   },
 
   account_name_free_cb: function(opdata, account_name) {
-    log("account_name_free_cb")
+    this.log("account_name_free_cb")
   },
 
   received_symkey_cb: function(opdata, context, use, usedata, usedatalen, symkey) {
-    log("received_symkey_cb")
+    this.log("received_symkey_cb")
   },
 
   otr_error_message_cb: function(opdata, context, err_code) {
-    log("otr_error_message_cb")
+    this.log("otr_error_message_cb")
   },
 
   otr_error_message_free_cb: function(opdata, err_msg) {
-    log("otr_error_message_free_cb")
+    this.log("otr_error_message_free_cb")
   },
 
   resent_msg_prefix_cb: function(opdata, context) {
-    log("resent_msg_prefix_cb")
+    this.log("resent_msg_prefix_cb")
   },
 
   resent_msg_prefix_free_cb: function(opdata, prefix) {
-    log("resent_msg_prefix_free_cb")
+    this.log("resent_msg_prefix_free_cb")
   },
 
   handle_smp_event_cb: function(opdata, smp_event, context, progress_percent, question) {
-    log("handle_smp_event_cb")
+    this.log("handle_smp_event_cb")
   },
 
   handle_msg_event_cb: function(opdata, msg_event, context, message, err) {
@@ -299,20 +300,20 @@ OTR.prototype = {
                                 " unencrypted: " + message.readString());
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_RCVD:
-      log("Heartbeat received from " + context.username + ".");
+      this.log("Heartbeat received from " + context.username + ".");
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_SENT:
-      log("Heartbeat sent to " + context.username + ".");
+      this.log("Heartbeat sent to " + context.username + ".");
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_ENCRYPTION_REQUIRED:
-      log("Encryption required")
+      this.log("Encryption required")
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_CONNECTION_ENDED:
       this.sendAlert(context, "The other side ended the OTR session." +
                               " You should too.");
       break;
     default:
-      log("msg event: " + msg_event)
+      this.log("msg event: " + msg_event)
     }
   },
 
@@ -321,15 +322,15 @@ OTR.prototype = {
   },
 
   convert_msg_cb: function(opdata, context, convert_type, dest, src) {
-    log("convert_msg_cb")
+    this.log("convert_msg_cb")
   },
 
   convert_free_cb: function(opdata, context, dest) {
-    log("convert_free_cb")
+    this.log("convert_free_cb")
   },
 
   timer_control_cb: function(opdata, interval) {
-    log("timer_control_cb")
+    this.log("timer_control_cb")
   },
 
   // uiOps
@@ -412,7 +413,7 @@ OTR.prototype = {
       return;
 
     let conv = new Conv(om.conversation);
-    log("pre sending: " + om.message)
+    this.log("pre sending: " + om.message)
 
     let newMessage = new ctypes.char.ptr();
 
@@ -450,7 +451,7 @@ OTR.prototype = {
       }
     }
 
-    log("post sending (" + !om.cancelled + "): " + msg);
+    this.log("post sending (" + !om.cancelled + "): " + msg);
     libotr.otrl_message_free(newMessage);
   },
 
@@ -459,14 +460,14 @@ OTR.prototype = {
       return;
 
     if (im.outgoing) {
-      log("outgoing message to display: " + im.displayMessage)
+      this.log("outgoing message to display: " + im.displayMessage)
       this.pluckMsg(im);
       return;
     }
 
     let conv = new Conv(im.conversation);
     let newMessage = new ctypes.char.ptr();
-    log("pre receiving: " + im.displayMessage)
+    this.log("pre receiving: " + im.displayMessage)
 
     let res = libotr.otrl_message_receiving(
       this.userstate,
@@ -488,10 +489,10 @@ OTR.prototype = {
     }
 
     if (res) {
-      log("error (" + res + ") ignoring: " + im.displayMessage)
+      this.log("error (" + res + ") ignoring: " + im.displayMessage)
       im.cancelled = true;  // ignore
     } else {
-      log("post receiving: " + im.displayMessage)
+      this.log("post receiving: " + im.displayMessage)
     }
 
     libotr.otrl_message_free(newMessage);
@@ -532,13 +533,13 @@ OTR.prototype = {
       if (b.conv === im.conversation && b.sent === im.displayMessage) {
         im.displayMessage = b.disp;
         buf.splice(i, 1);
-        log("displaying: " + b.disp)
+        this.log("displaying: " + b.disp)
         return;
       }
     }
     // don't display if it wasn't buffered
     im.cancelled = true;
-    log("not displaying: " + im.displayMessage)
+    this.log("not displaying: " + im.displayMessage)
   }
 
 };

@@ -5,17 +5,28 @@ Cu.import("resource:///modules/imWindows.jsm");
 
 const XULNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
-let csl = Cc["@mozilla.org/consoleservice;1"].getService(Ci.nsIConsoleService);
-function log(msg) csl.logStringMessage(msg);
 
 let ui = {
+
+  debug: false,
+  log: function log(msg) {
+    if (!ui.debug)
+      return;
+    let csl = Cc["@mozilla.org/consoleservice;1"].getService(Ci.nsIConsoleService);
+    csl.logStringMessage(msg);
+  },
+
+  uniqueId: (function() {
+    let counter = 0;
+    while (true)
+      yield counter++;
+  }()),
 
   otr: null,
   prefs: null,
   origAddConv: null,
 
   init: function() {
-    log("init")
     ui.prefs = Services.prefs.getBranch("extensions.otr.");
     let opts = {
       requireEncryption: ui.prefs.getBoolPref("requireEncryption")
@@ -23,7 +34,6 @@ let ui = {
     ui.otr = new OTR(opts);
     ui.otr.addObserver(ui);
     ui.otr.loadFiles().then(function() {
-      log("attach handlers")
       Services.obs.addObserver(ui.otr, "new-ui-conversation", false);
       Services.obs.addObserver(ui, "conversation-loaded", false);
       Services.obs.addObserver(ui, "account-disconnecting", false);
@@ -46,7 +56,7 @@ let ui = {
       ui.otr.setPolicy(ui.prefs.getBoolPref("requireEncryption"));
       break;
     default:
-      log(aMsg);
+      ui.log(aMsg);
     }
   },
 
@@ -88,7 +98,7 @@ let ui = {
 
     // workaround so status message still gets its attributes updated
     let broadcaster = doc.createElementNS(XULNS, "xul:broadcaster")
-    let broadcastID = "brID_" + uniqueId.next();
+    let broadcastID = "brID_" + ui.uniqueId.next();
     broadcaster.setAttribute("id", broadcastID);
     broadcaster.setAttribute("isBroadcaster", "true");
     smElt.parentNode.appendChild(broadcaster);
@@ -192,19 +202,22 @@ let ui = {
   observe: function(aObject, aTopic, aMsg) {
     switch(aTopic) {
     case "nsPref:changed":
-      this.changePref(aMsg);
+      ui.changePref(aMsg);
       break;
     case "conversation-loaded":
-      this.tabListener(aObject);
-      break;
-    case "msg-state":
-      this.updateButton(aObject);
+      ui.tabListener(aObject);
       break;
     case "account-disconnecting":
       ui.disconnect(aObject);
       break;
+    case "otr:msg-state":
+      ui.updateButton(aObject);
+      break;
+    case "otr:log":
+      ui.log("otr: " + aObject);
+      break;
     default:
-      log(aTopic)
+      ui.log(aTopic);
     }
   },
 
