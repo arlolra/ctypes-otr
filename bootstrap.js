@@ -26,8 +26,20 @@ let ui = {
   prefs: null,
   origAddConv: null,
 
+  setPrefs: function() {
+    let branch = "extensions.otr.";
+    let prefs = {
+      "requireEncryption": true
+    };
+    let defaults = Services.prefs.getDefaultBranch(branch);
+    Object.keys(prefs).forEach(function(key) {
+      defaults.setBoolPref(key, prefs[key]);
+    });
+    ui.prefs = Services.prefs.getBranch(branch);
+  },
+
   init: function() {
-    ui.prefs = Services.prefs.getBranch("extensions.otr.");
+    this.setPrefs();
     let opts = {
       requireEncryption: ui.prefs.getBoolPref("requireEncryption")
     };

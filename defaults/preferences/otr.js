@@ -1,1 +1,0 @@
-pref("extensions.otr.requireEncryption", false);
