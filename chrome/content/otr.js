@@ -436,24 +436,25 @@ OTR.prototype = {
       null
     );
 
-    if (err)
-      throw new OTRError("Returned code: " + err);
+    let msg = om.message;
 
-    let msg = "";
-    if (newMessage.isNull()) {
+    if (err) {
       om.cancelled = true;
-    } else {
+      Cu.reportError(new OTRError("OTR returned code: " + err));
+    } else if (!newMessage.isNull()) {
       msg = newMessage.readString();
+      // https://bugs.otr.im/issues/52
       if (!msg) {
-        // https://bugs.otr.im/issues/52
         om.cancelled = true;
-      } else {
-        this.bufferMsg(om.conversation, om.message, msg);
-        om.message = msg;
       }
     }
 
-    this.log("post sending (" + !om.cancelled + "): " + msg);
+    if (!om.cancelled) {
+      this.bufferMsg(om.conversation, om.message, msg);
+      om.message = msg;
+    }
+
+    this.log("post sending (" + !om.cancelled + "): " + om.message);
     libotr.otrl_message_free(newMessage);
   },
 
