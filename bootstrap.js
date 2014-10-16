@@ -72,99 +72,53 @@ let ui = {
     }
   },
 
-  resize: function(aEvent) {
-    let convElt = aEvent.originalTarget.document.getElementById("conversations");
-    if (!convElt)
-      return;
-
-    let conversations = convElt.conversations;
-    for each (let binding in conversations) {
-      if (binding.conv.isChat)
-        continue;
-      ui.addButton(binding, false);
-    }
-  },
-
   tabListener: function(aObject) {
     let binding = aObject.ownerDocument.getBindingParent(aObject);
     if (binding._conv.isChat)
       return;
-    ui.addButton(binding, true);
+    ui.addButton(binding);
   },
 
-  addButton: function(binding, attachResize) {
-    let convTop = binding.getElt("conv-top-info");
-    let doc = convTop.ownerDocument;
-    let window = doc.defaultView;
+  addButton: function(binding) {
+    let cti = binding.getElt("conv-top-info");
+    let doc = cti.ownerDocument;
 
-    if (attachResize)
-      window.addEventListener("resize", ui.resize, false);
-
-    // only add to large view
-    if (window.getComputedStyle(convTop).MozBinding.indexOf("conv-info-large") < 0)
-      return;
-
-    // handle timing issue
-    if (doc.getAnonymousElementByAttribute(convTop, "anonid", "otr:hbox") != null)
-      return;
-
-    let smElt = doc.getAnonymousElementByAttribute(convTop, "anonid", "statusMessage");
-
-    // workaround so status message still gets its attributes updated
-    let broadcaster = doc.createElementNS(XULNS, "xul:broadcaster")
-    let broadcastID = "brID_" + ui.uniqueId.next();
-    broadcaster.setAttribute("id", broadcastID);
-    broadcaster.setAttribute("isBroadcaster", "true");
-    smElt.parentNode.appendChild(broadcaster);
-    smElt.setAttribute("observes", broadcastID);
-
-    let hboxElt = doc.createElementNS(XULNS, "xul:hbox");
-    hboxElt.setAttribute("flex", "1");
-    hboxElt.setAttribute("anonid", "otr:hbox");
-    smElt.parentNode.appendChild(hboxElt);
-    hboxElt.appendChild(smElt);
-
-    let tbb = doc.createElementNS(XULNS, "xul:toolbarbutton");
-    tbb.setAttribute("anonid", "otr:button");
-    tbb.setAttribute("tooltiptext", "OTR");
-    tbb.setAttribute("type", "button");
-    tbb.addEventListener("command", function(e) {
-      e.preventDefault();
-      menupopup.openPopup(tbb, "after_start");
-    }, false);
-
-    tbb.style.margin = "29px 0px 0px 0px";
-    tbb.style.setProperty("padding", "0", "important");
-
-    let menupopup = doc.createElementNS(XULNS, "xul:menupopup");
-
-    let start = doc.createElementNS(XULNS, "xul:menuitem");
-    start.setAttribute("label", "Start OTR session");
-    start.setAttribute("anonid", "otr:start");
-    start.addEventListener("click", function(e) {
+    let otrStart = doc.createElement("menuitem");
+    otrStart.setAttribute("label", "Start OTR session");
+    otrStart.classList.add("otr-start");
+    otrStart.addEventListener("click", function(e) {
       e.preventDefault();
       if (!e.target.disabled)
         ui.otr.sendQueryMsg(binding._conv.target);
     });
-    menupopup.appendChild(start);
 
-    let end = doc.createElementNS(XULNS, "xul:menuitem");
-    end.setAttribute("label", "End OTR session");
-    end.setAttribute("anonid", "otr:end");
-    end.addEventListener("click", function(e) {
+    let otrEnd = doc.createElement("menuitem");
+    otrEnd.setAttribute("label", "End OTR session");
+    otrEnd.classList.add("otr-end");
+    otrEnd.addEventListener("click", function(e) {
       e.preventDefault();
       if (!e.target.disabled)
         ui.otr.disconnect(binding._conv.target);
     });
-    menupopup.appendChild(end);
 
-    tbb.appendChild(menupopup);
+    let otrMenu = doc.createElement("menupopup");
+    otrMenu.appendChild(otrStart);
+    otrMenu.appendChild(otrEnd);
+
+    let otrButton = doc.createElement("toolbarbutton");
+    otrButton.classList.add("otr-button");
+    otrButton.setAttribute("tooltiptext", "OTR");
+    otrButton.addEventListener("command", function(e) {
+      e.preventDefault();
+      otrMenu.openPopup(otrButton, "after_start");
+    }, false);
+
+    otrButton.appendChild(otrMenu);
+    cti.appendChild(otrButton);
 
     // get otr msg state
     let context = ui.otr.getContext(binding._conv.target);
-    ui.setMsgState(context.msgState, tbb, start, end);
-
-    hboxElt.appendChild(tbb);
+    ui.setMsgState(context.msgState, otrButton, otrStart, otrEnd);
   },
 
   updateButton: function(context) {
@@ -172,23 +126,16 @@ let ui = {
     Conversations._conversations.forEach(function(binding) {
       if (binding._conv.id !== conv.conv.id)
         return;
-
-      let convTop = binding.getElt("conv-top-info");
-      let doc = convTop.ownerDocument;
-      let window = doc.defaultView;
-
-      if (window.getComputedStyle(convTop).MozBinding.indexOf("conv-info-large") < 0)
-        return;
-
-      let tbb = doc.getAnonymousElementByAttribute(convTop, "anonid", "otr:button");
-      let start = doc.getAnonymousElementByAttribute(convTop, "anonid", "otr:start");
-      let end = doc.getAnonymousElementByAttribute(convTop, "anonid", "otr:end");
-      ui.setMsgState(context.msgState, tbb, start, end);
+      let cti = binding.getElt("conv-top-info");
+      let otrButton = cti.querySelector(".otr-button");
+      let otrStart = cti.querySelector(".otr-start");
+      let otrEnd = cti.querySelector(".otr-end");
+      ui.setMsgState(context.msgState, otrButton, otrStart, otrEnd);
     });
   },
 
   // set msg state on toolbar button
-  setMsgState: function(msgState, tbb, start, end) {
+  setMsgState: function(msgState, otrButton, otrStart, otrEnd) {
     let label, color, disableStart, disableEnd;
     switch(msgState) {
     case ui.otr.messageState.OTRL_MSGSTATE_ENCRYPTED:
@@ -207,10 +154,10 @@ let ui = {
     default:
       throw new Error("Shouldn't be here.");
     }
-    tbb.setAttribute("label", label);
-    tbb.style.color = color;
-    start.setAttribute("disabled", disableStart);
-    end.setAttribute("disabled", disableEnd);
+    otrButton.setAttribute("label", label);
+    // otrButton.style.color = color;
+    otrStart.setAttribute("disabled", disableStart);
+    otrEnd.setAttribute("disabled", disableEnd);
   },
 
   observe: function(aObject, aTopic, aMsg) {
@@ -237,23 +184,11 @@ let ui = {
 
   resetConv: function(binding) {
     ui.otr.removeConversation(binding._conv);
-
-    let convTop = binding.getElt("conv-top-info");
-    let doc = convTop.ownerDocument;
-    let window = doc.defaultView;
-    window.removeEventListener("resize", ui.resize, false);
-
-    if (window.getComputedStyle(convTop).MozBinding.indexOf("conv-info-large") < 0)
+    let cti = binding.getElt("conv-top-info");
+    let otrButton = cti.querySelector(".otr-button");
+    if (!otrButton)
       return;
-
-    if (!doc.getAnonymousElementByAttribute(convTop, "anonid", "otr:button"))
-      return;
-
-    let smElt = doc.getAnonymousElementByAttribute(convTop, "anonid", "statusMessage");
-    smElt.parentNode.appendChild(smElt);
-    stackElt.removeChild(doc.getAnonymousElementByAttribute(convTop, "anonid", "otr:hbox"));
-    stackElt.removeChild(doc.getAnonymousElementByAttribute(convTop, "isBroadcaster", "true"));
-    smElt.removeAttribute("observes");
+    otrButton.parentNode.removeChild(otrButton);
   },
 
   destroy: function() {
