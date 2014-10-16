@@ -155,7 +155,7 @@ let ui = {
       throw new Error("Shouldn't be here.");
     }
     otrButton.setAttribute("label", label);
-    // otrButton.style.color = color;
+    otrButton.style.color = color;
     otrStart.setAttribute("disabled", disableStart);
     otrEnd.setAttribute("disabled", disableEnd);
   },
