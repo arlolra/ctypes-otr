@@ -54,7 +54,13 @@ Context.prototype = {
   get username() this.context.contents.username.readString(),
   get account() this.context.contents.accountname.readString(),
   get protocol() this.context.contents.protocol.readString(),
-  get msgState() this.context.contents.msgstate
+  get msgstate() this.context.contents.msgstate,
+  get trust() {
+    let afp = this.context.contents.active_fingerprint;
+    return (!afp.isNull() &&
+      !afp.contents.trust.isNull() &&
+      afp.contents.trust.readString().length > 0);
+  }
 };
 
 // conversation wrapper
@@ -193,6 +199,28 @@ OTR.prototype = {
     libotr.otrl_message_free(query);
   },
 
+  trustState: {
+    TRUST_NOT_PRIVATE: 0,
+    TRUST_UNVERIFIED: 1,
+    TRUST_PRIVATE: 2,
+    TRUST_FINISHED: 3
+  },
+
+  trust: function(context) {
+    let level = this.trustState.TRUST_NOT_PRIVATE;
+    switch(context.msgstate) {
+    case this.messageState.OTRL_MSGSTATE_ENCRYPTED:
+      level = context.trust
+        ? this.trustState.TRUST_PRIVATE
+        : this.trustState.TRUST_UNVERIFIED;
+      break;
+    case this.messageState.OTRL_MSGSTATE_FINISHED:
+      level = this.trustState.TRUST_FINISHED;
+      break;
+    }
+    return level;
+  },
+
   // uiOps callbacks
 
   policy_cb: function(opdata, context) {
@@ -311,6 +339,7 @@ OTR.prototype = {
     case libotr.messageEvent.OTRL_MSGEVENT_CONNECTION_ENDED:
       this.sendAlert(context, "The other side ended the OTR session." +
                               " You should too.");
+      this.notifyObservers(context, "otr:msg-state");
       break;
     default:
       this.log("msg event: " + msg_event)

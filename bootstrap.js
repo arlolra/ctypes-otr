@@ -109,7 +109,7 @@ let ui = {
 
     // get otr msg state
     let context = ui.otr.getContext(binding._conv.target);
-    ui.setMsgState(context.msgState, otrButton, otrStart, otrEnd);
+    ui.setMsgState(context, otrButton, otrStart, otrEnd);
   },
 
   updateButton: function(context) {
@@ -121,26 +121,37 @@ let ui = {
       let otrButton = cti.querySelector(".otr-button");
       let otrStart = cti.querySelector(".otr-start");
       let otrEnd = cti.querySelector(".otr-end");
-      ui.setMsgState(context.msgState, otrButton, otrStart, otrEnd);
+      ui.setMsgState(context, otrButton, otrStart, otrEnd);
     });
   },
 
   // set msg state on toolbar button
-  setMsgState: function(msgState, otrButton, otrStart, otrEnd) {
+  setMsgState: function(context, otrButton, otrStart, otrEnd) {
     let label, color, disableStart, disableEnd;
-    switch(msgState) {
-    case ui.otr.messageState.OTRL_MSGSTATE_ENCRYPTED:
-    case ui.otr.messageState.OTRL_MSGSTATE_FINISHED:
+    switch(ui.otr.trust(context)) {
+    case ui.otr.trustState.TRUST_NOT_PRIVATE:
+      label = "Not private";
+      color = "red";
+      disableStart = false;
+      disableEnd = true;
+      break;
+    case ui.otr.trustState.TRUST_UNVERIFIED:
+      label = "Unverified";
+      color = "darkorange";
+      disableStart = true;
+      disableEnd = false;
+      break;
+    case ui.otr.trustState.TRUST_PRIVATE:
       label = "Private";
       color = "black";
       disableStart = true;
       disableEnd = false;
       break;
-    case ui.otr.messageState.OTRL_MSGSTATE_PLAINTEXT:
-      label = "Not private";
-      color = "red";
+    case ui.otr.trustState.TRUST_FINISHED:
+      label = "Finished";
+      color = "darkorange";
       disableStart = false;
-      disableEnd = true;
+      disableEnd = false;
       break;
     default:
       throw new Error("Shouldn't be here.");
@@ -189,7 +200,6 @@ let ui = {
     Conversations._conversations.forEach(ui.resetConv);
     ui.prefs.removeObserver("", ui);
     ui.otr.removeObserver(ui);
-    // ui.otr.close();
   }
 
 };
@@ -202,7 +212,6 @@ function startup(data, reason) {
 function shutdown(data, reason) {
   if (reason === APP_SHUTDOWN)
     return;
-
   ui.destroy();
   Cu.unload("chrome://otr/content/otr.js");
 }
