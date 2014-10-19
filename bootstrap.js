@@ -3,9 +3,6 @@ const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imWindows.jsm");
 
-const XULNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-
-
 let ui = {
 
   debug: false,
@@ -15,12 +12,6 @@ let ui = {
     let csl = Cc["@mozilla.org/consoleservice;1"].getService(Ci.nsIConsoleService);
     csl.logStringMessage(msg);
   },
-
-  uniqueId: (function() {
-    let counter = 0;
-    while (true)
-      yield counter++;
-  }()),
 
   otr: null,
   prefs: null,
