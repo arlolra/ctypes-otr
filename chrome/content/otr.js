@@ -27,6 +27,17 @@ OTRError.prototype = Object.create(Error.prototype, {
   constructor: { value: OTRError }
 });
 
+// translations
+
+let bundle = Services.strings.createBundle("chrome://otr/locale/otr.properties");
+
+function trans(name) {
+  let args = Array.prototype.slice.call(arguments, 1);
+  return args.length > 0
+    ? bundle.formatStringFromName(name, args, args.length)
+    : bundle.GetStringFromName(name);
+}
+
 // some helpers
 
 function ensureFileExists(path) {
@@ -259,13 +270,13 @@ OTR.prototype = {
   gone_secure_cb: function(opdata, context) {
     context = new Context(context);
     this.notifyObservers(context, "otr:msg-state");
-    this.sendAlert(context, "gone secure!");
+    this.sendAlert(context, trans("context.gone_secure"));
   },
 
   gone_insecure_cb: function(opdata, context) {
     context = new Context(context);
     this.notifyObservers(context, "otr:msg-state");
-    this.sendAlert(context, "oh no, insecure");
+    this.sendAlert(context, trans("context.gone_insecure"));
   },
 
   still_secure_cb: function(opdata, context, is_reply) {
@@ -319,13 +330,11 @@ OTR.prototype = {
     switch(msg_event) {
     case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
       if (!message.isNull())
-        this.sendAlert(context, "Received encrypted message but not currently" +
-                                " communicating privately: " + message.readString());
+        this.sendAlert(context, trans("msgevent.rcvd_unecrypted", message.readString()));
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
       if (!message.isNull())
-        this.sendAlert(context, "The following message was received" +
-                                " unencrypted: " + message.readString());
+        this.sendAlert(context, trans("msgevent.rcvd_unecrypted", message.readString()));
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_RCVD:
       this.log("Heartbeat received from " + context.username + ".");
@@ -337,8 +346,7 @@ OTR.prototype = {
       this.log("Encryption required")
       break;
     case libotr.messageEvent.OTRL_MSGEVENT_CONNECTION_ENDED:
-      this.sendAlert(context, "The other side ended the OTR session." +
-                              " You should too.");
+      this.sendAlert(context, trans("msgevent.ended"));
       this.notifyObservers(context, "otr:msg-state");
       break;
     default:

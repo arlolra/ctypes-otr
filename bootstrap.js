@@ -3,6 +3,15 @@ const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imWindows.jsm");
 
+let bundle = Services.strings.createBundle("chrome://otr/locale/ui.properties");
+
+function trans(name) {
+  let args = Array.prototype.slice.call(arguments, 1);
+  return args.length > 0
+    ? bundle.formatStringFromName(name, args, args.length)
+    : bundle.GetStringFromName(name);
+}
+
 let ui = {
 
   debug: false,
@@ -75,7 +84,7 @@ let ui = {
     let doc = cti.ownerDocument;
 
     let otrStart = doc.createElement("menuitem");
-    otrStart.setAttribute("label", "Start OTR session");
+    otrStart.setAttribute("label", trans("start.label"));
     otrStart.classList.add("otr-start");
     otrStart.addEventListener("click", function(e) {
       e.preventDefault();
@@ -84,7 +93,7 @@ let ui = {
     });
 
     let otrEnd = doc.createElement("menuitem");
-    otrEnd.setAttribute("label", "End OTR session");
+    otrEnd.setAttribute("label", trans("end.label"));
     otrEnd.classList.add("otr-end");
     otrEnd.addEventListener("click", function(e) {
       e.preventDefault();
@@ -98,7 +107,7 @@ let ui = {
 
     let otrButton = doc.createElement("toolbarbutton");
     otrButton.classList.add("otr-button");
-    otrButton.setAttribute("tooltiptext", "OTR");
+    otrButton.setAttribute("tooltiptext", trans("tooltip"));
     otrButton.addEventListener("command", function(e) {
       e.preventDefault();
       otrMenu.openPopup(otrButton, "after_start");
@@ -130,25 +139,25 @@ let ui = {
     let label, color, disableStart, disableEnd;
     switch(ui.otr.trust(context)) {
     case ui.otr.trustState.TRUST_NOT_PRIVATE:
-      label = "Not private";
+      label = trans("trust.not_private");
       color = "red";
       disableStart = false;
       disableEnd = true;
       break;
     case ui.otr.trustState.TRUST_UNVERIFIED:
-      label = "Unverified";
+      label = trans("trust.unverified");
       color = "darkorange";
       disableStart = true;
       disableEnd = false;
       break;
     case ui.otr.trustState.TRUST_PRIVATE:
-      label = "Private";
+      label = trans("trust.private");
       color = "black";
       disableStart = true;
       disableEnd = false;
       break;
     case ui.otr.trustState.TRUST_FINISHED:
-      label = "Finished";
+      label = trans("trust.finished");
       color = "darkorange";
       disableStart = false;
       disableEnd = false;
