@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-OTR := libotr-4.0.0
+OTR := libotr-4.1.0
 VERSION := $(shell cat install.rdf|grep '<em:version>' \
 	| cut -d\> -f2 | cut -d\< -f1)
 
