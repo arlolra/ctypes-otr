@@ -182,10 +182,8 @@ let ui = {
       ui.tabListener(aObject);
       break;
     case "account-disconnecting":
-      ui.disconnect(aObject);
-      break;
     case "prpl-quit":
-      ui.disconnect(null);
+      ui.disconnect(aTopic === "prpl-quit" ? null : aObject);
       break;
     case "otr:msg-state":
       ui.updateButton(aObject);
