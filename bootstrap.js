@@ -49,17 +49,19 @@ let ui = {
       Services.obs.addObserver(ui.otr, "new-ui-conversation", false);
       Services.obs.addObserver(ui, "conversation-loaded", false);
       Services.obs.addObserver(ui, "account-disconnecting", false);
+      Services.obs.addObserver(ui, "prpl-quit", false);
       ui.prefs.addObserver("", ui, false);
     }, function(reason) { throw new Error(reason); });
   },
 
   disconnect: function(aAccount) {
-    Conversations._conversations.forEach(function(binding) {
-      let conv = binding._conv;
-      if (conv.isChat || conv.account.id !== aAccount.id)
+    let convos = Services.conversations.getConversations();
+    while (convos.hasMoreElements()) {
+      let conv = convos.getNext();
+      if (conv.isChat || (aAccount && (conv.account.id !== aAccount.id)))
         return;
-      ui.otr.disconnect(conv.target);
-    });
+      ui.otr.disconnect(conv);
+    }
   },
 
   changePref: function(aMsg) {
@@ -182,6 +184,9 @@ let ui = {
     case "account-disconnecting":
       ui.disconnect(aObject);
       break;
+    case "prpl-quit":
+      ui.disconnect(null);
+      break;
     case "otr:msg-state":
       ui.updateButton(aObject);
       break;
@@ -206,6 +211,7 @@ let ui = {
     Services.obs.removeObserver(ui.otr, "new-ui-conversation");
     Services.obs.removeObserver(ui, "conversation-loaded");
     Services.obs.removeObserver(ui, "account-disconnecting");
+    Services.obs.removeObserver(ui, "prpl-quit");
     Conversations._conversations.forEach(ui.resetConv);
     ui.prefs.removeObserver("", ui);
     ui.otr.removeObserver(ui);
