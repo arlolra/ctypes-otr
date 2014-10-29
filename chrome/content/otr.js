@@ -431,8 +431,7 @@ OTR.prototype = {
         return;
       let conv = new Conv(aObject.target);
       this.convos.set(conv.id, conv);
-      aObject.addObserver(this, "sending-message");
-      aObject.addObserver(this, "received-message");
+      aObject.addObserver(this);
       // generate a pk if necessary
       if (this.privateKeyFingerprint(conv.account, conv.protocol) === null)
         this.generatePrivateKey(conv.account, conv.protocol);
@@ -441,8 +440,7 @@ OTR.prototype = {
   },
 
   removeConversation: function(uiConv) {
-    uiConv.removeObserver(this, "sending-message");
-    uiConv.removeObserver(this, "received-message");
+    uiConv.removeObserver(this);
     let conv = new Conv(uiConv.target);
     this.convos.delete(conv.id);
   },
