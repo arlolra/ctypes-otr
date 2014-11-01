@@ -61,7 +61,6 @@ function Context(context) {
 
 Context.prototype = {
   constructor: Context,
-  get id() this.protocol + ":" + this.account,
   get username() this.context.contents.username.readString(),
   get account() this.context.contents.accountname.readString(),
   get protocol() this.context.contents.protocol.readString(),
@@ -74,35 +73,20 @@ Context.prototype = {
   }
 };
 
-// conversation wrapper
-
-function Conv(conv) {
-  this.conv = conv;
-  this._jsObj = conv.wrappedJSObject;
-  this._account = this._jsObj._account;
-}
-
-Conv.prototype = {
-  constructor: Conv,
-  get id() this.protocol + ":" + this.account,
-  get name() this.conv.normalizedName,
-  get account() this._account.normalizedName,
-  get protocol() this._account.protocol.normalizedName,
-  get sendMsg() this.conv.sendMsg.bind(this.conv),
-  get writeMsg() this._jsObj.writeMessage.bind(this._jsObj)
-};
-
 // otr constructor
 
 function OTR(opts) {
   opts = opts || {};
   this.setPolicy(opts.requireEncryption);
+
   this.userstate = libotr.otrl_userstate_create();
   this.privateKeyPath = profilePath("otr.private_key")
   this.fingerprintsPath = profilePath("otr.fingerprints");
   this.instanceTagsPath = profilePath("otr.instance_tags");
   this.uiOps = this.initUiOps();
-  this.convos = new Map();
+
+  // A map of UIConvs, keyed on the target.id
+  this._convos = new Map();
   this._observers = [];
   this._buffer = [];
 }
@@ -177,33 +161,57 @@ OTR.prototype = {
   messageState: libotr.messageState,
 
   // get context from conv
-  getContext: function(aConv) {
-    let conv = new Conv(aConv);
+  getContext: function(conv) {
     let context = libotr.otrl_context_find(
-      this.userstate, conv.name, conv.account, conv.protocol,
+      this.userstate,
+      conv.normalizedName,
+      conv.account.normalizedName,
+      conv.account.protocol.normalizedName,
       libotr.OTRL_INSTAG_BEST, 1, null, null, null
     );
     return new Context(context);
   },
 
-  disconnect: function(aConv) {
-    let conv = new Conv(aConv);
+  getUIConvFromContext: function(context) {
+    return this.getUIConvForRecipient(
+      context.account, context.protocol, context.username
+    );
+  },
+
+  getUIConvForRecipient: function(account, protocol, recipient) {
+    let uiConvs = this._convos.values();
+    let uiConv = uiConvs.next();
+    while (!uiConv.done) {
+      let conv = uiConv.value.target;
+      if (conv.account.normalizedName === account &&
+          conv.account.protocol.normalizedName === protocol &&
+          conv.normalizedName === recipient)
+        return uiConv.value;
+      uiConv = uiConvs.next();
+    }
+    return null;
+  },
+
+  disconnect: function(conv, remove) {
     libotr.otrl_message_disconnect(
       this.userstate,
       this.uiOps.address(),
       null,
-      conv.account,
-      conv.protocol,
-      conv.name,
+      conv.account.normalizedName,
+      conv.account.protocol.normalizedName,
+      conv.normalizedName,
       libotr.OTRL_INSTAG_BEST
     );
-    this.notifyObservers(this.getContext(aConv), "otr:msg-state");
+    if (remove) {
+      let uiConv = Services.conversations.getUIConversation(conv);
+      this.removeConversation(uiConv);
+    } else
+      this.notifyObservers(this.getContext(conv), "otr:msg-state");
   },
 
-  sendQueryMsg: function(aConv) {
-    let conv = new Conv(aConv);
+  sendQueryMsg: function(conv) {
     let query = libotr.otrl_proto_default_query_msg(
-      conv.name,
+      conv.account.normalizedName,
       this.policy
     );
     conv.sendMsg(query.readString());
@@ -250,9 +258,15 @@ OTR.prototype = {
   inject_message_cb: function(opdata, accountname, protocol, recipient, message) {
     let aMsg = message.readString();
     this.log("inject_message_cb (msglen:" + aMsg.length + "): " + aMsg);
-    let id = protocol.readString() + ":" + accountname.readString();
-    let conv = this.convos.get(id);
-    conv.sendMsg(aMsg);
+    let uiConv = this.getUIConvForRecipient(
+      accountname.readString(),
+      protocol.readString(),
+      recipient.readString()
+    );
+    if (uiConv)
+      uiConv.target.sendMsg(aMsg);
+    else
+      Cu.reportError("Couldn't find conversation to inject.");
   },
 
   update_context_list_cb: function(opdata) {
@@ -413,9 +427,11 @@ OTR.prototype = {
   },
 
   sendAlert: function(context, msg) {
-    let conv = this.convos.get(context.id);
-    let flags = { system: true, noLog: true, error: false };
-    conv.writeMsg("system", msg, flags);
+    let uiConv = this.getUIConvFromContext(context);
+    if (uiConv)
+      uiConv.systemMessage(msg);
+    else
+      Cu.reportError("Couldn't find conversation to inject.");
   },
 
   observe: function(aObject, aTopic, aMsg) {
@@ -427,29 +443,38 @@ OTR.prototype = {
       this.onReceive(aObject);
       break;
     case "new-ui-conversation":
-      if (aObject.isChat)
+      let conv = aObject.target;
+      if (conv.isChat)
         return;
-      let conv = new Conv(aObject.target);
-      this.convos.set(conv.id, conv);
+      this._convos.set(conv.id, aObject);
       aObject.addObserver(this);
-      // generate a pk if necessary
-      if (this.privateKeyFingerprint(conv.account, conv.protocol) === null)
-        this.generatePrivateKey(conv.account, conv.protocol);
+      // FIXME: this belongs somewhere else
+      let account = conv.account.normalizedName;
+      let protocol = conv.account.protocol.normalizedName;
+      if (this.privateKeyFingerprint(account, protocol) === null)
+        this.generatePrivateKey(account, protocol);
       break;
     }
   },
 
   removeConversation: function(uiConv) {
     uiConv.removeObserver(this);
-    let conv = new Conv(uiConv.target);
-    this.convos.delete(conv.id);
+    this._convos.delete(uiConv.target.id);
   },
 
   onSend: function(om) {
     if (om.cancelled)
       return;
 
-    let conv = new Conv(om.conversation);
+    // FIXME: om.conversation should be a uiConv.
+    let uiConv = this._convos.get(om.conversation.id);
+    if (!uiConv) {
+      om.cancelled = true;
+      Cu.reportError(new OTRError("Sending to an unknown conversation."));
+      return;
+    }
+    let conv = uiConv.target;
+
     this.log("pre sending: " + om.message)
 
     let newMessage = new ctypes.char.ptr();
@@ -458,9 +483,9 @@ OTR.prototype = {
       this.userstate,
       this.uiOps.address(),
       null,
-      conv.account,
-      conv.protocol,
-      conv.name,
+      conv.account.normalizedName,
+      conv.account.protocol.normalizedName,
+      conv.normalizedName,
       libotr.OTRL_INSTAG_BEST,
       om.message,
       null,
@@ -485,7 +510,7 @@ OTR.prototype = {
     }
 
     if (!om.cancelled) {
-      this.bufferMsg(om.conversation, om.message, msg);
+      this.bufferMsg(conv.id, om.message, msg);
       om.message = msg;
     }
 
@@ -503,7 +528,7 @@ OTR.prototype = {
       return;
     }
 
-    let conv = new Conv(im.conversation);
+    let conv = im.conversation;
     let newMessage = new ctypes.char.ptr();
     this.log("pre receiving: " + im.displayMessage)
 
@@ -511,9 +536,9 @@ OTR.prototype = {
       this.userstate,
       this.uiOps.address(),
       null,
-      conv.account,
-      conv.protocol,
-      conv.name,
+      conv.account.normalizedName,
+      conv.account.protocol.normalizedName,
+      conv.normalizedName,
       im.displayMessage,
       newMessage.address(),
       null,
@@ -555,10 +580,10 @@ OTR.prototype = {
 
   // buffer messages
 
-  bufferMsg: function(conv, disp, sent) {
+  bufferMsg: function(convId, display, sent) {
     this._buffer.push({
-      conv: conv,
-      disp: disp,
+      convId: convId,
+      display: display,
       sent: sent
     });
   },
@@ -568,10 +593,10 @@ OTR.prototype = {
     let buf = this._buffer;
     for (let i = 0; i < buf.length; i++) {
       let b = buf[i];
-      if (b.conv === im.conversation && b.sent === im.displayMessage) {
-        im.displayMessage = b.disp;
+      if (b.convId === im.conversation.id && b.sent === im.displayMessage) {
+        im.displayMessage = b.display;
         buf.splice(i, 1);
-        this.log("displaying: " + b.disp)
+        this.log("displaying: " + b.display)
         return;
       }
     }

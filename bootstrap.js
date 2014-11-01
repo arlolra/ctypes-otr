@@ -48,19 +48,21 @@ let ui = {
     ui.otr.loadFiles().then(function() {
       Services.obs.addObserver(ui.otr, "new-ui-conversation", false);
       Services.obs.addObserver(ui, "conversation-loaded", false);
-      Services.obs.addObserver(ui, "account-disconnecting", false);
+      Services.obs.addObserver(ui, "conversation-closed", false);
       Services.obs.addObserver(ui, "prpl-quit", false);
       ui.prefs.addObserver("", ui, false);
     }, function(reason) { throw new Error(reason); });
   },
 
-  disconnect: function(aAccount) {
-    let convos = Services.conversations.getConversations();
-    while (convos.hasMoreElements()) {
-      let conv = convos.getNext();
-      if (conv.isChat || (aAccount && (conv.account.id !== aAccount.id)))
+  disconnect: function(aConv) {
+    if (aConv)
+      return ui.otr.disconnect(aConv, true);
+    let conversations = Services.conversations.getConversations();
+    while (conversations.hasMoreElements()) {
+      let conv = conversations.getNext();
+      if (conv.isChat)
         return;
-      ui.otr.disconnect(conv);
+      ui.otr.disconnect(conv, true);
     }
   },
 
@@ -74,14 +76,13 @@ let ui = {
     }
   },
 
-  tabListener: function(aObject) {
+  addButton: function(aObject) {
     let binding = aObject.ownerDocument.getBindingParent(aObject);
-    if (binding._conv.isChat)
+    let uiConv = binding._conv;
+    let conv = uiConv.target;
+    if (conv.isChat)
       return;
-    ui.addButton(binding);
-  },
 
-  addButton: function(binding) {
     let cti = binding.getElt("conv-top-info");
     let doc = cti.ownerDocument;
 
@@ -91,7 +92,7 @@ let ui = {
     otrStart.addEventListener("click", function(e) {
       e.preventDefault();
       if (!e.target.disabled)
-        ui.otr.sendQueryMsg(binding._conv.target);
+        ui.otr.sendQueryMsg(conv);
     });
 
     let otrEnd = doc.createElement("menuitem");
@@ -100,7 +101,7 @@ let ui = {
     otrEnd.addEventListener("click", function(e) {
       e.preventDefault();
       if (!e.target.disabled)
-        ui.otr.disconnect(binding._conv.target);
+        ui.otr.disconnect(conv, false);
     });
 
     let otrMenu = doc.createElement("menupopup");
@@ -119,58 +120,69 @@ let ui = {
     cti.appendChild(otrButton);
 
     // get otr msg state
-    let context = ui.otr.getContext(binding._conv.target);
-    ui.setMsgState(context, otrButton, otrStart, otrEnd);
+    let context = ui.otr.getContext(conv);
+    let trust = ui.getTrustSettings(context);
+    ui.setMsgState(trust, otrButton, otrStart, otrEnd);
+    uiConv.systemMessage(trans("alert.state", trust.label));
   },
 
   updateButton: function(context) {
-    let conv = ui.otr.convos.get(context.id);
+    let uiConv = ui.otr.getUIConvFromContext(context);
+    if (!uiConv)
+      Cu.reportError("Couldn't find conversation to update.");
     Conversations._conversations.forEach(function(binding) {
-      if (binding._conv.id !== conv.conv.id)
+      if (binding._conv.id !== uiConv.id)
         return;
       let cti = binding.getElt("conv-top-info");
       let otrButton = cti.querySelector(".otr-button");
       let otrStart = cti.querySelector(".otr-start");
       let otrEnd = cti.querySelector(".otr-end");
-      ui.setMsgState(context, otrButton, otrStart, otrEnd);
+      let trust = ui.getTrustSettings(context);
+      ui.setMsgState(trust, otrButton, otrStart, otrEnd);
     });
   },
 
-  // set msg state on toolbar button
-  setMsgState: function(context, otrButton, otrStart, otrEnd) {
-    let label, color, disableStart, disableEnd;
+  getTrustSettings: function(context) {
     switch(ui.otr.trust(context)) {
     case ui.otr.trustState.TRUST_NOT_PRIVATE:
-      label = trans("trust.not_private");
-      color = "red";
-      disableStart = false;
-      disableEnd = true;
-      break;
+      return {
+        label: trans("trust.not_private"),
+        color: "red",
+        disableStart: false,
+        disableEnd: true
+      };
     case ui.otr.trustState.TRUST_UNVERIFIED:
-      label = trans("trust.unverified");
-      color = "darkorange";
-      disableStart = true;
-      disableEnd = false;
-      break;
+      return {
+        label: trans("trust.unverified"),
+        color: "darkorange",
+        disableStart: true,
+        disableEnd: false
+      };
     case ui.otr.trustState.TRUST_PRIVATE:
-      label = trans("trust.private");
-      color = "black";
-      disableStart = true;
-      disableEnd = false;
-      break;
+      return {
+        label: trans("trust.private"),
+        color: "black",
+        disableStart: true,
+        disableEnd: false
+      };
     case ui.otr.trustState.TRUST_FINISHED:
-      label = trans("trust.finished");
-      color = "darkorange";
-      disableStart = false;
-      disableEnd = false;
-      break;
+      return {
+        label: trans("trust.finished"),
+        color: "darkorange",
+        disableStart: false,
+        disableEnd: false
+      };
     default:
       throw new Error("Shouldn't be here.");
     }
-    otrButton.setAttribute("label", label);
-    otrButton.style.color = color;
-    otrStart.setAttribute("disabled", disableStart);
-    otrEnd.setAttribute("disabled", disableEnd);
+  },
+
+  // set msg state on toolbar button
+  setMsgState: function(trust, otrButton, otrStart, otrEnd) {
+    otrButton.setAttribute("label", trust.label);
+    otrButton.style.color = trust.color;
+    otrStart.setAttribute("disabled", trust.disableStart);
+    otrEnd.setAttribute("disabled", trust.disableEnd);
   },
 
   observe: function(aObject, aTopic, aMsg) {
@@ -179,9 +191,9 @@ let ui = {
       ui.changePref(aMsg);
       break;
     case "conversation-loaded":
-      ui.tabListener(aObject);
+      ui.addButton(aObject);
       break;
-    case "account-disconnecting":
+    case "conversation-closed":
     case "prpl-quit":
       ui.disconnect(aTopic === "prpl-quit" ? null : aObject);
       break;
@@ -208,7 +220,7 @@ let ui = {
   destroy: function() {
     Services.obs.removeObserver(ui.otr, "new-ui-conversation");
     Services.obs.removeObserver(ui, "conversation-loaded");
-    Services.obs.removeObserver(ui, "account-disconnecting");
+    Services.obs.removeObserver(ui, "conversation-closed");
     Services.obs.removeObserver(ui, "prpl-quit");
     Conversations._conversations.forEach(ui.resetConv);
     ui.prefs.removeObserver("", ui);
