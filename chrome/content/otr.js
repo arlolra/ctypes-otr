@@ -460,6 +460,7 @@ OTR.prototype = {
   removeConversation: function(uiConv) {
     uiConv.removeObserver(this);
     this._convos.delete(uiConv.target.id);
+    this.clearMsgs(uiConv.target.id);
   },
 
   onSend: function(om) {
@@ -579,6 +580,10 @@ OTR.prototype = {
   },
 
   // buffer messages
+
+  clearMsgs: function(convId) {
+    this._buffer = this._buffer.filter((msg) => msg.convId !== convId);
+  },
 
   bufferMsg: function(convId, display, sent) {
     this._buffer.push({
