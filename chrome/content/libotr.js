@@ -11,13 +11,13 @@ Cu.import("resource://gre/modules/Services.jsm");
 // load libotr
 let libotr;
 try {
-  // look in standard locations
-  libotr = ctypes.open(ctypes.libraryName("otr"));
-} catch(e) {
   // try in chrome
   let uri = "chrome://otr/content/" + ctypes.libraryName("otr");
   uri = Cr.convertChromeURL(Services.io.newURI(uri, null, null));
   libotr = ctypes.open(uri.QueryInterface(Ci.nsIFileURL).file.path);
+} catch(e) {
+  // look in standard locations
+  libotr = ctypes.open(ctypes.libraryName("otr"));
 }
 
 // libotr API version
