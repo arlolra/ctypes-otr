@@ -284,17 +284,20 @@ OTR.prototype = {
   gone_secure_cb: function(opdata, context) {
     context = new Context(context);
     this.notifyObservers(context, "otr:msg-state");
-    this.sendAlert(context, trans("context.gone_secure"));
+    this.sendAlert(context, trans("context.gone_secure", context.username));
   },
 
   gone_insecure_cb: function(opdata, context) {
-    context = new Context(context);
-    this.notifyObservers(context, "otr:msg-state");
-    this.sendAlert(context, trans("context.gone_insecure"));
+    // This isn't used. See: https://bugs.otr.im/issues/48
+    this.log("gone_insecure_cb");
   },
 
   still_secure_cb: function(opdata, context, is_reply) {
-    this.log("still_secure_cb");
+    if (!is_reply) {
+      context = new Context(context);
+      this.notifyObservers(context, "otr:msg-state");
+      this.sendAlert(context, trans("context.still_secure", context.username));
+    }
   },
 
   max_message_size_cb: function(opdata, context) {
@@ -531,6 +534,8 @@ OTR.prototype = {
 
     let conv = im.conversation;
     let newMessage = new ctypes.char.ptr();
+    let tlvs = new libotr.OtrlTLV.ptr();
+
     this.log("pre receiving: " + im.displayMessage)
 
     let res = libotr.otrl_message_receiving(
@@ -542,7 +547,7 @@ OTR.prototype = {
       conv.normalizedName,
       im.displayMessage,
       newMessage.address(),
-      null,
+      tlvs.address(),
       null,
       null,
       null
@@ -550,6 +555,15 @@ OTR.prototype = {
 
     if (!newMessage.isNull()) {
       im.displayMessage = newMessage.readString();
+    }
+
+    // search tlvs for a disconnect msg
+    // https://bugs.otr.im/issues/54
+    let tlv = libotr.otrl_tlv_find(tlvs, libotr.tlvs.OTRL_TLV_DISCONNECTED);
+    if (!tlv.isNull()) {
+      let context = this.getContext(conv);
+      this.sendAlert(context, trans("msgevent.ended"));
+      this.notifyObservers(context, "otr:msg-state");
     }
 
     if (res) {

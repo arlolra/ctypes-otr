@@ -91,8 +91,12 @@ let ui = {
     otrStart.classList.add("otr-start");
     otrStart.addEventListener("click", function(e) {
       e.preventDefault();
-      if (!e.target.disabled)
+      if (!e.target.disabled) {
+        let context = ui.otr.getContext(conv);
+        if (context.msgstate === ui.otr.messageState.OTRL_MSGSTATE_ENCRYPTED)
+          uiConv.systemMessage(trans("alert.refresh", conv.normalizedName));
         ui.otr.sendQueryMsg(conv);
+      }
     });
 
     let otrEnd = doc.createElement("menuitem");
@@ -100,8 +104,10 @@ let ui = {
     otrEnd.classList.add("otr-end");
     otrEnd.addEventListener("click", function(e) {
       e.preventDefault();
-      if (!e.target.disabled)
+      if (!e.target.disabled) {
         ui.otr.disconnect(conv, false);
+        uiConv.systemMessage(trans("alert.gone_insecure", conv.normalizedName));
+      }
     });
 
     let otrMenu = doc.createElement("menupopup");
@@ -123,7 +129,7 @@ let ui = {
     let context = ui.otr.getContext(conv);
     let trust = ui.getTrustSettings(context);
     ui.setMsgState(trust, otrButton, otrStart, otrEnd);
-    uiConv.systemMessage(trans("alert.state", trust.label));
+    uiConv.systemMessage(trans("alert.state", trust.trustLabel));
   },
 
   updateButton: function(context) {
@@ -146,28 +152,32 @@ let ui = {
     switch(ui.otr.trust(context)) {
     case ui.otr.trustState.TRUST_NOT_PRIVATE:
       return {
-        label: trans("trust.not_private"),
+        trustLabel: trans("trust.not_private"),
+        startLabel: trans("start.label"),
         color: "red",
         disableStart: false,
         disableEnd: true
       };
     case ui.otr.trustState.TRUST_UNVERIFIED:
       return {
-        label: trans("trust.unverified"),
+        trustLabel: trans("trust.unverified"),
+        startLabel: trans("refresh.label"),
         color: "darkorange",
-        disableStart: true,
+        disableStart: false,
         disableEnd: false
       };
     case ui.otr.trustState.TRUST_PRIVATE:
       return {
-        label: trans("trust.private"),
+        trustLabel: trans("trust.private"),
+        startLabel: trans("refresh.label"),
         color: "black",
-        disableStart: true,
+        disableStart: false,
         disableEnd: false
       };
     case ui.otr.trustState.TRUST_FINISHED:
       return {
-        label: trans("trust.finished"),
+        trustLabel: trans("trust.finished"),
+        startLabel: trans("start.label"),
         color: "darkorange",
         disableStart: false,
         disableEnd: false
@@ -179,8 +189,9 @@ let ui = {
 
   // set msg state on toolbar button
   setMsgState: function(trust, otrButton, otrStart, otrEnd) {
-    otrButton.setAttribute("label", trust.label);
     otrButton.style.color = trust.color;
+    otrButton.setAttribute("label", trust.trustLabel);
+    otrStart.setAttribute("label", trust.startLabel);
     otrStart.setAttribute("disabled", trust.disableStart);
     otrEnd.setAttribute("disabled", trust.disableEnd);
   },

@@ -290,6 +290,13 @@ OtrlMessageAppOps.define([
   { timer_control: timer_control_cb_t }
 ]);
 
+OtrlTLV.define([
+  { type: ctypes.unsigned_short },
+  { len: ctypes.unsigned_short },
+  { data: ctypes.unsigned_char.ptr },
+  { next: OtrlTLV.ptr }
+]);
+
 // policies
 
 const OTRL_POLICY_ALLOW_V1 = 0x01;
@@ -585,6 +592,33 @@ libOTR.prototype = {
     ctypes.char.ptr,
     ctypes.char.ptr,
     otrl_instag_t
-  )
+  ),
+
+  // tlv.h
+
+  tlvs: {
+    OTRL_TLV_PADDING: new ctypes.unsigned_short(0x0000),
+    OTRL_TLV_DISCONNECTED: new ctypes.unsigned_short(0x0001),
+    OTRL_TLV_SMP1: new ctypes.unsigned_short(0x0002),
+    OTRL_TLV_SMP2: new ctypes.unsigned_short(0x0003),
+    OTRL_TLV_SMP3: new ctypes.unsigned_short(0x0004),
+    OTRL_TLV_SMP4: new ctypes.unsigned_short(0x0005),
+    OTRL_TLV_SMP_ABORT: new ctypes.unsigned_short(0x0006),
+    OTRL_TLV_SMP1Q: new ctypes.unsigned_short(0x0007),
+    OTRL_TLV_SYMKEY: new ctypes.unsigned_short(0x0008)
+  },
+
+  OtrlTLV: OtrlTLV,
+
+  otrl_tlv_find: libotr.declare(
+    "otrl_tlv_find", abi, OtrlTLV.ptr,
+    OtrlTLV.ptr,
+    ctypes.unsigned_short
+  ),
+
+  otrl_tlv_free: libotr.declare(
+    "otrl_tlv_free", abi, ctypes.void_t.ptr,
+    OtrlTLV.ptr
+  ),
 
 };
