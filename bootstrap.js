@@ -2,7 +2,6 @@ const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imWindows.jsm");
-Cu.import("resource:///modules/ibCore.jsm");
 
 const authDialog = "chrome://otr/content/auth.xul";
 

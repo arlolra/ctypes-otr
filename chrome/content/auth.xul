@@ -9,14 +9,28 @@
   windowtype="OTR:Auth"
   title="&authDialog.title;"
   onload="otrAuth.onload()"
-  buttons="accept,cancel"
+  buttons="accept,cancel,help"
   buttonlabelaccept="&authDialog.authenticate;"
   buttonlabelcancel="&authDialog.cancel;"
+  buttonlabelhelp="&authDialog.help;"
   ondialogaccept="otrAuth.accept()"
-  ondialogcancel="otrAuth.cancel()">
+  ondialoghelp="otrAuth.help()">
 
   <script type="application/javascript" src="chrome://otr/content/auth.js" />
 
-  <description value="&authDialog.description;" />
+  <groupbox id="manualGroup">
+    <caption label="&authDialog.manualVerification;"/>
+    <description style="width: 300px; white-space: pre-wrap;">&authDialog.manualInstruction;</description>
+    <description id="fingerprints" style="width: 300px; white-space: pre-wrap;"></description>
+    <hbox align="center">
+      <menulist id="verifiedOption">
+        <menupopup>
+          <menuitem label="&authDialog.have;" value="1" />
+          <menuitem label="&authDialog.haveNot;" value="0" />
+        </menupopup>
+      </menulist>
+      <label value="&authDialog.verified;" />
+    </hbox>
+  </groupbox>
 
 </dialog>

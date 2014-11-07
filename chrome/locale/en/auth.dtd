@@ -1,9 +1,13 @@
 <!ENTITY authDialog.title "Authenticate contact">
 <!ENTITY authDialog.authenticate "Authenticate">
 <!ENTITY authDialog.cancel "Cancel">
+<!ENTITY authDialog.help "Help">
 <!ENTITY authDialog.have "I have">
 <!ENTITY authDialog.haveNot "I have not">
 <!ENTITY authDialog.verified "verified that this is in fact the correct fingerprint.">
 <!ENTITY authDialog.yourFingerprint "Your fingerprint">
 <!ENTITY authDialog.theirFingerprint "Their purported fingerprint">
-<!ENTITY authDialog.description "Authenticating a contact helps ensure that the person you are talking to is who they claim to be.">
+<!ENTITY authDialog.manualVerification "Manual fingerprint verification">
+<!ENTITY authDialog.questionAndAnswer "Question and answer">
+<!ENTITY authDialog.sharedSecret "Shared secret">
+<!ENTITY authDialog.manualInstruction "To verify the fingerprint, contact your buddy via some other authenticated channel, such as the telephone or GPG-signed email. Each of you should tell your fingerprint to the other. If everything matches up, you should indicate in the dialog below that you have verified the fingerprint.">

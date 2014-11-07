@@ -46,6 +46,7 @@ const DH_keypair = ctypes.StructType("DH_keypair");
 
 const OTRL_PRIVKEY_FPRINT_HUMAN_LEN = 45;
 const fingerprint_t = ctypes.char.array(OTRL_PRIVKEY_FPRINT_HUMAN_LEN);
+const hash_t = ctypes.unsigned_char.array(20);
 
 const app_data_free_t = ctypes.FunctionType(abi, ctypes.void_t, [
   ctypes.void_t.ptr
@@ -465,6 +466,11 @@ let libOTR = {
   otrl_privkey_fingerprint: libotr.declare(
     "otrl_privkey_fingerprint", abi, ctypes.char.ptr,
     OtrlUserState, fingerprint_t, ctypes.char.ptr, ctypes.char.ptr
+  ),
+
+  otrl_privkey_hash_to_human: libotr.declare(
+    "otrl_privkey_hash_to_human", abi, ctypes.void_t.ptr,
+    fingerprint_t, hash_t
   ),
 
   // uiOps callbacks
