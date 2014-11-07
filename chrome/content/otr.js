@@ -1,4 +1,4 @@
-let EXPORTED_SYMBOLS = ["OTR"];
+let EXPORTED_SYMBOLS = ["otr"];
 
 const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
@@ -6,26 +6,6 @@ Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/osfile.jsm");
 Cu.import("chrome://otr/content/libotr.js");
-
-let libotr = new libOTR();
-
-// error type
-
-function OTRError(message) {
-  if (Error.captureStackTrace) {
-    Error.captureStackTrace(this, this.constructor);
-  } else {
-    var err = new Error();
-    err.toString = this.toString.bind(this);
-    this.stack = err.stack;
-  }
-  this.message = message;
-}
-
-OTRError.prototype = Object.create(Error.prototype, {
-  name: { value: "OTR Error" },
-  constructor: { value: OTRError }
-});
 
 // translations
 
@@ -53,7 +33,7 @@ function profilePath(filename) {
   return OS.Path.join(OS.Constants.Path.profileDir, filename);
 }
 
-// context wrapper
+// libotr context wrapper
 
 function Context(context) {
   this.context = context;
@@ -73,28 +53,29 @@ Context.prototype = {
   }
 };
 
-// otr constructor
+// otr module
 
-function OTR(opts) {
-  opts = opts || {};
-  this.setPolicy(opts.requireEncryption);
+let otr = {
 
-  this.userstate = libotr.otrl_userstate_create();
-  this.privateKeyPath = profilePath("otr.private_key")
-  this.fingerprintsPath = profilePath("otr.fingerprints");
-  this.instanceTagsPath = profilePath("otr.instance_tags");
-  this.uiOps = this.initUiOps();
+  init: function(opts) {
+    opts = opts || {};
 
-  // A map of UIConvs, keyed on the target.id
-  this._convos = new Map();
-  this._observers = [];
-  this._buffer = [];
-}
+    libOTR.init();
+    this.setPolicy(opts.requireEncryption);
 
-OTR.prototype = {
+    this.userstate = libOTR.otrl_userstate_create();
+    this.privateKeyPath = profilePath("otr.private_key")
+    this.fingerprintsPath = profilePath("otr.fingerprints");
+    this.instanceTagsPath = profilePath("otr.instance_tags");
+    this.uiOps = this.initUiOps();
 
-  constructor: OTR,
-  close: () => libotr.close(),
+    // A map of UIConvs, keyed on the target.id
+    this._convos = new Map();
+    this._observers = [];
+    this._buffer = [];
+  },
+
+  close: () => libOTR.close(),
 
   log: function(msg) {
     this.notifyObservers(msg, "otr:log");
@@ -102,72 +83,72 @@ OTR.prototype = {
 
   setPolicy: function(requireEncryption) {
     this.policy = requireEncryption
-      ? libotr.OTRL_POLICY_ALWAYS
-      : libotr.OTRL_POLICY_OPPORTUNISTIC;
+      ? libOTR.OTRL_POLICY_ALWAYS
+      : libOTR.OTRL_POLICY_OPPORTUNISTIC;
   },
 
   // load stored files from my profile
   loadFiles: function() {
     return ensureFileExists(this.privateKeyPath).then(() => {
-      let err = libotr.otrl_privkey_read(this.userstate, this.privateKeyPath);
+      let err = libOTR.otrl_privkey_read(this.userstate, this.privateKeyPath);
       if (err)
-        throw new OTRError("Returned code: " + err);
+        throw new Error("Returned code: " + err);
     }).then(() => ensureFileExists(this.fingerprintsPath)).then(() => {
-      let err = libotr.otrl_privkey_read_fingerprints(
+      let err = libOTR.otrl_privkey_read_fingerprints(
         this.userstate, this.fingerprintsPath, null, null
       );
       if (err)
-        throw new OTRError("Returned code: " + err);
+        throw new Error("Returned code: " + err);
     }).then(() => ensureFileExists(this.instanceTagsPath));
   },
   
   // generate a private key
   // TODO: maybe move this to a ChromeWorker
   generatePrivateKey: function(account, protocol) {
-    let err = libotr.otrl_privkey_generate(
+    let err = libOTR.otrl_privkey_generate(
       this.userstate, this.privateKeyPath, account, protocol
     );
     if (err)
-      throw new OTRError("Returned code: " + err);
+      throw new Error("Returned code: " + err);
   },
 
   // get my fingerprint
   privateKeyFingerprint: function(account, protocol) {
-    let fingerprint = libotr.otrl_privkey_fingerprint(
-      this.userstate, new libotr.fingerprint_t(), account, protocol
+    let fingerprint = libOTR.otrl_privkey_fingerprint(
+      this.userstate, new libOTR.fingerprint_t(), account, protocol
     );
     return fingerprint.isNull() ? null : fingerprint.readString();
   },
 
   // write fingerprints to file synchronously
   writeFingerprints: function() {
-    let err = libotr.otrl_privkey_write_fingerprints(
+    let err = libOTR.otrl_privkey_write_fingerprints(
       this.userstate, this.fingerprintsPath
     );
     if (err)
-      throw new OTRError("Returned code: " + err);
+      throw new Error("Returned code: " + err);
   },
 
   // write fingerprints to file synchronously
   genInstag: function(account, protocol) {
-    let err = libotr.otrl_instag_generate(
+    let err = libOTR.otrl_instag_generate(
       this.userstate, this.instanceTagsPath, account, protocol
     );
     if (err)
-      throw new OTRError("Returned code: " + err);
+      throw new Error("Returned code: " + err);
   },
 
   // expose message states
-  messageState: libotr.messageState,
+  messageState: libOTR.messageState,
 
   // get context from conv
   getContext: function(conv) {
-    let context = libotr.otrl_context_find(
+    let context = libOTR.otrl_context_find(
       this.userstate,
       conv.normalizedName,
       conv.account.normalizedName,
       conv.account.protocol.normalizedName,
-      libotr.OTRL_INSTAG_BEST, 1, null, null, null
+      libOTR.OTRL_INSTAG_BEST, 1, null, null, null
     );
     return new Context(context);
   },
@@ -193,14 +174,14 @@ OTR.prototype = {
   },
 
   disconnect: function(conv, remove) {
-    libotr.otrl_message_disconnect(
+    libOTR.otrl_message_disconnect(
       this.userstate,
       this.uiOps.address(),
       null,
       conv.account.normalizedName,
       conv.account.protocol.normalizedName,
       conv.normalizedName,
-      libotr.OTRL_INSTAG_BEST
+      libOTR.OTRL_INSTAG_BEST
     );
     if (remove) {
       let uiConv = Services.conversations.getUIConversation(conv);
@@ -210,12 +191,12 @@ OTR.prototype = {
   },
 
   sendQueryMsg: function(conv) {
-    let query = libotr.otrl_proto_default_query_msg(
+    let query = libOTR.otrl_proto_default_query_msg(
       conv.account.normalizedName,
       this.policy
     );
     conv.sendMsg(query.readString());
-    libotr.otrl_message_free(query);
+    libOTR.otrl_message_free(query);
   },
 
   trustState: {
@@ -345,24 +326,24 @@ OTR.prototype = {
   handle_msg_event_cb: function(opdata, msg_event, context, message, err) {
     context = new Context(context);
     switch(msg_event) {
-    case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
+    case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
       if (!message.isNull())
         this.sendAlert(context, trans("msgevent.rcvd_unecrypted", message.readString()));
       break;
-    case libotr.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
+    case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
       if (!message.isNull())
         this.sendAlert(context, trans("msgevent.rcvd_unecrypted", message.readString()));
       break;
-    case libotr.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_RCVD:
+    case libOTR.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_RCVD:
       this.log("Heartbeat received from " + context.username + ".");
       break;
-    case libotr.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_SENT:
+    case libOTR.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_SENT:
       this.log("Heartbeat sent to " + context.username + ".");
       break;
-    case libotr.messageEvent.OTRL_MSGEVENT_ENCRYPTION_REQUIRED:
+    case libOTR.messageEvent.OTRL_MSGEVENT_ENCRYPTION_REQUIRED:
       this.log("Encryption required")
       break;
-    case libotr.messageEvent.OTRL_MSGEVENT_CONNECTION_ENDED:
+    case libOTR.messageEvent.OTRL_MSGEVENT_CONNECTION_ENDED:
       this.sendAlert(context, trans("msgevent.ended"));
       this.notifyObservers(context, "otr:msg-state");
       break;
@@ -390,7 +371,7 @@ OTR.prototype = {
   // uiOps
 
   initUiOps: function() {
-    let uiOps = new libotr.OtrlMessageAppOps()
+    let uiOps = new libOTR.OtrlMessageAppOps()
 
     let methods = [
       "policy",
@@ -422,7 +403,7 @@ OTR.prototype = {
     for (let i = 0; i < methods.length; i++) {
       let m = methods[i];
       // keep a pointer to this in memory to avoid crashing
-      this[m + "_cb"] = libotr[m + "_cb_t"](this[m + "_cb"].bind(this));
+      this[m + "_cb"] = libOTR[m + "_cb_t"](this[m + "_cb"].bind(this));
       uiOps[m] = this[m + "_cb"];
     }
 
@@ -474,7 +455,7 @@ OTR.prototype = {
     let uiConv = this._convos.get(om.conversation.id);
     if (!uiConv) {
       om.cancelled = true;
-      Cu.reportError(new OTRError("Sending to an unknown conversation."));
+      Cu.reportError(new Error("Sending to an unknown conversation."));
       return;
     }
     let conv = uiConv.target;
@@ -483,18 +464,18 @@ OTR.prototype = {
 
     let newMessage = new ctypes.char.ptr();
 
-    let err = libotr.otrl_message_sending(
+    let err = libOTR.otrl_message_sending(
       this.userstate,
       this.uiOps.address(),
       null,
       conv.account.normalizedName,
       conv.account.protocol.normalizedName,
       conv.normalizedName,
-      libotr.OTRL_INSTAG_BEST,
+      libOTR.OTRL_INSTAG_BEST,
       om.message,
       null,
       newMessage.address(),
-      libotr.fragPolicy.OTRL_FRAGMENT_SEND_ALL_BUT_LAST,
+      libOTR.fragPolicy.OTRL_FRAGMENT_SEND_ALL_BUT_LAST,
       null,
       null,
       null
@@ -504,7 +485,7 @@ OTR.prototype = {
 
     if (err) {
       om.cancelled = true;
-      Cu.reportError(new OTRError("OTR returned code: " + err));
+      Cu.reportError(new Error("OTR returned code: " + err));
     } else if (!newMessage.isNull()) {
       msg = newMessage.readString();
       // https://bugs.otr.im/issues/52
@@ -519,7 +500,7 @@ OTR.prototype = {
     }
 
     this.log("post sending (" + !om.cancelled + "): " + om.message);
-    libotr.otrl_message_free(newMessage);
+    libOTR.otrl_message_free(newMessage);
   },
 
   onReceive: function(im) {
@@ -534,11 +515,11 @@ OTR.prototype = {
 
     let conv = im.conversation;
     let newMessage = new ctypes.char.ptr();
-    let tlvs = new libotr.OtrlTLV.ptr();
+    let tlvs = new libOTR.OtrlTLV.ptr();
 
     this.log("pre receiving: " + im.displayMessage)
 
-    let res = libotr.otrl_message_receiving(
+    let res = libOTR.otrl_message_receiving(
       this.userstate,
       this.uiOps.address(),
       null,
@@ -559,7 +540,7 @@ OTR.prototype = {
 
     // search tlvs for a disconnect msg
     // https://bugs.otr.im/issues/54
-    let tlv = libotr.otrl_tlv_find(tlvs, libotr.tlvs.OTRL_TLV_DISCONNECTED);
+    let tlv = libOTR.otrl_tlv_find(tlvs, libOTR.tlvs.OTRL_TLV_DISCONNECTED);
     if (!tlv.isNull()) {
       let context = this.getContext(conv);
       this.sendAlert(context, trans("msgevent.ended"));
@@ -573,7 +554,7 @@ OTR.prototype = {
       this.log("post receiving: " + im.displayMessage)
     }
 
-    libotr.otrl_message_free(newMessage);
+    libOTR.otrl_message_free(newMessage);
   },
 
   // observer interface

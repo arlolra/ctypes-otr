@@ -2,6 +2,9 @@ const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imWindows.jsm");
+Cu.import("resource:///modules/ibCore.jsm");
+
+const authDialog = "chrome://otr/content/auth.xul";
 
 let bundle = Services.strings.createBundle("chrome://otr/locale/ui.properties");
 
@@ -22,7 +25,6 @@ let ui = {
     csl.logStringMessage(msg);
   },
 
-  otr: null,
   prefs: null,
   origAddConv: null,
 
@@ -43,10 +45,10 @@ let ui = {
     let opts = {
       requireEncryption: ui.prefs.getBoolPref("requireEncryption")
     };
-    ui.otr = new OTR(opts);
-    ui.otr.addObserver(ui);
-    ui.otr.loadFiles().then(function() {
-      Services.obs.addObserver(ui.otr, "new-ui-conversation", false);
+    otr.init(opts);
+    otr.addObserver(ui);
+    otr.loadFiles().then(function() {
+      Services.obs.addObserver(otr, "new-ui-conversation", false);
       Services.obs.addObserver(ui, "conversation-loaded", false);
       Services.obs.addObserver(ui, "conversation-closed", false);
       Services.obs.addObserver(ui, "prpl-quit", false);
@@ -56,20 +58,20 @@ let ui = {
 
   disconnect: function(aConv) {
     if (aConv)
-      return ui.otr.disconnect(aConv, true);
+      return otr.disconnect(aConv, true);
     let conversations = Services.conversations.getConversations();
     while (conversations.hasMoreElements()) {
       let conv = conversations.getNext();
       if (conv.isChat)
         return;
-      ui.otr.disconnect(conv, true);
+      otr.disconnect(conv, true);
     }
   },
 
   changePref: function(aMsg) {
     switch(aMsg) {
     case "requireEncryption":
-      ui.otr.setPolicy(ui.prefs.getBoolPref("requireEncryption"));
+      otr.setPolicy(ui.prefs.getBoolPref("requireEncryption"));
       break;
     default:
       ui.log(aMsg);
@@ -85,6 +87,7 @@ let ui = {
 
     let cti = binding.getElt("conv-top-info");
     let doc = cti.ownerDocument;
+    let window = doc.defaultView;
 
     let otrStart = doc.createElement("menuitem");
     otrStart.setAttribute("label", trans("start.label"));
@@ -92,10 +95,10 @@ let ui = {
     otrStart.addEventListener("click", function(e) {
       e.preventDefault();
       if (!e.target.disabled) {
-        let context = ui.otr.getContext(conv);
-        if (context.msgstate === ui.otr.messageState.OTRL_MSGSTATE_ENCRYPTED)
+        let context = otr.getContext(conv);
+        if (context.msgstate === otr.messageState.OTRL_MSGSTATE_ENCRYPTED)
           uiConv.systemMessage(trans("alert.refresh", conv.normalizedName));
-        ui.otr.sendQueryMsg(conv);
+        otr.sendQueryMsg(conv);
       }
     });
 
@@ -105,14 +108,26 @@ let ui = {
     otrEnd.addEventListener("click", function(e) {
       e.preventDefault();
       if (!e.target.disabled) {
-        ui.otr.disconnect(conv, false);
+        otr.disconnect(conv, false);
         uiConv.systemMessage(trans("alert.gone_insecure", conv.normalizedName));
+      }
+    });
+
+    let otrAuth = doc.createElement("menuitem");
+    otrAuth.setAttribute("label", trans("auth.label"));
+    otrAuth.classList.add("otr-auth");
+    otrAuth.addEventListener("click", function(e) {
+      e.preventDefault();
+      if (!e.target.disabled) {
+        let features = "centerscreen,resizable=no,minimizable=no";
+        window.openDialog(authDialog, trans("auth.label"), features, uiConv);
       }
     });
 
     let otrMenu = doc.createElement("menupopup");
     otrMenu.appendChild(otrStart);
     otrMenu.appendChild(otrEnd);
+    otrMenu.appendChild(otrAuth);
 
     let otrButton = doc.createElement("toolbarbutton");
     otrButton.classList.add("otr-button");
@@ -126,14 +141,14 @@ let ui = {
     cti.appendChild(otrButton);
 
     // get otr msg state
-    let context = ui.otr.getContext(conv);
+    let context = otr.getContext(conv);
     let trust = ui.getTrustSettings(context);
-    ui.setMsgState(trust, otrButton, otrStart, otrEnd);
+    ui.setMsgState(trust, otrButton, otrStart, otrEnd, otrAuth);
     uiConv.systemMessage(trans("alert.state", trust.trustLabel));
   },
 
   updateButton: function(context) {
-    let uiConv = ui.otr.getUIConvFromContext(context);
+    let uiConv = otr.getUIConvFromContext(context);
     if (!uiConv)
       Cu.reportError("Couldn't find conversation to update.");
     Conversations._conversations.forEach(function(binding) {
@@ -143,44 +158,52 @@ let ui = {
       let otrButton = cti.querySelector(".otr-button");
       let otrStart = cti.querySelector(".otr-start");
       let otrEnd = cti.querySelector(".otr-end");
+      let otrAuth = cti.querySelector(".otr-auth");
       let trust = ui.getTrustSettings(context);
-      ui.setMsgState(trust, otrButton, otrStart, otrEnd);
+      ui.setMsgState(trust, otrButton, otrStart, otrEnd, otrAuth);
     });
   },
 
   getTrustSettings: function(context) {
-    switch(ui.otr.trust(context)) {
-    case ui.otr.trustState.TRUST_NOT_PRIVATE:
+    switch(otr.trust(context)) {
+    case otr.trustState.TRUST_NOT_PRIVATE:
       return {
         trustLabel: trans("trust.not_private"),
         startLabel: trans("start.label"),
+        authLabel: trans("auth.label"),
         color: "red",
         disableStart: false,
-        disableEnd: true
+        disableEnd: true,
+        disableAuth: true
       };
-    case ui.otr.trustState.TRUST_UNVERIFIED:
+    case otr.trustState.TRUST_UNVERIFIED:
       return {
         trustLabel: trans("trust.unverified"),
         startLabel: trans("refresh.label"),
+        authLabel: trans("auth.label"),
         color: "darkorange",
         disableStart: false,
         disableEnd: false
       };
-    case ui.otr.trustState.TRUST_PRIVATE:
+    case otr.trustState.TRUST_PRIVATE:
       return {
         trustLabel: trans("trust.private"),
         startLabel: trans("refresh.label"),
+        authLabel: trans("reauth.label"),
         color: "black",
         disableStart: false,
-        disableEnd: false
+        disableEnd: false,
+        disableAuth: false
       };
-    case ui.otr.trustState.TRUST_FINISHED:
+    case otr.trustState.TRUST_FINISHED:
       return {
         trustLabel: trans("trust.finished"),
         startLabel: trans("start.label"),
+        authLabel: trans("auth.label"),
         color: "darkorange",
         disableStart: false,
-        disableEnd: false
+        disableEnd: false,
+        disableAuth: true
       };
     default:
       throw new Error("Shouldn't be here.");
@@ -188,12 +211,14 @@ let ui = {
   },
 
   // set msg state on toolbar button
-  setMsgState: function(trust, otrButton, otrStart, otrEnd) {
+  setMsgState: function(trust, otrButton, otrStart, otrEnd, otrAuth) {
     otrButton.style.color = trust.color;
     otrButton.setAttribute("label", trust.trustLabel);
     otrStart.setAttribute("label", trust.startLabel);
     otrStart.setAttribute("disabled", trust.disableStart);
     otrEnd.setAttribute("disabled", trust.disableEnd);
+    otrAuth.setAttribute("label", trust.authLabel);
+    otrAuth.setAttribute("disabled", trust.disableAuth);
   },
 
   observe: function(aObject, aTopic, aMsg) {
@@ -220,7 +245,7 @@ let ui = {
   },
 
   resetConv: function(binding) {
-    ui.otr.removeConversation(binding._conv);
+    otr.removeConversation(binding._conv);
     let cti = binding.getElt("conv-top-info");
     let otrButton = cti.querySelector(".otr-button");
     if (!otrButton)
@@ -229,13 +254,14 @@ let ui = {
   },
 
   destroy: function() {
-    Services.obs.removeObserver(ui.otr, "new-ui-conversation");
+    Services.obs.removeObserver(otr, "new-ui-conversation");
     Services.obs.removeObserver(ui, "conversation-loaded");
     Services.obs.removeObserver(ui, "conversation-closed");
     Services.obs.removeObserver(ui, "prpl-quit");
     Conversations._conversations.forEach(ui.resetConv);
     ui.prefs.removeObserver("", ui);
-    ui.otr.removeObserver(ui);
+    otr.removeObserver(ui);
+    otr.close();
   }
 
 };

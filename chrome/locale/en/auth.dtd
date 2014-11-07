@@ -1,0 +1,9 @@
+<!ENTITY authDialog.title "Authenticate contact">
+<!ENTITY authDialog.authenticate "Authenticate">
+<!ENTITY authDialog.cancel "Cancel">
+<!ENTITY authDialog.have "I have">
+<!ENTITY authDialog.haveNot "I have not">
+<!ENTITY authDialog.verified "verified that this is in fact the correct fingerprint.">
+<!ENTITY authDialog.yourFingerprint "Your fingerprint">
+<!ENTITY authDialog.theirFingerprint "Their purported fingerprint">
+<!ENTITY authDialog.description "Authenticating a contact helps ensure that the person you are talking to is who they claim to be.">

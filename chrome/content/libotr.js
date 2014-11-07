@@ -2,13 +2,11 @@ let EXPORTED_SYMBOLS = ["libOTR"];
 
 const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
-let Cr = Cc["@mozilla.org/chrome/chrome-registry;1"]
-           .getService(Ci.nsIXULChromeRegistry);
+let Cr = Cc["@mozilla.org/chrome/chrome-registry;1"].getService(Ci.nsIXULChromeRegistry);
 
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
-// load libotr
 let libotr;
 try {
   // try in chrome
@@ -25,12 +23,6 @@ const otrl_version = [4, 0, 0];
 
 // ABI used to call native functions in the library
 const abi = ctypes.default_abi;
-
-function libOTR() {
-  // Apply version array as arguments to init function
-  if (this.otrl_init.apply(this, otrl_version))
-    throw new Error("Couldn't initialize libotr.");
-}
 
 // type defs
 
@@ -307,9 +299,14 @@ const OTRL_POLICY_SEND_WHITESPACE_TAG = 0x10;
 const OTRL_POLICY_WHITESPACE_START_AKE = 0x20;
 const OTRL_POLICY_ERROR_START_AKE = 0x40;
 
-libOTR.prototype = {
+let libOTR = {
 
-  constructor: libOTR,
+  init: function() {
+    // apply version array as arguments to the init function
+    if (this.otrl_init.apply(this, otrl_version))
+      throw new Error("Couldn't initialize libotr.");
+  },
+
   close: () => libotr.close(),
 
   // proto.h
@@ -619,6 +616,6 @@ libOTR.prototype = {
   otrl_tlv_free: libotr.declare(
     "otrl_tlv_free", abi, ctypes.void_t.ptr,
     OtrlTLV.ptr
-  ),
+  )
 
 };

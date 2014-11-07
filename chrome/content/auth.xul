@@ -1,9 +1,22 @@
 <?xml version="1.0" ?>
 <?xml-stylesheet href="chrome://global/skin/" type="text/css" ?>
 
-<dialog xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        buttons="cancel">
+<!DOCTYPE window SYSTEM "chrome://otr/locale/auth.dtd">
 
-  <checkbox id="hi" label="Hello" checked="true"/>
+<dialog
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  id="otrAuthDialog"
+  windowtype="OTR:Auth"
+  title="&authDialog.title;"
+  onload="otrAuth.onload()"
+  buttons="accept,cancel"
+  buttonlabelaccept="&authDialog.authenticate;"
+  buttonlabelcancel="&authDialog.cancel;"
+  ondialogaccept="otrAuth.accept()"
+  ondialogcancel="otrAuth.cancel()">
+
+  <script type="application/javascript" src="chrome://otr/content/auth.js" />
+
+  <description value="&authDialog.description;" />
 
 </dialog>
