@@ -563,6 +563,7 @@ let otr = {
       this.log("post receiving: " + im.displayMessage)
     }
 
+    libOTR.otrl_tlv_free(tlvs);
     libOTR.otrl_message_free(newMessage);
   },
 

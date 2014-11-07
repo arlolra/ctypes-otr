@@ -340,14 +340,13 @@ let libOTR = {
   // with it.
   otrl_proto_default_query_msg: libotr.declare(
     "otrl_proto_default_query_msg", abi, ctypes.char.ptr,
-    ctypes.char.ptr,
-    OtrlPolicy
+    ctypes.char.ptr, OtrlPolicy
   ),
 
   // Initialize the OTR library. Pass the version of the API you are using.
   otrl_init: libotr.declare(
     "otrl_init", abi, gcry_error_t,
-    ctypes.uint32_t, ctypes.uint32_t, ctypes.uint32_t
+    ctypes.unsigned_int, ctypes.unsigned_int, ctypes.unsigned_int
   ),
 
   // instag.h
@@ -391,6 +390,12 @@ let libOTR = {
     ctypes.int.ptr,
     ctypes.void_t.ptr,
     ctypes.void_t.ptr
+  ),
+
+  // Set the trust level for a given fingerprint.
+  otrl_context_set_trust: libotr.declare(
+    "otrl_context_set_trust", abi, ctypes.void_t,
+    Fingerprint.ptr, ctypes.char.ptr
   ),
 
   // dh.h
@@ -437,7 +442,8 @@ let libOTR = {
   // Read a sets of private DSA keys from a file on disk into the given
   // OtrlUserState.
   otrl_privkey_read: libotr.declare(
-    "otrl_privkey_read", abi, gcry_error_t, OtrlUserState, ctypes.char.ptr
+    "otrl_privkey_read", abi, gcry_error_t,
+    OtrlUserState, ctypes.char.ptr
   ),
 
   // Read the fingerprint store from a file on disk into the given
@@ -468,8 +474,9 @@ let libOTR = {
     OtrlUserState, fingerprint_t, ctypes.char.ptr, ctypes.char.ptr
   ),
 
+  // Convert a 20-byte hash value to a 45-byte human-readable value.
   otrl_privkey_hash_to_human: libotr.declare(
-    "otrl_privkey_hash_to_human", abi, ctypes.void_t.ptr,
+    "otrl_privkey_hash_to_human", abi, ctypes.void_t,
     fingerprint_t, hash_t
   ),
 
@@ -549,9 +556,11 @@ let libOTR = {
 
   // Deallocate a message allocated by other otrl_message_* routines.
   otrl_message_free: libotr.declare(
-    "otrl_message_free", abi, ctypes.void_t, ctypes.char.ptr
+    "otrl_message_free", abi, ctypes.void_t,
+    ctypes.char.ptr
   ),
 
+  // Handle a message about to be sent to the network.
   otrl_message_sending: libotr.declare(
     "otrl_message_sending", abi, gcry_error_t,
     OtrlUserState,
@@ -570,6 +579,7 @@ let libOTR = {
     ctypes.void_t.ptr
   ),
 
+  // Handle a message just received from the network.
   otrl_message_receiving: libotr.declare(
     "otrl_message_receiving", abi, ctypes.int,
     OtrlUserState,
@@ -581,13 +591,16 @@ let libOTR = {
     ctypes.char.ptr,
     ctypes.char.ptr.ptr,
     OtrlTLV.ptr.ptr,
-    ConnContext.ptr,
+    ConnContext.ptr.ptr,
     ctypes.void_t.ptr,
     ctypes.void_t.ptr
   ),
 
+  // Put a connection into the PLAINTEXT state, first sending the
+  // other side a notice that we're doing so if we're currently ENCRYPTED,
+  // and we think he's logged in. Affects only the specified instance.
   otrl_message_disconnect: libotr.declare(
-    "otrl_message_disconnect", abi, ctypes.void_t.ptr,
+    "otrl_message_disconnect", abi, ctypes.void_t,
     OtrlUserState,
     OtrlMessageAppOps.ptr,
     ctypes.void_t.ptr,
@@ -613,14 +626,16 @@ let libOTR = {
 
   OtrlTLV: OtrlTLV,
 
+  // Return the first TLV with the given type in the chain, or NULL if one
+  // isn't found.
   otrl_tlv_find: libotr.declare(
     "otrl_tlv_find", abi, OtrlTLV.ptr,
-    OtrlTLV.ptr,
-    ctypes.unsigned_short
+    OtrlTLV.ptr, ctypes.unsigned_short
   ),
 
+  // Deallocate a chain of TLVs.
   otrl_tlv_free: libotr.declare(
-    "otrl_tlv_free", abi, ctypes.void_t.ptr,
+    "otrl_tlv_free", abi, ctypes.void_t,
     OtrlTLV.ptr
   )
 
