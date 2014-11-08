@@ -45,12 +45,12 @@ Context.prototype = {
   get account() this.context.contents.accountname.readString(),
   get protocol() this.context.contents.protocol.readString(),
   get msgstate() this.context.contents.msgstate,
-  get afp() this.context.contents.active_fingerprint,
-  get fingerprint() this.afp.contents.fingerprint,
+  get fingerprint() this.context.contents.active_fingerprint,
+  get fingerprint_hash() this.fingerprint.contents.fingerprint,
   get trust() {
-    return (!this.afp.isNull() &&
-      !this.afp.contents.trust.isNull() &&
-      this.afp.contents.trust.readString().length > 0);
+    return (!this.fingerprint.isNull() &&
+      !this.fingerprint.contents.trust.isNull() &&
+      this.fingerprint.contents.trust.readString().length > 0);
   }
 };
 
@@ -121,12 +121,18 @@ let otr = {
     return fingerprint.isNull() ? null : fingerprint.readString();
   },
 
-  hashToHuman: function(hash) {
+  hashToHuman: function(context) {
+    let hash = context.fingerprint_hash;
     if (hash.isNull())
       throw Error("No fingerprint.");
     let fingerprint = new libOTR.fingerprint_t();
     libOTR.otrl_privkey_hash_to_human(fingerprint, hash);
     return fingerprint.readString();
+  },
+
+  setTrust: function(context, trust) {
+    libOTR.otrl_context_set_trust(context.fingerprint, trust ? "verified" : "");
+    // otrg_plugin_write_fingerprints();
   },
 
   // write fingerprints to file synchronously

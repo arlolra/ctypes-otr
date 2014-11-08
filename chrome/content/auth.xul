@@ -25,8 +25,8 @@
     <hbox align="center">
       <menulist id="verifiedOption">
         <menupopup>
-          <menuitem label="&authDialog.have;" value="1" />
-          <menuitem label="&authDialog.haveNot;" value="0" />
+          <menuitem label="&authDialog.have;" value="have" />
+          <menuitem label="&authDialog.haveNot;" value="not" />
         </menupopup>
       </menulist>
       <label value="&authDialog.verified;" />
