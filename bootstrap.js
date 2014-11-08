@@ -141,9 +141,8 @@ let ui = {
 
     // get otr msg state
     let context = otr.getContext(conv);
-    let trust = ui.getTrustSettings(context);
-    ui.setMsgState(trust, otrButton, otrStart, otrEnd, otrAuth);
-    uiConv.systemMessage(trans("alert.state", trust.trustLabel));
+    ui.setMsgState(context, otrButton, otrStart, otrEnd, otrAuth);
+    ui.alertTrust(context);
   },
 
   updateButton: function(context) {
@@ -158,9 +157,16 @@ let ui = {
       let otrStart = cti.querySelector(".otr-start");
       let otrEnd = cti.querySelector(".otr-end");
       let otrAuth = cti.querySelector(".otr-auth");
-      let trust = ui.getTrustSettings(context);
-      ui.setMsgState(trust, otrButton, otrStart, otrEnd, otrAuth);
+      ui.setMsgState(context, otrButton, otrStart, otrEnd, otrAuth);
     });
+  },
+
+  alertTrust: function(context) {
+    let uiConv = otr.getUIConvFromContext(context);
+    if (!uiConv)
+      Cu.reportError("Couldn't find conversation to update.");
+    let trust = ui.getTrustSettings(context);
+    uiConv.systemMessage(trans("alert.state", trust.trustLabel));
   },
 
   getTrustSettings: function(context) {
@@ -210,7 +216,8 @@ let ui = {
   },
 
   // set msg state on toolbar button
-  setMsgState: function(trust, otrButton, otrStart, otrEnd, otrAuth) {
+  setMsgState: function(context, otrButton, otrStart, otrEnd, otrAuth) {
+    let trust = ui.getTrustSettings(context);
     otrButton.style.color = trust.color;
     otrButton.setAttribute("label", trust.trustLabel);
     otrStart.setAttribute("label", trust.startLabel);
@@ -234,6 +241,9 @@ let ui = {
       break;
     case "otr:msg-state":
       ui.updateButton(aObject);
+      break;
+    case "otr:trust-state":
+      ui.alertTrust(aObject);
       break;
     case "otr:log":
       ui.log("otr: " + aObject);

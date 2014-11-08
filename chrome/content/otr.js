@@ -121,6 +121,7 @@ let otr = {
     return fingerprint.isNull() ? null : fingerprint.readString();
   },
 
+  // return a human readable string of their active fingerprint
   hashToHuman: function(context) {
     let hash = context.fingerprint_hash;
     if (hash.isNull())
@@ -130,9 +131,14 @@ let otr = {
     return fingerprint.readString();
   },
 
+  // update trust in fingerprint
   setTrust: function(context, trust) {
+    if (trust === context.trust)
+      return;  // ignore if no change in trust
     libOTR.otrl_context_set_trust(context.fingerprint, trust ? "verified" : "");
-    // otrg_plugin_write_fingerprints();
+    this.writeFingerprints();
+    this.notifyObservers(context, "otr:msg-state");
+    this.notifyObservers(context, "otr:trust-state");
   },
 
   // write fingerprints to file synchronously
@@ -141,16 +147,16 @@ let otr = {
       this.userstate, this.fingerprintsPath
     );
     if (err)
-      throw new Error("Returned code: " + err);
+      throw new Error("Failed to write fingerprints: " + err);
   },
 
-  // write fingerprints to file synchronously
+  // generate instance tags synchronously
   genInstag: function(account, protocol) {
     let err = libOTR.otrl_instag_generate(
       this.userstate, this.instanceTagsPath, account, protocol
     );
     if (err)
-      throw new Error("Returned code: " + err);
+      throw new Error("Failed to generate instance tags: " + err);
   },
 
   // expose message states
