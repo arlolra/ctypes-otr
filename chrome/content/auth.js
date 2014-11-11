@@ -20,14 +20,14 @@ let otrAuth = {
 
   onload: function() {
     let context = otr.getContext(uiConv.target);
-    let desc = document.getElementById("fingerprints");
+    let fingers = document.getElementById("fingerprints");
     let yours = otr.privateKeyFingerprint(context.account, context.protocol);
     if (!yours)
       throw new Error("Fingerprint should already be generated.");
     let theirs = otr.hashToHuman(context);
-    desc.textContent = "\n" +
+    fingers.value =
       trans("auth.yourFingerprint", context.account, yours) + "\n\n" +
-      trans("auth.theirFingerprint", context.username, theirs) + "\n";
+      trans("auth.theirFingerprint", context.username, theirs);
     let opts = document.getElementById("verifiedOption");
     let select = context.trust ? "have" : "not";
     for (let i = 0; i < opts.menupopup.childNodes.length; i ++) {

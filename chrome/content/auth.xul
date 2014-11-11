@@ -21,7 +21,8 @@
   <groupbox id="manualGroup">
     <caption label="&authDialog.manualVerification;"/>
     <description style="width: 300px; white-space: pre-wrap;">&authDialog.manualInstruction;</description>
-    <description id="fingerprints" style="width: 300px; white-space: pre-wrap;"></description>
+    <description  style="width: 300px; white-space: pre-wrap;"></description>
+    <textbox id="fingerprints" rows="5" multiline="true" readonly="true" />
     <hbox align="center">
       <menulist id="verifiedOption">
         <menupopup>
