@@ -52,7 +52,7 @@ let ui = {
       Services.obs.addObserver(ui, "conversation-closed", false);
       Services.obs.addObserver(ui, "prpl-quit", false);
       ui.prefs.addObserver("", ui, false);
-    }, function(reason) { throw new Error(reason); });
+    }).catch(function(err) { throw err; });
   },
 
   disconnect: function(aConv) {
@@ -147,8 +147,6 @@ let ui = {
 
   updateButton: function(context) {
     let uiConv = otr.getUIConvFromContext(context);
-    if (!uiConv)
-      Cu.reportError("Couldn't find conversation to update.");
     Conversations._conversations.forEach(function(binding) {
       if (binding._conv.id !== uiConv.id)
         return;
@@ -163,8 +161,6 @@ let ui = {
 
   alertTrust: function(context) {
     let uiConv = otr.getUIConvFromContext(context);
-    if (!uiConv)
-      Cu.reportError("Couldn't find conversation to update.");
     let trust = ui.getTrustSettings(context);
     uiConv.systemMessage(trans("alert.state", trust.trustLabel));
   },

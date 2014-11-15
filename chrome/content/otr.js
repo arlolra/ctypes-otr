@@ -7,7 +7,9 @@ Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/osfile.jsm");
 Cu.import("chrome://otr/content/libotr.js");
 
-// translations
+const privDialog = "chrome://otr/content/priv.xul";
+
+// some helpers
 
 let bundle = Services.strings.createBundle("chrome://otr/locale/otr.properties");
 
@@ -16,17 +18,6 @@ function trans(name) {
   return args.length > 0
     ? bundle.formatStringFromName(name, args, args.length)
     : bundle.GetStringFromName(name);
-}
-
-// some helpers
-
-function ensureFileExists(path) {
-  return OS.File.exists(path).then(exists => {
-    if (!exists)
-      return OS.File.open(path, { create: true }).then(file => {
-        return file.close()
-      });
-  });
 }
 
 function profilePath(filename) {
@@ -63,18 +54,18 @@ let otr = {
 
     libOTR.init();
     this.setPolicy(opts.requireEncryption);
-
+    this.initUiOps();
     this.userstate = libOTR.otrl_userstate_create();
-    this.privateKeyPath = profilePath("otr.private_key")
-    this.fingerprintsPath = profilePath("otr.fingerprints");
-    this.instanceTagsPath = profilePath("otr.instance_tags");
-    this.uiOps = this.initUiOps();
 
     // A map of UIConvs, keyed on the target.id
     this._convos = new Map();
     this._observers = [];
     this._buffer = [];
   },
+
+  privateKeyPath: profilePath("otr.private_key"),
+  fingerprintsPath: profilePath("otr.fingerprints"),
+  instanceTagsPath: profilePath("otr.instance_tags"),
 
   close: () => libOTR.close(),
 
@@ -90,27 +81,53 @@ let otr = {
 
   // load stored files from my profile
   loadFiles: function() {
-    return ensureFileExists(this.privateKeyPath).then(() => {
-      let err = libOTR.otrl_privkey_read(this.userstate, this.privateKeyPath);
-      if (err)
-        throw new Error("Returned code: " + err);
-    }).then(() => ensureFileExists(this.fingerprintsPath)).then(() => {
-      let err = libOTR.otrl_privkey_read_fingerprints(
-        this.userstate, this.fingerprintsPath, null, null
-      );
-      if (err)
-        throw new Error("Returned code: " + err);
-    }).then(() => ensureFileExists(this.instanceTagsPath));
+    return Promise.all([
+      OS.File.exists(this.privateKeyPath).then((exists) => {
+        if (exists && libOTR.otrl_privkey_read(
+          this.userstate, this.privateKeyPath
+        )) throw new Error("Failed to read private keys.");
+      }),
+      OS.File.exists(this.fingerprintsPath).then((exists) => {
+        if (exists && libOTR.otrl_privkey_read_fingerprints(
+          this.userstate, this.fingerprintsPath, null, null
+        )) throw new Error("Failed to read fingerprints.");
+      }),
+      OS.File.exists(this.instanceTagsPath).then((exists) => {
+        if (exists && libOTR.otrl_instag_read(
+          this.userstate, this.instanceTagsPath
+        )) throw new Error("Failed to read instance tags.");
+      })
+    ]);
   },
-  
+
   // generate a private key
-  // TODO: maybe move this to a ChromeWorker
   generatePrivateKey: function(account, protocol) {
-    let err = libOTR.otrl_privkey_generate(
+    let features = "modal,centerscreen,resizable=no,minimizable=no";
+    let args = {
+      account: account,
+      protocol: protocol
+    };
+    args.wrappedJSObject = args;
+    Services.ww.openWindow(null, privDialog, trans("priv.label"), features, args);
+  },
+  _generatePrivateKey: function(account, protocol) {
+    if (libOTR.otrl_privkey_generate(
       this.userstate, this.privateKeyPath, account, protocol
-    );
-    if (err)
-      throw new Error("Returned code: " + err);
+    )) throw new Error("Failed to generate private key.");
+  },
+
+  // write fingerprints to file synchronously
+  writeFingerprints: function() {
+    if (libOTR.otrl_privkey_write_fingerprints(
+      this.userstate, this.fingerprintsPath
+    )) throw new Error("Failed to write fingerprints.");
+  },
+
+  // generate instance tag synchronously
+  generateInstanceTag: function(account, protocol) {
+    if (libOTR.otrl_instag_generate(
+      this.userstate, this.instanceTagsPath, account, protocol
+    )) throw new Error("Failed to generate instance tag.");
   },
 
   // get my fingerprint
@@ -125,7 +142,7 @@ let otr = {
   hashToHuman: function(context) {
     let hash = context.fingerprint_hash;
     if (hash.isNull())
-      throw Error("No fingerprint.");
+      throw Error("No fingerprint found.");
     let fingerprint = new libOTR.fingerprint_t();
     libOTR.otrl_privkey_hash_to_human(fingerprint, hash);
     return fingerprint.readString();
@@ -139,24 +156,6 @@ let otr = {
     this.writeFingerprints();
     this.notifyObservers(context, "otr:msg-state");
     this.notifyObservers(context, "otr:trust-state");
-  },
-
-  // write fingerprints to file synchronously
-  writeFingerprints: function() {
-    let err = libOTR.otrl_privkey_write_fingerprints(
-      this.userstate, this.fingerprintsPath
-    );
-    if (err)
-      throw new Error("Failed to write fingerprints: " + err);
-  },
-
-  // generate instance tags synchronously
-  genInstag: function(account, protocol) {
-    let err = libOTR.otrl_instag_generate(
-      this.userstate, this.instanceTagsPath, account, protocol
-    );
-    if (err)
-      throw new Error("Failed to generate instance tags: " + err);
   },
 
   // expose message states
@@ -191,7 +190,7 @@ let otr = {
         return uiConv.value;
       uiConv = uiConvs.next();
     }
-    return null;
+    throw new Error("Couldn't find conversation.");
   },
 
   disconnect: function(conv, remove) {
@@ -204,10 +203,9 @@ let otr = {
       conv.normalizedName,
       libOTR.OTRL_INSTAG_BEST
     );
-    if (remove) {
-      let uiConv = Services.conversations.getUIConversation(conv);
-      this.removeConversation(uiConv);
-    } else
+    if (remove)
+      this.removeConversation(Services.conversations.getUIConversation(conv));
+    else
       this.notifyObservers(this.getContext(conv), "otr:msg-state");
   },
 
@@ -253,22 +251,18 @@ let otr = {
   },
 
   is_logged_in_cb: function(opdata, accountname, protocol, recipient) {
-    // FIXME: ask the ui if this is true
+    // FIXME: ask if this is true
     return 1;
   },
 
   inject_message_cb: function(opdata, accountname, protocol, recipient, message) {
     let aMsg = message.readString();
     this.log("inject_message_cb (msglen:" + aMsg.length + "): " + aMsg);
-    let uiConv = this.getUIConvForRecipient(
+    this.getUIConvForRecipient(
       accountname.readString(),
       protocol.readString(),
       recipient.readString()
-    );
-    if (uiConv)
-      uiConv.target.sendMsg(aMsg);
-    else
-      Cu.reportError("Couldn't find conversation to inject.");
+    ).target.sendMsg(aMsg);
   },
 
   update_context_list_cb: function(opdata) {
@@ -276,6 +270,7 @@ let otr = {
   },
 
   new_fingerprint_cb: function(opdata, us, accountname, protocol, username, fingerprint) {
+    // FIXME: throw a warning!
     this.log("new_fingerprint_cb");
   },
 
@@ -291,10 +286,10 @@ let otr = {
 
   gone_insecure_cb: function(opdata, context) {
     // This isn't used. See: https://bugs.otr.im/issues/48
-    this.log("gone_insecure_cb");
   },
 
   still_secure_cb: function(opdata, context, is_reply) {
+    // Indicate the private conversation was refreshed.
     if (!is_reply) {
       context = new Context(context);
       this.notifyObservers(context, "otr:msg-state");
@@ -369,12 +364,12 @@ let otr = {
       this.notifyObservers(context, "otr:msg-state");
       break;
     default:
-      this.log("msg event: " + msg_event)
+      this.log("msg event: " + msg_event);
     }
   },
 
   create_instag_cb: function(opdata, accountname, protocol) {
-    this.genInstag(accountname.readString(), protocol.readString())
+    this.generateInstanceTag(accountname.readString(), protocol.readString());
   },
 
   convert_msg_cb: function(opdata, context, convert_type, dest, src) {
@@ -392,7 +387,7 @@ let otr = {
   // uiOps
 
   initUiOps: function() {
-    let uiOps = new libOTR.OtrlMessageAppOps()
+    this.uiOps = new libOTR.OtrlMessageAppOps();
 
     let methods = [
       "policy",
@@ -425,18 +420,12 @@ let otr = {
       let m = methods[i];
       // keep a pointer to this in memory to avoid crashing
       this[m + "_cb"] = libOTR[m + "_cb_t"](this[m + "_cb"].bind(this));
-      uiOps[m] = this[m + "_cb"];
+      this.uiOps[m] = this[m + "_cb"];
     }
-
-    return uiOps;
   },
 
   sendAlert: function(context, msg) {
-    let uiConv = this.getUIConvFromContext(context);
-    if (uiConv)
-      uiConv.systemMessage(msg);
-    else
-      Cu.reportError("Couldn't find conversation to inject.");
+    this.getUIConvFromContext(context).systemMessage(msg);
   },
 
   observe: function(aObject, aTopic, aMsg) {
@@ -453,11 +442,6 @@ let otr = {
         return;
       this._convos.set(conv.id, aObject);
       aObject.addObserver(this);
-      // FIXME: this belongs somewhere else
-      let account = conv.account.normalizedName;
-      let protocol = conv.account.protocol.normalizedName;
-      if (this.privateKeyFingerprint(account, protocol) === null)
-        this.generatePrivateKey(account, protocol);
       break;
     }
   },
@@ -472,7 +456,7 @@ let otr = {
     if (om.cancelled)
       return;
 
-    // FIXME: om.conversation should be a uiConv.
+    // FIXME: upstream, om.conversation should be a uiConv.
     let uiConv = this._convos.get(om.conversation.id);
     if (!uiConv) {
       om.cancelled = true;
@@ -506,7 +490,7 @@ let otr = {
 
     if (err) {
       om.cancelled = true;
-      Cu.reportError(new Error("OTR returned code: " + err));
+      Cu.reportError(new Error("Failed to send message. Returned code: " + err));
     } else if (!newMessage.isNull()) {
       msg = newMessage.readString();
       // https://bugs.otr.im/issues/52

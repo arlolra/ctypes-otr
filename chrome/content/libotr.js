@@ -359,6 +359,18 @@ let libOTR = {
     OtrlUserState, ctypes.char.ptr, ctypes.char.ptr, ctypes.char.ptr
   ),
 
+  // Read our instance tag from a file on disk into the given OtrlUserState.
+  otrl_instag_read: libotr.declare(
+    "otrl_instag_read", abi, gcry_error_t,
+    OtrlUserState, ctypes.char.ptr
+  ),
+
+  // Write our instance tags to a file on disk.
+  otrl_instag_write: libotr.declare(
+    "otrl_instag_write", abi, gcry_error_t,
+    OtrlUserState, ctypes.char.ptr
+  ),
+
   // auth.h
 
   authState: {
