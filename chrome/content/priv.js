@@ -18,9 +18,11 @@ let otrPriv = {
     let args = window.arguments[0].wrappedJSObject;
     let priv = document.getElementById("priv");
     priv.textContent = trans("priv.account", args.account, args.protocol);
-    otr._generatePrivateKey(args.account, args.protocol);
-    // document.documentElement.acceptDialog();
-    document.documentElement.getButton("accept").disabled = false;
+    setTimeout(function() {
+      otr._generatePrivateKey(args.account, args.protocol);
+      // document.documentElement.acceptDialog();
+      document.documentElement.getButton("accept").disabled = false;
+    }, 1000);
   }
 
 };
