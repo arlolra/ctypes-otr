@@ -1,0 +1,15 @@
+.otr-not-private {
+  list-style-image: url("icons/not-private.png");
+}
+
+.otr-unverified {
+  list-style-image: url("icons/unverified.png");
+}
+
+.otr-private {
+  list-style-image: url("icons/private.png");
+}
+
+.otr-button > .toolbarbutton-icon {
+  max-width: 16px;
+}

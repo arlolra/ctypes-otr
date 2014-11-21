@@ -1,4 +1,4 @@
-let EXPORTED_SYMBOLS = ["libOTR"];
+let EXPORTED_SYMBOLS = ["libOTR", "libC"];
 
 const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
@@ -19,7 +19,7 @@ try {
 }
 
 // libotr API version
-const otrl_version = [4, 0, 0];
+const otrl_version = [4, 1, 0];
 
 // ABI used to call native functions in the library
 const abi = ctypes.default_abi;
@@ -351,7 +351,14 @@ let libOTR = {
 
   // instag.h
 
-  OTRL_INSTAG_BEST: new ctypes.unsigned_int(1),
+  instag: {
+    OTRL_INSTAG_MASTER: new ctypes.unsigned_int(0),
+    OTRL_INSTAG_BEST: new ctypes.unsigned_int(1),
+    OTRL_INSTAG_RECENT: new ctypes.unsigned_int(2),
+    OTRL_INSTAG_RECENT_RECEIVED: new ctypes.unsigned_int(3),
+    OTRL_INSTAG_RECENT_SENT: new ctypes.unsigned_int(4),
+    OTRL_MIN_VALID_INSTAG: new ctypes.unsigned_int(0x100)
+  },
 
   // Get a new instance tag for the given account and write to file.
   otrl_instag_generate: libotr.declare(
@@ -622,6 +629,15 @@ let libOTR = {
     otrl_instag_t
   ),
 
+  // Call this function every so often, to clean up stale private state that
+  // may otherwise stick around in memory.
+  otrl_message_poll: libotr.declare(
+    "otrl_message_poll", abi, ctypes.void_t,
+    OtrlUserState,
+    OtrlMessageAppOps.ptr,
+    ctypes.void_t.ptr
+  ),
+
   // tlv.h
 
   tlvs: {
@@ -651,4 +667,26 @@ let libOTR = {
     OtrlTLV.ptr
   )
 
+};
+
+// libc
+
+let libc = ctypes.open(ctypes.libraryName("c"));
+
+let libC = {
+  close: () => libc.close(),
+  memcmp: libc.declare(
+    "memcmp", abi, ctypes.int,
+    ctypes.void_t.ptr,
+    ctypes.void_t.ptr,
+    ctypes.size_t
+  ),
+  free: libc.declare(
+    "free", abi, ctypes.void_t,
+    ctypes.void_t.ptr
+  ),
+  strdup: libc.declare(
+    "strdup", abi, ctypes.char.ptr,
+    ctypes.char.ptr
+  )
 };

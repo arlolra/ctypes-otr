@@ -11,7 +11,7 @@
   buttons="accept"
   buttonlabelaccept="&privDialog.done;"
   onload="otrPriv.onload()"
-  buttondisabledaccept="buttondisabledaccept">
+  buttondisabledaccept="true">
 
   <script type="application/javascript" src="chrome://otr/content/priv.js" />
   <description id="priv" style="width: 300px; white-space: pre-wrap;"></description>

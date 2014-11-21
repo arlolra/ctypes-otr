@@ -89,7 +89,6 @@ let ui = {
     let window = doc.defaultView;
 
     let otrStart = doc.createElement("menuitem");
-    otrStart.setAttribute("label", trans("start.label"));
     otrStart.classList.add("otr-start");
     otrStart.addEventListener("click", function(e) {
       e.preventDefault();
@@ -113,7 +112,6 @@ let ui = {
     });
 
     let otrAuth = doc.createElement("menuitem");
-    otrAuth.setAttribute("label", trans("auth.label"));
     otrAuth.classList.add("otr-auth");
     otrAuth.addEventListener("click", function(e) {
       e.preventDefault();
@@ -130,7 +128,6 @@ let ui = {
 
     let otrButton = doc.createElement("toolbarbutton");
     otrButton.classList.add("otr-button");
-    otrButton.setAttribute("tooltiptext", trans("tooltip"));
     otrButton.addEventListener("command", function(e) {
       e.preventDefault();
       otrMenu.openPopup(otrButton, "after_start");
@@ -162,7 +159,7 @@ let ui = {
   alertTrust: function(context) {
     let uiConv = otr.getUIConvFromContext(context);
     let trust = ui.getTrustSettings(context);
-    uiConv.systemMessage(trans("alert.state", trust.trustLabel));
+    uiConv.systemMessage(trans("alert.state", trust.trustLabel.toLowerCase()));
   },
 
   getTrustSettings: function(context) {
@@ -172,39 +169,39 @@ let ui = {
         trustLabel: trans("trust.not_private"),
         startLabel: trans("start.label"),
         authLabel: trans("auth.label"),
-        color: "red",
         disableStart: false,
         disableEnd: true,
-        disableAuth: true
+        disableAuth: true,
+        cssClass: "otr-not-private"
       };
     case otr.trustState.TRUST_UNVERIFIED:
       return {
         trustLabel: trans("trust.unverified"),
         startLabel: trans("refresh.label"),
         authLabel: trans("auth.label"),
-        color: "darkorange",
         disableStart: false,
-        disableEnd: false
+        disableEnd: false,
+        cssClass: "otr-unverified"
       };
     case otr.trustState.TRUST_PRIVATE:
       return {
         trustLabel: trans("trust.private"),
         startLabel: trans("refresh.label"),
         authLabel: trans("reauth.label"),
-        color: "black",
         disableStart: false,
         disableEnd: false,
-        disableAuth: false
+        disableAuth: false,
+        cssClass: "otr-private"
       };
     case otr.trustState.TRUST_FINISHED:
       return {
         trustLabel: trans("trust.finished"),
         startLabel: trans("start.label"),
         authLabel: trans("auth.label"),
-        color: "darkorange",
         disableStart: false,
         disableEnd: false,
-        disableAuth: true
+        disableAuth: true,
+        cssClass: "otr-unverified"
       };
     default:
       throw new Error("Shouldn't be here.");
@@ -214,8 +211,8 @@ let ui = {
   // set msg state on toolbar button
   setMsgState: function(context, otrButton, otrStart, otrEnd, otrAuth) {
     let trust = ui.getTrustSettings(context);
-    otrButton.style.color = trust.color;
-    otrButton.setAttribute("label", trust.trustLabel);
+    otrButton.setAttribute("tooltiptext", trust.trustLabel);
+    otrButton.className = "otr-button" + " " + trust.cssClass;
     otrStart.setAttribute("label", trust.startLabel);
     otrStart.setAttribute("disabled", trust.disableStart);
     otrEnd.setAttribute("disabled", trust.disableEnd);
@@ -273,6 +270,12 @@ let ui = {
 
 function startup(data, reason) {
   Cu.import("chrome://otr/content/otr.js");
+
+  var sss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
+  var ios = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
+  var uri = ios.newURI("chrome://otr/skin/otr.css", null, null);
+  sss.loadAndRegisterSheet(uri, sss.USER_SHEET);
+
   ui.init()
 }
 

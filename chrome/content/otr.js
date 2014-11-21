@@ -11,6 +11,16 @@ const privDialog = "chrome://otr/content/priv.xul";
 
 // some helpers
 
+function setInterval(fn, delay) {
+  let timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
+  timer.init(fn, delay, Ci.nsITimer.TYPE_REPEATING_SLACK);
+  return timer;
+}
+
+function clearInterval(timer) {
+  timer.cancel();
+}
+
 let bundle = Services.strings.createBundle("chrome://otr/locale/otr.properties");
 
 function trans(name) {
@@ -61,13 +71,17 @@ let otr = {
     this._convos = new Map();
     this._observers = [];
     this._buffer = [];
+    this._poll_timer = null;
   },
 
   privateKeyPath: profilePath("otr.private_key"),
   fingerprintsPath: profilePath("otr.fingerprints"),
   instanceTagsPath: profilePath("otr.instance_tags"),
 
-  close: () => libOTR.close(),
+  close: () => {
+    libOTR.close();
+    libC.close();
+  },
 
   log: function(msg) {
     this.notifyObservers(msg, "otr:log");
@@ -168,7 +182,7 @@ let otr = {
       conv.normalizedName,
       conv.account.normalizedName,
       conv.account.protocol.normalizedName,
-      libOTR.OTRL_INSTAG_BEST, 1, null, null, null
+      libOTR.instag.OTRL_INSTAG_BEST, 1, null, null, null
     );
     return new Context(context);
   },
@@ -201,7 +215,7 @@ let otr = {
       conv.account.normalizedName,
       conv.account.protocol.normalizedName,
       conv.normalizedName,
-      libOTR.OTRL_INSTAG_BEST
+      libOTR.instag.OTRL_INSTAG_BEST
     );
     if (remove)
       this.removeConversation(Services.conversations.getUIConversation(conv));
@@ -242,19 +256,34 @@ let otr = {
 
   // uiOps callbacks
 
+  // Return the OTR policy for the given context.
   policy_cb: function(opdata, context) {
     return this.policy;
   },
 
+  // Create a private key for the given accountname/protocol if desired.
   create_privkey_cb: function(opdata, accountname, protocol) {
     this.generatePrivateKey(accountname.readString(), protocol.readString());
   },
 
+  // Report whether you think the given user is online. Return 1 if you think
+  // they are, 0 if you think they aren't, -1 if you're not sure.
   is_logged_in_cb: function(opdata, accountname, protocol, recipient) {
-    // FIXME: ask if this is true
-    return 1;
+    let conv = this.getUIConvForRecipient(
+      accountname.readString(),
+      protocol.readString(),
+      recipient.readString()
+    ).target;
+    let ret = -1;
+    if (conv.buddy)
+      ret = conv.buddy.online ? 1 : 0;
+    else if (protocol.readString() === "irc")
+      ret = 1;  // no presence in irc, but we want to send the disconnect msg
+    return ret;
   },
 
+  // Send the given IM to the given recipient from the given
+  // accountname/protocol.
   inject_message_cb: function(opdata, accountname, protocol, recipient, message) {
     let aMsg = message.readString();
     this.log("inject_message_cb (msglen:" + aMsg.length + "): " + aMsg);
@@ -265,29 +294,49 @@ let otr = {
     ).target.sendMsg(aMsg);
   },
 
-  update_context_list_cb: function(opdata) {
-    this.log("update_context_list_cb");
-  },
-
+  // A new fingerprint for the given user has been received.
   new_fingerprint_cb: function(opdata, us, accountname, protocol, username, fingerprint) {
-    // FIXME: throw a warning!
-    this.log("new_fingerprint_cb");
+    let context = libOTR.otrl_context_find(
+      this.userstate,
+      username.readString(),
+      accountname.readString(),
+      protocol.readString(),
+      libOTR.instag.OTRL_INSTAG_MASTER, 1, null, null, null
+    );
+
+    let seen = false;
+    let fp = context.contents.fingerprint_root.next;
+    while (!fp.isNull()) {
+      if (libC.memcmp(fingerprint, fp.contents.fingerprint, new ctypes.size_t(20))) {
+        seen = true;
+        break;
+      }
+      fp = fp.contents.next;
+    }
+
+    let msg = trans("finger." + (seen ? "seen" : "unseen"), username.readString());
+    this.sendAlert(new Context(context), msg);
   },
 
+  // The list of known fingerprints has changed.  Write them to disk.
   write_fingerprint_cb: function(opdata) {
     this.writeFingerprints();
   },
 
+  // A ConnContext has entered a secure state.
   gone_secure_cb: function(opdata, context) {
     context = new Context(context);
     this.notifyObservers(context, "otr:msg-state");
-    this.sendAlert(context, trans("context.gone_secure", context.username));
+    this.sendAlert(context, trans("context.gone_secure", trans("secure." + (context.trust ? "private" : "unverified")), context.username));
   },
 
+  // A ConnContext has left a secure state.
   gone_insecure_cb: function(opdata, context) {
     // This isn't used. See: https://bugs.otr.im/issues/48
   },
 
+  // We have completed an authentication, using the D-H keys we already knew.
+  // is_reply indicates whether we initiated the AKE.
   still_secure_cb: function(opdata, context, is_reply) {
     // Indicate the private conversation was refreshed.
     if (!is_reply) {
@@ -297,7 +346,9 @@ let otr = {
     }
   },
 
+  // Find the maximum message size supported by this protocol.
   max_message_size_cb: function(opdata, context) {
+    // TODO: we can do better here.
     context = new Context(context);
     switch(context.protocol) {
     case "irc":
@@ -307,81 +358,132 @@ let otr = {
     }
   },
 
-  account_name_cb: function(opdata, account, protocol) {
-    this.log("account_name_cb")
-  },
-
-  account_name_free_cb: function(opdata, account_name) {
-    this.log("account_name_free_cb")
-  },
-
+  // We received a request from the buddy to use the current "extra" symmetric
+  // key.
   received_symkey_cb: function(opdata, context, use, usedata, usedatalen, symkey) {
-    this.log("received_symkey_cb")
+    // Ignore until we have a use.
   },
 
+  // Return a string according to the error event.
   otr_error_message_cb: function(opdata, context, err_code) {
-    this.log("otr_error_message_cb")
+    context = new Context(context);
+    let msg;
+    switch(err_code) {
+    case libOTR.errorCode.OTRL_ERRCODE_ENCRYPTION_ERROR:
+      msg = trans("error.enc");
+      break;
+    case libOTR.errorCode.OTRL_ERRCODE_MSG_NOT_IN_PRIVATE:
+      msg = trans("error.not_priv", context.username);
+      break;
+    case libOTR.errorCode.OTRL_ERRCODE_MSG_UNREADABLE:
+      msg = trans("error.unreadable");
+      break;
+    case libOTR.errorCode.OTRL_ERRCODE_MSG_MALFORMED:
+      msg = trans("error.malformed");
+      break;
+    default:
+      return null;
+    }
+    return libC.strdup(msg);
   },
 
+  // Deallocate a string returned by otr_error_message_cb.
   otr_error_message_free_cb: function(opdata, err_msg) {
-    this.log("otr_error_message_free_cb")
+    if (!err_msg.isNull())
+      libC.free(err_msg);
   },
 
+  // Return a string that will be prefixed to any resent message.
   resent_msg_prefix_cb: function(opdata, context) {
-    this.log("resent_msg_prefix_cb")
+    return libC.strdup(trans("resent"));
   },
 
+  // Deallocate a string returned by resent_msg_prefix.
   resent_msg_prefix_free_cb: function(opdata, prefix) {
-    this.log("resent_msg_prefix_free_cb")
+    if (!prefix.isNull())
+      libC.free(prefix);
   },
 
+  // Update the authentication UI with respect to SMP events.
   handle_smp_event_cb: function(opdata, smp_event, context, progress_percent, question) {
-    this.log("handle_smp_event_cb")
+    // TODO: implement SMP.
   },
 
+  // Handle and send the appropriate message(s) to the sender/recipient
+  // depending on the message events.
   handle_msg_event_cb: function(opdata, msg_event, context, message, err) {
     context = new Context(context);
     switch(msg_event) {
-    case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
-      if (!message.isNull())
-        this.sendAlert(context, trans("msgevent.rcvd_unecrypted", message.readString()));
-      break;
-    case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
-      if (!message.isNull())
-        this.sendAlert(context, trans("msgevent.rcvd_unecrypted", message.readString()));
-      break;
-    case libOTR.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_RCVD:
-      this.log("Heartbeat received from " + context.username + ".");
-      break;
-    case libOTR.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_SENT:
-      this.log("Heartbeat sent to " + context.username + ".");
+    case libOTR.messageEvent.OTRL_MSGEVENT_NONE:
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_ENCRYPTION_REQUIRED:
-      this.log("Encryption required")
+      this.sendAlert(context, trans("msgevent.encryption_required", context.username));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_ENCRYPTION_ERROR:
+      this.sendAlert(context, trans("msgevent.encryption_error"));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_CONNECTION_ENDED:
-      this.sendAlert(context, trans("msgevent.ended"));
-      this.notifyObservers(context, "otr:msg-state");
+      this.sendAlert(context, trans("msgevent.connection_ended", context.username));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_SETUP_ERROR:
+      this.sendAlert(context, trans("msgevent.setup_error"));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_MSG_REFLECTED:
+      this.sendAlert(context, trans("msgevent.msg_reflected"));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_MSG_RESENT:
+      this.sendAlert(context, trans("msgevent.msg_resent"));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
+      this.sendAlert(context, trans("msgevent.rcvdmsg_not_private", context.username));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNREADABLE:
+      this.sendAlert(context, trans("msgevent.rcvdmsg_unreadable", context.username));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_MALFORMED:
+      this.sendAlert(context, trans("msgevent.rcvdmsg_malformed", context.username));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_RCVD:
+      this.log(trans("msgevent.log_heartbeat_rcvd", context.username));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_SENT:
+      this.log(trans("msgevent.log_heartbeat_sent", context.username));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_GENERAL_ERR:
+      this.sendAlert(context, trans("msgevent.rcvdmsg_general_err", message.isNull() ? "" : message.readString()));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
+      this.sendAlert(context, trans("msgevent.rcvd_unecrypted", context.username, message.isNull() ? "" : message.readString()));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNRECOGNIZED:
+      this.sendAlert(context, trans("msgevent.rcvd_unrecognized", context.username));
+      break;
+    case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_FOR_OTHER_INSTANCE:
+      this.log(trans("msgevent.rcvd_for_other_instance", context.username));
       break;
     default:
       this.log("msg event: " + msg_event);
     }
   },
 
+  // Create an instance tag for the given accountname/protocol if desired.
   create_instag_cb: function(opdata, accountname, protocol) {
     this.generateInstanceTag(accountname.readString(), protocol.readString());
   },
 
-  convert_msg_cb: function(opdata, context, convert_type, dest, src) {
-    this.log("convert_msg_cb")
-  },
-
-  convert_free_cb: function(opdata, context, dest) {
-    this.log("convert_free_cb")
-  },
-
+  // When timer_control is called, turn off any existing periodic timer.
+  // Additionally, if interval > 0, set a new periodic timer to go off every
+  // interval seconds.
   timer_control_cb: function(opdata, interval) {
-    this.log("timer_control_cb")
+    if (this._poll_timer) {
+      clearInterval(this._poll_timer);
+      this._poll_timer = null;
+    }
+    if (interval > 0) {
+      this._poll_timer = setInterval(function() {
+        libOTR.otrl_message_poll(this.userstate, this.uiOps.address(), null);
+      }.bind(this), interval * 1000);
+    }
   },
 
   // uiOps
@@ -394,15 +496,15 @@ let otr = {
       "create_privkey",
       "is_logged_in",
       "inject_message",
-      "update_context_list",
+      "update_context_list",  // not implemented
       "new_fingerprint",
       "write_fingerprint",
       "gone_secure",
       "gone_insecure",
       "still_secure",
       "max_message_size",
-      "account_name",
-      "account_name_free",
+      "account_name",  // not implemented
+      "account_name_free",  // not implemented
       "received_symkey",
       "otr_error_message",
       "otr_error_message_free",
@@ -411,13 +513,17 @@ let otr = {
       "handle_smp_event",
       "handle_msg_event",
       "create_instag",
-      "convert_msg",
-      "convert_free",
+      "convert_msg",  // not implemented
+      "convert_free",  // not implemented
       "timer_control"
     ];
 
     for (let i = 0; i < methods.length; i++) {
       let m = methods[i];
+      if (!this[m + "_cb"]) {
+        this.uiOps[m] = null;
+        continue;
+      }
       // keep a pointer to this in memory to avoid crashing
       this[m + "_cb"] = libOTR[m + "_cb_t"](this[m + "_cb"].bind(this));
       this.uiOps[m] = this[m + "_cb"];
@@ -476,7 +582,7 @@ let otr = {
       conv.account.normalizedName,
       conv.account.protocol.normalizedName,
       conv.normalizedName,
-      libOTR.OTRL_INSTAG_BEST,
+      libOTR.instag.OTRL_INSTAG_BEST,
       om.message,
       null,
       newMessage.address(),
@@ -548,7 +654,7 @@ let otr = {
     let tlv = libOTR.otrl_tlv_find(tlvs, libOTR.tlvs.OTRL_TLV_DISCONNECTED);
     if (!tlv.isNull()) {
       let context = this.getContext(conv);
-      this.sendAlert(context, trans("msgevent.ended"));
+      this.sendAlert(context, trans("tlv.disconnected", conv.normalizedName));
       this.notifyObservers(context, "otr:msg-state");
     }
 

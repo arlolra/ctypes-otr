@@ -1,3 +1,4 @@
 content otr chrome/content/
+skin otr classic/1.0 chrome/skin/
 
 locale otr en chrome/locale/en/
