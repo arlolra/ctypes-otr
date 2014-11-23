@@ -7,6 +7,24 @@ let Cr = Cc["@mozilla.org/chrome/chrome-registry;1"].getService(Ci.nsIXULChromeR
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
+let abi, libcPath;
+switch(Services.appinfo.OS) {
+case "WINNT":
+  abi = ctypes.stdcall_abi;
+  libcPath = ctypes.libraryName("msvcrt");
+  break;
+case "Darwin":
+  abi = ctypes.default_abi;
+  libcPath = ctypes.libraryName("c");
+  break;
+case "Linux":
+  abi = ctypes.default_abi;
+  libcPath = "libc.so.6";
+  break;
+default:
+  throw new Error("Unknown OS");
+}
+
 let libotr;
 try {
   // try in chrome
@@ -20,9 +38,6 @@ try {
 
 // libotr API version
 const otrl_version = [4, 1, 0];
-
-// ABI used to call native functions in the library
-const abi = ctypes.default_abi;
 
 // type defs
 
@@ -671,7 +686,7 @@ let libOTR = {
 
 // libc
 
-let libc = ctypes.open(ctypes.libraryName("c"));
+let libc = ctypes.open(libcPath);
 
 let libC = {
   close: () => libc.close(),
