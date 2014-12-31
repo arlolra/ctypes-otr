@@ -653,6 +653,51 @@ let libOTR = {
     ctypes.void_t.ptr
   ),
 
+  // Initiate the Socialist Millionaires' Protocol.
+  otrl_message_initiate_smp: libotr.declare(
+    "otrl_message_initiate_smp", abi, ctypes.void_t,
+    OtrlUserState,
+    OtrlMessageAppOps.ptr,
+    ctypes.void_t.ptr,
+    ConnContext.ptr,
+    ctypes.char.ptr,
+    ctypes.size_t
+  ),
+
+  // Initiate the Socialist Millionaires' Protocol and send a prompt
+  // question to the buddy.
+  otrl_message_initiate_smp_q: libotr.declare(
+    "otrl_message_initiate_smp_q", abi, ctypes.void_t,
+    OtrlUserState,
+    OtrlMessageAppOps.ptr,
+    ctypes.void_t.ptr,
+    ConnContext.ptr,
+    ctypes.char.ptr,
+    ctypes.char.ptr,
+    ctypes.size_t
+  ),
+
+  // Respond to a buddy initiating the Socialist Millionaires' Protocol.
+  otrl_message_respond_smp: libotr.declare(
+    "otrl_message_respond_smp", abi, ctypes.void_t,
+    OtrlUserState,
+    OtrlMessageAppOps.ptr,
+    ctypes.void_t.ptr,
+    ConnContext.ptr,
+    ctypes.char.ptr,
+    ctypes.size_t
+  ),
+
+  // Abort the SMP. Called when an unexpected SMP message breaks the
+  // normal flow.
+  otrl_message_abort_smp: libotr.declare(
+    "otrl_message_abort_smp", abi, ctypes.void_t,
+    OtrlUserState,
+    OtrlMessageAppOps.ptr,
+    ctypes.void_t.ptr,
+    ConnContext.ptr
+  ),
+
   // tlv.h
 
   tlvs: {

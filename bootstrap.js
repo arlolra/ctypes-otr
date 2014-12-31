@@ -115,9 +115,19 @@ let ui = {
     otrAuth.classList.add("otr-auth");
     otrAuth.addEventListener("click", function(e) {
       e.preventDefault();
-      if (!e.target.disabled) {
-        let features = "centerscreen,resizable=no,minimizable=no";
-        window.openDialog(authDialog, trans("auth.label"), features, uiConv);
+      let target = e.target;
+      if (!target.disabled) {
+        target.disabled = true;
+        let win = window.openDialog(
+          authDialog,
+          "auth=" + conv.normalizedName,
+          "centerscreen,resizable=no,minimizable=no",
+          "start",
+          uiConv
+        );
+        win.addEventListener("beforeunload", function() {
+          target.disabled = false;
+        });
       }
     });
 
@@ -220,6 +230,31 @@ let ui = {
     otrAuth.setAttribute("disabled", trust.disableAuth);
   },
 
+  askAuth: function(aObject) {
+    let uiConv = otr.getUIConvFromContext(aObject.context);
+    let otrAuth, window;
+    if (!Conversations._conversations.some(function(binding) {
+      if (binding._conv.id !== uiConv.id)
+        return false;
+      let cti = binding.getElt("conv-top-info");
+      window = cti.ownerDocument.defaultView;
+      otrAuth = cti.querySelector(".otr-auth");
+      return true;
+    })) return;  // couldn't find auth button
+    otrAuth.disabled = true;
+    let win = window.openDialog(
+      authDialog,
+      "auth=" + uiConv.target.normalizedName,
+      "centerscreen,resizable=no,minimizable=no",
+      "ask",
+      uiConv,
+      aObject
+    );
+    win.addEventListener("beforeunload", function() {
+      otrAuth.disabled = false;
+    });
+  },
+
   observe: function(aObject, aTopic, aMsg) {
     switch(aTopic) {
     case "nsPref:changed":
@@ -238,11 +273,12 @@ let ui = {
     case "otr:trust-state":
       ui.alertTrust(aObject);
       break;
+    case "otr:auth-ask":
+      ui.askAuth(aObject);
+      break;
     case "otr:log":
       ui.log("otr: " + aObject);
       break;
-    default:
-      ui.log(aTopic);
     }
   },
 
@@ -270,12 +306,10 @@ let ui = {
 
 function startup(data, reason) {
   Cu.import("chrome://otr/content/otr.js");
-
-  var sss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
-  var ios = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
-  var uri = ios.newURI("chrome://otr/skin/otr.css", null, null);
+  let sss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
+  let ios = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
+  let uri = ios.newURI("chrome://otr/skin/otr.css", null, null);
   sss.loadAndRegisterSheet(uri, sss.USER_SHEET);
-
   ui.init()
 }
 

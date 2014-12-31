@@ -13,41 +13,158 @@ function trans(name) {
     : bundle.GetStringFromName(name);
 }
 
-// TODO: attach a close handler
-let uiConv = window.arguments[0];
+let [mode, uiConv, aObject] = window.arguments;
+
+function showSection(selected, hideMenu, hideAccept) {
+  if (hideMenu) {
+    document.getElementById("how").hidden = true;
+  }
+  if (hideAccept) {
+    document.documentElement.getButton("accept").hidden = true;
+  }
+  [ "questionAndAnswer",
+    "sharedSecret",
+    "manualVerification",
+    "waiting",
+    "ask",
+    "finished"
+  ].forEach(function(key) {
+    document.getElementById(key).hidden = (key !== selected);
+  });
+  window.sizeToContent();
+}
+
+function startSMP(context, answer, question) {
+  showSection("waiting", true, true);
+  otrAuth.waiting = true;
+  otr.sendSecret(context, answer, question);
+  return false;
+}
 
 let otrAuth = {
 
+  waiting: false,
+  finished: false,
+
   onload: function() {
-    let context = otr.getContext(uiConv.target);
-    let fingers = document.getElementById("fingerprints");
-    let yours = otr.privateKeyFingerprint(context.account, context.protocol);
-    if (!yours)
-      throw new Error("Fingerprint should already be generated.");
-    let theirs = otr.hashToHuman(context);
-    fingers.value =
-      trans("auth.yourFingerprint", context.account, yours) + "\n\n" +
-      trans("auth.theirFingerprint", context.username, theirs);
-    let opts = document.getElementById("verifiedOption");
-    let select = context.trust ? "have" : "not";
-    for (let i = 0; i < opts.menupopup.childNodes.length; i ++) {
-      let item = opts.menupopup.childNodes[i];
-      if (select === item.value) {
-        opts.selectedItem = item;
-        break;
-      }
-    };
+    otr.addObserver(otrAuth);
+    switch(mode) {
+    case "start":
+      // populate manual verification
+      let context = otr.getContext(uiConv.target);
+      let fingers = document.getElementById("fingerprints");
+      let yours = otr.privateKeyFingerprint(context.account, context.protocol);
+      if (!yours)
+        throw new Error("Fingerprint should already be generated.");
+      let theirs = otr.hashToHuman(context);
+      fingers.value =
+        trans("auth.yourFingerprint", context.account, yours) + "\n\n" +
+        trans("auth.theirFingerprint", context.username, theirs);
+      let opts = document.getElementById("verifiedOption");
+      let select = context.trust ? "have" : "not";
+      for (let i = 0; i < opts.menupopup.childNodes.length; i ++) {
+        let item = opts.menupopup.childNodes[i];
+        if (select === item.value) {
+          opts.selectedItem = item;
+          break;
+        }
+      };
+      break;
+    case "ask":
+      otrAuth.waiting = true;
+      document.getElementById("askLabel").textContent = aObject.question
+        ? trans("auth.question", aObject.question)
+        : trans("auth.secret");
+      showSection("ask", true);
+      break;
+    }
+  },
+
+  onunload: function() {
+    otr.removeObserver(otrAuth);
   },
 
   accept: function() {
     let context = otr.getContext(uiConv.target);
-    let opts = document.getElementById("verifiedOption");
-    let trust = (opts.selectedItem.value === "have");
-    otr.setTrust(context, trust);
+    // FIXME: ensure a secret is provided
+    if (mode === "start") {
+      let how = document.getElementById("howOption");
+      switch(how.selectedItem.value) {
+      case "questionAndAnswer":
+        let question = document.getElementById("question").value;
+        let answer = document.getElementById("answer").value;
+        return startSMP(context, answer, question);
+      case "sharedSecret":
+        let secret = document.getElementById("secret").value;
+        return startSMP(context, secret);
+      case "manualVerification":
+        let opts = document.getElementById("verifiedOption");
+        let trust = (opts.selectedItem.value === "have");
+        otr.setTrust(context, trust);
+        return true;
+      }
+    } else if (mode === "ask") {
+      let response = document.getElementById("response").value;
+      document.getElementById("progress").value = aObject.progress;
+      document.getElementById("waitingLabel").hidden = true;
+      showSection("waiting", true, true);
+      otr.sendResponse(context, response);
+      return false;
+    }
+  },
+
+  cancel: function() {
+    if (otrAuth.waiting && !otrAuth.finished) {
+      let context = otr.getContext(uiConv.target);
+      otr.abortSMP(context);
+    }
+  },
+
+  how: function() {
+    let how = document.getElementById("howOption");
+    showSection(how.selectedItem.value);
   },
 
   help: function() {
+    // TODO: show waiting help
     prompt.alert(window, trans("auth.helpTitle"), trans("auth.help"));
+  },
+
+  updateProgress: function(aObj) {
+    if (!otrAuth.waiting || aObj.context.username !== uiConv.target.normalizedName)
+      return;
+
+    if (!aObj.progress) {
+      otrAuth.finished = true;
+      document.getElementById("finLabel").textContent = trans("auth.error");
+      showSection("finished", true, true);
+    } else if (aObj.progress === 100) {
+      otrAuth.finished = true;
+      let str;
+      if (aObj.success) {
+        if (aObj.context.trust) {
+          str = "auth.success";
+        } else {
+          str = "auth.successThem";
+        }
+      } else {
+        str = "auth.fail";
+      }
+      otr.notifyTrust(aObj.context);
+      document.getElementById("finLabel").textContent = trans(str);
+      showSection("finished", true, true);
+    } else {
+      document.getElementById("progress").value = aObj.progress;
+      document.getElementById("waitingLabel").hidden = true;
+    }
+  },
+
+  observe: function(aObj, aTopic, aMsg) {
+    switch(aTopic) {
+    case "otr:auth-update":
+      otrAuth.updateProgress(aObj);
+      break;
+    }
   }
 
 };

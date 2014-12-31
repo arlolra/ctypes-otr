@@ -37,16 +37,16 @@ function profilePath(filename) {
 // libotr context wrapper
 
 function Context(context) {
-  this.context = context;
+  this._context = context;
 }
 
 Context.prototype = {
   constructor: Context,
-  get username() this.context.contents.username.readString(),
-  get account() this.context.contents.accountname.readString(),
-  get protocol() this.context.contents.protocol.readString(),
-  get msgstate() this.context.contents.msgstate,
-  get fingerprint() this.context.contents.active_fingerprint,
+  get username() this._context.contents.username.readString(),
+  get account() this._context.contents.accountname.readString(),
+  get protocol() this._context.contents.protocol.readString(),
+  get msgstate() this._context.contents.msgstate,
+  get fingerprint() this._context.contents.active_fingerprint,
   get fingerprint_hash() this.fingerprint.contents.fingerprint,
   get trust() {
     return (!this.fingerprint.isNull() &&
@@ -168,6 +168,10 @@ let otr = {
       return;  // ignore if no change in trust
     libOTR.otrl_context_set_trust(context.fingerprint, trust ? "verified" : "");
     this.writeFingerprints();
+    this.notifyTrust(context);
+  },
+
+  notifyTrust: function(context) {
     this.notifyObservers(context, "otr:msg-state");
     this.notifyObservers(context, "otr:trust-state");
   },
@@ -406,7 +410,37 @@ let otr = {
 
   // Update the authentication UI with respect to SMP events.
   handle_smp_event_cb: function(opdata, smp_event, context, progress_percent, question) {
-    // TODO: implement SMP.
+    context = new Context(context);
+    switch(smp_event) {
+    case libOTR.smpEvent.OTRL_SMPEVENT_NONE:
+      break;
+    case libOTR.smpEvent.OTRL_SMPEVENT_ASK_FOR_ANSWER:
+    case libOTR.smpEvent.OTRL_SMPEVENT_ASK_FOR_SECRET:
+      this.notifyObservers({
+        context: context,
+        progress: progress_percent,
+        question: question.isNull() ? null : question.readString()
+      }, "otr:auth-ask");
+      break;
+    case libOTR.smpEvent.OTRL_SMPEVENT_CHEATED:
+      otr.abortSMP(context);
+      // fall through
+    case libOTR.smpEvent.OTRL_SMPEVENT_IN_PROGRESS:
+    case libOTR.smpEvent.OTRL_SMPEVENT_SUCCESS:
+    case libOTR.smpEvent.OTRL_SMPEVENT_FAILURE:
+    case libOTR.smpEvent.OTRL_SMPEVENT_ABORT:
+      this.notifyObservers({
+        context: context,
+        progress: progress_percent,
+        success: (smp_event === libOTR.smpEvent.OTRL_SMPEVENT_SUCCESS)
+      }, "otr:auth-update");
+      break;
+    case libOTR.smpEvent.OTRL_SMPEVENT_ERROR:
+      otr.abortSMP(context);
+      break;
+    default:
+      this.log("smp event: " + smp_event);
+    }
   },
 
   // Handle and send the appropriate message(s) to the sender/recipient
@@ -556,6 +590,42 @@ let otr = {
     uiConv.removeObserver(this);
     this._convos.delete(uiConv.target.id);
     this.clearMsgs(uiConv.target.id);
+  },
+
+  sendSecret: function(context, secret, question) {
+    let str = ctypes.char.array()(secret);
+    let strlen = new ctypes.size_t(str.length - 1);
+    libOTR.otrl_message_initiate_smp_q(
+      this.userstate,
+      this.uiOps.address(),
+      null,
+      context._context,
+      question ? question : null,
+      str,
+      strlen
+    );
+  },
+
+  sendResponse: function(context, response) {
+    let str = ctypes.char.array()(response);
+    let strlen = new ctypes.size_t(str.length - 1);
+    libOTR.otrl_message_respond_smp(
+      this.userstate,
+      this.uiOps.address(),
+      null,
+      context._context,
+      str,
+      strlen
+    );
+  },
+
+  abortSMP: function(context) {
+    libOTR.otrl_message_abort_smp(
+      this.userstate,
+      this.uiOps.address(),
+      null,
+      context._context
+    );
   },
 
   onSend: function(om) {
