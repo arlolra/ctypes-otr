@@ -2,33 +2,35 @@ let EXPORTED_SYMBOLS = ["libOTR", "libC"];
 
 const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
-let Cr = Cc["@mozilla.org/chrome/chrome-registry;1"].getService(Ci.nsIXULChromeRegistry);
-
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
+// Set the abi and path to libc based on the OS.
 let abi, libcPath;
 switch(Services.appinfo.OS) {
-case "WINNT":
-  abi = ctypes.stdcall_abi;
-  libcPath = ctypes.libraryName("msvcrt");
-  break;
-case "Darwin":
-  abi = ctypes.default_abi;
-  libcPath = ctypes.libraryName("c");
-  break;
-case "Linux":
-  abi = ctypes.default_abi;
-  libcPath = "libc.so.6";
-  break;
-default:
-  throw new Error("Unknown OS");
+  case "WINNT":
+    abi = ctypes.stdcall_abi;
+    libcPath = ctypes.libraryName("msvcrt");
+    break;
+  case "Darwin":
+    abi = ctypes.default_abi;
+    libcPath = ctypes.libraryName("c");
+    break;
+  case "Linux":
+    abi = ctypes.default_abi;
+    libcPath = "libc.so.6";
+    break;
+  default:
+    throw new Error("Unknown OS");
 }
 
+// Open libotr. Determine the path to the chrome directory and look for it
+// there first. If not, fallback to searching the standard locations.
 let libotr;
 try {
   // try in chrome
   let uri = "chrome://otr/content/" + ctypes.libraryName("otr");
+  let Cr = Cc["@mozilla.org/chrome/chrome-registry;1"].getService(Ci.nsIXULChromeRegistry);
   uri = Cr.convertChromeURL(Services.io.newURI(uri, null, null));
   libotr = ctypes.open(uri.QueryInterface(Ci.nsIFileURL).file.path);
 } catch(e) {
