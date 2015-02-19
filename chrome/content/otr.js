@@ -318,8 +318,11 @@ let otr = {
       fp = fp.contents.next;
     }
 
-    let msg = trans("finger." + (seen ? "seen" : "unseen"), username.readString());
-    this.sendAlert(new Context(context), msg);
+    this.notifyObservers(
+      new Context(context),
+      "otr:new-unverified",
+      (seen ? "seen" : "unseen")
+    );
   },
 
   // The list of known fingerprints has changed.  Write them to disk.
@@ -330,8 +333,9 @@ let otr = {
   // A ConnContext has entered a secure state.
   gone_secure_cb: function(opdata, context) {
     context = new Context(context);
+    let str = "context.gone_secure_" + (context.trust ? "private" : "unverified");
     this.notifyObservers(context, "otr:msg-state");
-    this.sendAlert(context, trans("context.gone_secure", trans("secure." + (context.trust ? "private" : "unverified")), context.username));
+    this.sendAlert(context, trans(str, context.username));
   },
 
   // A ConnContext has left a secure state.
@@ -724,8 +728,8 @@ let otr = {
     let tlv = libOTR.otrl_tlv_find(tlvs, libOTR.tlvs.OTRL_TLV_DISCONNECTED);
     if (!tlv.isNull()) {
       let context = this.getContext(conv);
-      this.sendAlert(context, trans("tlv.disconnected", conv.normalizedName));
       this.notifyObservers(context, "otr:msg-state");
+      this.sendAlert(context, trans("tlv.disconnected", conv.normalizedName));
     }
 
     if (res) {

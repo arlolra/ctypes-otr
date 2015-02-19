@@ -77,6 +77,21 @@ let ui = {
     }
   },
 
+  openAuth: function(window, target, name, mode, uiConv, aObject) {
+    target.disabled = true;
+    let win = window.openDialog(
+      authDialog,
+      "auth=" + name,
+      "centerscreen,resizable=no,minimizable=no",
+      mode,
+      uiConv,
+      aObject
+    );
+    win.addEventListener("beforeunload", function() {
+      target.disabled = false;
+    });
+  },
+
   addButton: function(aObject) {
     let binding = aObject.ownerDocument.getBindingParent(aObject);
     let uiConv = binding._conv;
@@ -117,17 +132,7 @@ let ui = {
       e.preventDefault();
       let target = e.target;
       if (!target.disabled) {
-        target.disabled = true;
-        let win = window.openDialog(
-          authDialog,
-          "auth=" + conv.normalizedName,
-          "centerscreen,resizable=no,minimizable=no",
-          "start",
-          uiConv
-        );
-        win.addEventListener("beforeunload", function() {
-          target.disabled = false;
-        });
+        ui.openAuth(window, target, conv.normalizedName, "start", uiConv);
       }
     });
 
@@ -153,17 +158,18 @@ let ui = {
   },
 
   updateButton: function(context) {
-    let uiConv = otr.getUIConvFromContext(context);
-    Conversations._conversations.forEach(function(binding) {
+    let cti, uiConv = otr.getUIConvFromContext(context);
+    if (!Conversations._conversations.some(function(binding) {
       if (binding._conv.id !== uiConv.id)
-        return;
-      let cti = binding.getElt("conv-top-info");
-      let otrButton = cti.querySelector(".otr-button");
-      let otrStart = cti.querySelector(".otr-start");
-      let otrEnd = cti.querySelector(".otr-end");
-      let otrAuth = cti.querySelector(".otr-auth");
-      ui.setMsgState(context, otrButton, otrStart, otrEnd, otrAuth);
-    });
+        return false;
+      cti = binding.getElt("conv-top-info");
+      return true;
+    })) return;
+    let otrButton = cti.querySelector(".otr-button");
+    let otrStart = cti.querySelector(".otr-start");
+    let otrEnd = cti.querySelector(".otr-end");
+    let otrAuth = cti.querySelector(".otr-auth");
+    ui.setMsgState(context, otrButton, otrStart, otrEnd, otrAuth);
   },
 
   alertTrust: function(context) {
@@ -231,28 +237,48 @@ let ui = {
   },
 
   askAuth: function(aObject) {
-    let uiConv = otr.getUIConvFromContext(aObject.context);
-    let otrAuth, window;
+    let cti, uiConv = otr.getUIConvFromContext(aObject.context);
     if (!Conversations._conversations.some(function(binding) {
       if (binding._conv.id !== uiConv.id)
         return false;
-      let cti = binding.getElt("conv-top-info");
-      window = cti.ownerDocument.defaultView;
-      otrAuth = cti.querySelector(".otr-auth");
+      cti = binding.getElt("conv-top-info");
       return true;
-    })) return;  // couldn't find auth button
-    otrAuth.disabled = true;
-    let win = window.openDialog(
-      authDialog,
-      "auth=" + uiConv.target.normalizedName,
-      "centerscreen,resizable=no,minimizable=no",
-      "ask",
-      uiConv,
-      aObject
-    );
-    win.addEventListener("beforeunload", function() {
-      otrAuth.disabled = false;
-    });
+    })) return;
+    let window = cti.ownerDocument.defaultView;
+    let otrAuth = cti.querySelector(".otr-auth");
+    let name = uiConv.target.normalizedName;
+    ui.openAuth(window, otrAuth, name, "ask", uiConv, aObject);
+  },
+
+  notifyBox: function(context, seen) {
+    let cti, notification, uiConv = otr.getUIConvFromContext(context);
+    if (!Conversations._conversations.some(function(binding) {
+      if (binding._conv.id !== uiConv.id)
+        return false;
+      cti = binding.getElt("conv-top-info");
+      notification = binding.getElt("convNotificationBox");
+      return true;
+    })) return;
+
+    let window = cti.ownerDocument.defaultView;
+    let otrAuth = cti.querySelector(".otr-auth");
+
+    let id = "unverified";
+    if (notification.getNotificationWithValue(id))
+      return;
+
+    let msg = trans("finger." + seen, context.username);
+    let buttons = [{
+      label: trans("finger.verify"),
+      callback: function() {
+        let name = uiConv.target.normalizedName;
+        ui.openAuth(window, otrAuth, name, "start", uiConv);
+        return false;
+      }
+    }];
+
+    let priority = notification.PRIORITY_WARNING_HIGH;
+    notification.appendNotification(msg, id, null, priority, buttons, null);
   },
 
   observe: function(aObject, aTopic, aMsg) {
@@ -269,6 +295,9 @@ let ui = {
       break;
     case "otr:msg-state":
       ui.updateButton(aObject);
+      break;
+    case "otr:new-unverified":
+      ui.notifyBox(aObject, aMsg);
       break;
     case "otr:trust-state":
       ui.alertTrust(aObject);
