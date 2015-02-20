@@ -491,13 +491,13 @@ let otr = {
       this.sendAlert(context, trans("msgevent.rcvdmsg_general_err", message.isNull() ? "" : message.readString()));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
-      this.sendAlert(context, trans("msgevent.rcvd_unecrypted", context.username, message.isNull() ? "" : message.readString()));
+      this.sendAlert(context, trans("msgevent.rcvdmsg_unecrypted", context.username, message.isNull() ? "" : message.readString()));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNRECOGNIZED:
-      this.sendAlert(context, trans("msgevent.rcvd_unrecognized", context.username));
+      this.sendAlert(context, trans("msgevent.rcvdmsg_unrecognized", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_FOR_OTHER_INSTANCE:
-      this.log(trans("msgevent.rcvd_for_other_instance", context.username));
+      this.log(trans("msgevent.rcvdmsg_for_other_instance", context.username));
       break;
     default:
       this.log("msg event: " + msg_event);
