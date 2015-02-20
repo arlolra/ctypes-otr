@@ -86,7 +86,6 @@ let otrAuth = {
 
   accept: function() {
     let context = otr.getContext(uiConv.target);
-    // FIXME: ensure a secret is provided
     if (mode === "start") {
       let how = document.getElementById("howOption");
       switch(how.selectedItem.value) {
