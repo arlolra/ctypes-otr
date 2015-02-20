@@ -455,7 +455,8 @@ let otr = {
     case libOTR.messageEvent.OTRL_MSGEVENT_NONE:
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_ENCRYPTION_REQUIRED:
-      this.sendAlert(context, trans("msgevent.encryption_required", context.username));
+      this.sendAlert(context, trans("msgevent.encryption_required_part1", context.username));
+      this.sendAlert(context, trans("msgevent.encryption_required_part2"));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_ENCRYPTION_ERROR:
       this.sendAlert(context, trans("msgevent.encryption_error"));
