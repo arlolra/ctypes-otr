@@ -21,7 +21,7 @@ instantbird -ProfileManager
 On darwin,
 
 ```
-brew install libgcrypt libotr
+brew install libotr
 git clone https://github.com/arlolra/ctypes-otr.git
 cd ctypes-otr
 pwd > ~/Library/Application\ Support/Instantbird/Profiles/<profile>/extensions/ctypes-otr@tormessenger
@@ -30,7 +30,7 @@ pwd > ~/Library/Application\ Support/Instantbird/Profiles/<profile>/extensions/c
 On linux,
 
 ```
-sudo apt-get install libgcrypt11-dev libotr-dev
+sudo apt-get install libotr5-dev
 git clone https://github.com/arlolra/ctypes-otr.git
 cd ctypes-otr
 pwd > ~/.instantbird/<profile>/extensions/ctypes-otr@tormessenger

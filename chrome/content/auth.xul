@@ -35,16 +35,16 @@
     <caption label="&authDialog.questionAndAnswer;" />
     <description style="width: 300px; white-space: pre-wrap;">&authDialog.qaInstruction;</description>
     <label value="&authDialog.question;" control="question" flex="1" />
-    <textbox id="question" flex="1" />
+    <textbox id="question" />
     <label value="&authDialog.answer;" control="answer" flex="1" />
-    <textbox id="answer" flex="1" />
+    <textbox id="answer" />
   </groupbox>
 
   <groupbox id="sharedSecret" hidden="true">
     <caption label="&authDialog.sharedSecret;" />
     <description style="width: 300px; white-space: pre-wrap;">&authDialog.secretInstruction;</description>
     <label value="&authDialog.secret;" control="secret" flex="1" />
-    <textbox id="secret" flex="1" />
+    <textbox id="secret" />
   </groupbox>
 
   <groupbox id="manualVerification" hidden="true">
@@ -69,7 +69,7 @@
 
   <groupbox id="ask" hidden="true">
     <description id="askLabel" style="width: 300px; white-space: pre-wrap;" />
-    <textbox id="response" flex="1" />
+    <textbox id="response" />
   </groupbox>
 
   <groupbox id="finished" hidden="true">
