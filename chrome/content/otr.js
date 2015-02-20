@@ -637,7 +637,6 @@ let otr = {
     if (om.cancelled)
       return;
 
-    // FIXME: upstream, om.conversation should be a uiConv.
     let uiConv = this._convos.get(om.conversation.id);
     if (!uiConv) {
       om.cancelled = true;
