@@ -637,17 +637,10 @@ let otr = {
     if (om.cancelled)
       return;
 
-    let uiConv = this._convos.get(om.conversation.id);
-    if (!uiConv) {
-      om.cancelled = true;
-      Cu.reportError(new Error("Sending to an unknown conversation."));
-      return;
-    }
-    let conv = uiConv.target;
+    let conv = om.conversation;
+    let newMessage = new ctypes.char.ptr();
 
     this.log("pre sending: " + om.message)
-
-    let newMessage = new ctypes.char.ptr();
 
     let err = libOTR.otrl_message_sending(
       this.userstate,
@@ -774,7 +767,7 @@ let otr = {
     });
   },
 
-  // set a timer for unplucked msgs
+  // FIXME: set a timer for unplucked msgs
   pluckMsg: function(im) {
     let buf = this._buffer;
     for (let i = 0; i < buf.length; i++) {

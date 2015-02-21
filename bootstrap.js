@@ -14,6 +14,51 @@ function trans(name) {
     : bundle.GetStringFromName(name);
 }
 
+let trustMap;
+function setTrustMap() {
+  trustMap = new Map([
+    [otr.trustState.TRUST_NOT_PRIVATE, {
+      trustLabel: trans("trust.not_private"),
+      alertState: trans("state.not_private"),
+      startLabel: trans("start.label"),
+      authLabel: trans("auth.label"),
+      disableStart: false,
+      disableEnd: true,
+      disableAuth: true,
+      class: "not_private"
+    }],
+    [otr.trustState.TRUST_UNVERIFIED, {
+      trustLabel: trans("trust.unverified"),
+      alertState: trans("state.unverified"),
+      startLabel: trans("refresh.label"),
+      authLabel: trans("auth.label"),
+      disableStart: false,
+      disableEnd: false,
+      class: "unverified"
+    }],
+    [otr.trustState.TRUST_PRIVATE, {
+      trustLabel: trans("trust.private"),
+      alertState: trans("state.private"),
+      startLabel: trans("refresh.label"),
+      authLabel: trans("reauth.label"),
+      disableStart: false,
+      disableEnd: false,
+      disableAuth: false,
+      class: "private"
+    }],
+    [otr.trustState.TRUST_FINISHED, {
+      trustLabel: trans("trust.finished"),
+      alertState: trans("state.finished"),
+      startLabel: trans("start.label"),
+      authLabel: trans("auth.label"),
+      disableStart: false,
+      disableEnd: false,
+      disableAuth: true,
+      class: "finished"
+    }]
+  ]);
+}
+
 let ui = {
 
   debug: false,
@@ -40,11 +85,11 @@ let ui = {
   },
 
   init: function() {
+    setTrustMap();
     this.setPrefs();
-    let opts = {
+    otr.init({
       requireEncryption: ui.prefs.getBoolPref("requireEncryption")
-    };
-    otr.init(opts);
+    });
     otr.addObserver(ui);
     otr.loadFiles().then(function() {
       Services.obs.addObserver(otr, "new-ui-conversation", false);
@@ -154,7 +199,9 @@ let ui = {
     // get otr msg state
     let context = otr.getContext(conv);
     ui.setMsgState(context, otrButton, otrStart, otrEnd, otrAuth);
-    ui.alertTrust(context);
+
+    let trust = ui.getTrustSettings(context);
+    uiConv.systemMessage(trust.alertState);
   },
 
   updateButton: function(context) {
@@ -175,60 +222,18 @@ let ui = {
   alertTrust: function(context) {
     let uiConv = otr.getUIConvFromContext(context);
     let trust = ui.getTrustSettings(context);
-    uiConv.systemMessage(trans("alert.state", trust.trustLabel.toLowerCase()));
+    uiConv.systemMessage(trans("afterauth." + trust.class, context.username));
   },
 
   getTrustSettings: function(context) {
-    switch(otr.trust(context)) {
-    case otr.trustState.TRUST_NOT_PRIVATE:
-      return {
-        trustLabel: trans("trust.not_private"),
-        startLabel: trans("start.label"),
-        authLabel: trans("auth.label"),
-        disableStart: false,
-        disableEnd: true,
-        disableAuth: true,
-        cssClass: "otr-not-private"
-      };
-    case otr.trustState.TRUST_UNVERIFIED:
-      return {
-        trustLabel: trans("trust.unverified"),
-        startLabel: trans("refresh.label"),
-        authLabel: trans("auth.label"),
-        disableStart: false,
-        disableEnd: false,
-        cssClass: "otr-unverified"
-      };
-    case otr.trustState.TRUST_PRIVATE:
-      return {
-        trustLabel: trans("trust.private"),
-        startLabel: trans("refresh.label"),
-        authLabel: trans("reauth.label"),
-        disableStart: false,
-        disableEnd: false,
-        disableAuth: false,
-        cssClass: "otr-private"
-      };
-    case otr.trustState.TRUST_FINISHED:
-      return {
-        trustLabel: trans("trust.finished"),
-        startLabel: trans("start.label"),
-        authLabel: trans("auth.label"),
-        disableStart: false,
-        disableEnd: false,
-        disableAuth: true,
-        cssClass: "otr-unverified"
-      };
-    default:
-      throw new Error("Shouldn't be here.");
-    }
+    return trustMap.get(otr.trust(context));
   },
 
   // set msg state on toolbar button
   setMsgState: function(context, otrButton, otrStart, otrEnd, otrAuth) {
     let trust = ui.getTrustSettings(context);
     otrButton.setAttribute("tooltiptext", trust.trustLabel);
-    otrButton.className = "otr-button" + " " + trust.cssClass;
+    otrButton.className = "otr-button" + " otr-" + trust.class;
     otrStart.setAttribute("label", trust.startLabel);
     otrStart.setAttribute("disabled", trust.disableStart);
     otrEnd.setAttribute("disabled", trust.disableEnd);
