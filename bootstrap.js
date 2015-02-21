@@ -4,6 +4,7 @@ Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imWindows.jsm");
 
 const authDialog = "chrome://otr/content/auth.xul";
+const authVerify = "otr-auth-unverified";
 
 let bundle = Services.strings.createBundle("chrome://otr/locale/ui.properties");
 
@@ -58,6 +59,8 @@ function setTrustMap() {
     }]
   ]);
 }
+
+let windowRefs = new Map();
 
 let ui = {
 
@@ -132,9 +135,17 @@ let ui = {
       uiConv,
       aObject
     );
+    windowRefs.set(name, win);
     win.addEventListener("beforeunload", function() {
       target.disabled = false;
+      windowRefs.delete(name);
     });
+  },
+
+  closeAuth: function(context) {
+    let win = windowRefs.get(context.username);
+    if (win)
+      win.close();
   },
 
   addButton: function(aObject) {
@@ -166,6 +177,8 @@ let ui = {
     otrEnd.addEventListener("click", function(e) {
       e.preventDefault();
       if (!e.target.disabled) {
+        let context = otr.getContext(conv);
+        ui.closeAuth(context);
         otr.disconnect(conv, false);
         uiConv.systemMessage(trans("alert.gone_insecure", conv.normalizedName));
       }
@@ -255,6 +268,21 @@ let ui = {
     ui.openAuth(window, otrAuth, name, "ask", uiConv, aObject);
   },
 
+  closeVerify: function(context) {
+    let cti, notification, uiConv = otr.getUIConvFromContext(context);
+    if (!Conversations._conversations.some(function(binding) {
+      if (binding._conv.id !== uiConv.id)
+        return false;
+      cti = binding.getElt("conv-top-info");
+      notification = binding.getElt("convNotificationBox")
+                            .getNotificationWithValue(authVerify);
+      return true;
+    })) return;
+
+    if (notification)
+      notification.close();
+  },
+
   notifyBox: function(context, seen) {
     let cti, notification, uiConv = otr.getUIConvFromContext(context);
     if (!Conversations._conversations.some(function(binding) {
@@ -265,12 +293,11 @@ let ui = {
       return true;
     })) return;
 
+    if (notification.getNotificationWithValue(authVerify))
+      return;
+
     let window = cti.ownerDocument.defaultView;
     let otrAuth = cti.querySelector(".otr-auth");
-
-    let id = "unverified";
-    if (notification.getNotificationWithValue(id))
-      return;
 
     let msg = trans("finger." + seen, context.username);
     let buttons = [{
@@ -283,7 +310,7 @@ let ui = {
     }];
 
     let priority = notification.PRIORITY_WARNING_HIGH;
-    notification.appendNotification(msg, id, null, priority, buttons, null);
+    notification.appendNotification(msg, authVerify, null, priority, buttons, null);
   },
 
   observe: function(aObject, aTopic, aMsg) {
@@ -295,9 +322,15 @@ let ui = {
       ui.addButton(aObject);
       break;
     case "conversation-closed":
+      ui.closeAuth(otr.getContext(aObject));
+      // fall through
     case "prpl-quit":
       ui.disconnect(aTopic === "prpl-quit" ? null : aObject);
       break;
+    case "otr:disconnected":
+      ui.closeAuth(aObject);
+      ui.closeVerify(aObject);
+      // fall through
     case "otr:msg-state":
       ui.updateButton(aObject);
       break;

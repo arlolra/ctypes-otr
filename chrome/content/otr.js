@@ -729,7 +729,7 @@ let otr = {
     let tlv = libOTR.otrl_tlv_find(tlvs, libOTR.tlvs.OTRL_TLV_DISCONNECTED);
     if (!tlv.isNull()) {
       let context = this.getContext(conv);
-      this.notifyObservers(context, "otr:msg-state");
+      this.notifyObservers(context, "otr:disconnected");
       this.sendAlert(context, trans("tlv.disconnected", conv.normalizedName));
     }
 
