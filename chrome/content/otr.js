@@ -232,7 +232,15 @@ let otr = {
       conv.account.normalizedName,
       this.policy
     );
-    conv.sendMsg(query.readString());
+    if (query.isNull()) {
+      Cu.reportError(new Error("Sending query message failed."));
+      return;
+    }
+    // Use the default msg to format the version.
+    // We don't supprt v1 of the protocol so this should be fine.
+    var queryMsg = /^\?OTR.*?\?/.exec(query.readString())[0] + "\n";
+    queryMsg += trans("query.msg", conv.account.normalizedName);
+    conv.sendMsg(queryMsg);
     libOTR.otrl_message_free(query);
   },
 
