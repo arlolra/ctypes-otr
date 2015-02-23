@@ -36,11 +36,9 @@ cd ctypes-otr
 pwd > ~/.instantbird/<profile>/extensions/ctypes-otr@tormessenger
 ```
 
-Now launch Instantbird w/ OTR enabled. The default policy is optimistic
-encryption. That means whitespace tags are appended to plaintext messages to
-start OTR. To manually enforce it, try sending a message with just ?OTRv2,3?
-or initiate with another client. Require encryption can be enabled in the
-add-on settings.
+Now launch Instantbird w/ OTR enabled. The default policy is to require
+encryption. That can be changed to optimistically enable it in the add-on
+settings.
 
 [3]: http://ftp.instantbird.com/instantbird/nightly/latest-trunk/
 

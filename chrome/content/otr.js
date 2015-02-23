@@ -72,6 +72,21 @@ let otr = {
     this._observers = [];
     this._buffer = [];
     this._poll_timer = null;
+
+    // Async sending may fail in the transport protocols, so periodically
+    // drop old messages from the internal buffer. Should be rare.
+    const pluck_time = 1 * 60 * 1000;
+    this._pluck_timer = setInterval(function() {
+      let buf = this._buffer;
+      for (let i = 0; i < buf.length;) {
+        if ((Date.now() - buf[i].time) > pluck_time) {
+          this.log("dropping an old message: " + buf[i].display);
+          buf.splice(i, 1);
+        } else {
+          i += 1;
+        }
+      }
+    }.bind(this), pluck_time);
   },
 
   privateKeyPath: profilePath("otr.private_key"),
@@ -364,13 +379,35 @@ let otr = {
 
   // Find the maximum message size supported by this protocol.
   max_message_size_cb: function(opdata, context) {
-    // TODO: we can do better here.
     context = new Context(context);
+    // These values are, for the most part, from pidgin-otr's mms_table.
     switch(context.protocol) {
-    case "irc":
-      return 400;
-    default:
-      return 0;
+      case "irc":
+      case "prpl-irc":
+        return 417;
+      case "twitter":
+        return 140;
+      case "facebook":
+      case "gtalk":
+      case "odnoklassniki":
+      case "jabber":
+      case "xmpp":
+        return 65536;
+      case "prpl-yahoo":
+        return 799;
+      case "prpl-msn":
+        return 1409;
+      case "prpl-icq":
+        return 2346;
+      case "prpl-gg":
+        return 1999;
+      case "prpl-aim":
+      case "prpl-oscar":
+        return 2343;
+      case "prpl-novell":
+        return 1792;
+      default:
+        return 0;
     }
   },
 
@@ -648,7 +685,7 @@ let otr = {
     let conv = om.conversation;
     let newMessage = new ctypes.char.ptr();
 
-    this.log("pre sending: " + om.message)
+    this.log("pre sending: " + om.message);
 
     let err = libOTR.otrl_message_sending(
       this.userstate,
@@ -694,7 +731,7 @@ let otr = {
       return;
 
     if (im.outgoing) {
-      this.log("outgoing message to display: " + im.displayMessage)
+      this.log("outgoing message to display: " + im.displayMessage);
       this.pluckMsg(im);
       return;
     }
@@ -703,7 +740,7 @@ let otr = {
     let newMessage = new ctypes.char.ptr();
     let tlvs = new libOTR.OtrlTLV.ptr();
 
-    this.log("pre receiving: " + im.displayMessage)
+    this.log("pre receiving: " + im.displayMessage);
 
     let res = libOTR.otrl_message_receiving(
       this.userstate,
@@ -734,10 +771,10 @@ let otr = {
     }
 
     if (res) {
-      this.log("error (" + res + ") ignoring: " + im.displayMessage)
+      this.log("error (" + res + ") ignoring: " + im.displayMessage);
       im.cancelled = true;  // ignore
     } else {
-      this.log("post receiving: " + im.displayMessage)
+      this.log("post receiving: " + im.displayMessage);
     }
 
     libOTR.otrl_tlv_free(tlvs);
@@ -771,11 +808,11 @@ let otr = {
     this._buffer.push({
       convId: convId,
       display: display,
-      sent: sent
+      sent: sent,
+      time: Date.now()
     });
   },
 
-  // FIXME: set a timer for unplucked msgs
   pluckMsg: function(im) {
     let buf = this._buffer;
     for (let i = 0; i < buf.length; i++) {
@@ -783,13 +820,13 @@ let otr = {
       if (b.convId === im.conversation.id && b.sent === im.displayMessage) {
         im.displayMessage = b.display;
         buf.splice(i, 1);
-        this.log("displaying: " + b.display)
+        this.log("displaying: " + b.display);
         return;
       }
     }
     // don't display if it wasn't buffered
     im.cancelled = true;
-    this.log("not displaying: " + im.displayMessage)
+    this.log("not displaying: " + im.displayMessage);
   }
 
 };

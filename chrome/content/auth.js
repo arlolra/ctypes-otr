@@ -125,7 +125,6 @@ let otrAuth = {
   },
 
   help: function() {
-    // TODO: show waiting help
     prompt.alert(window, trans("auth.helpTitle"), trans("auth.help"));
   },
 
@@ -143,13 +142,15 @@ let otrAuth = {
       if (aObj.success) {
         if (aObj.context.trust) {
           str = "auth.success";
+          otr.notifyTrust(aObj.context);
         } else {
           str = "auth.successThem";
         }
       } else {
         str = "auth.fail";
+        if (!aObj.context.trust)
+          otr.notifyTrust(aObj.context);
       }
-      otr.notifyTrust(aObj.context);
       document.getElementById("finLabel").textContent = trans(str);
       showSection("finished", true, true);
     } else {
