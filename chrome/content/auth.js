@@ -61,7 +61,7 @@ let otrAuth = {
         trans("auth.yourFingerprint", context.account, yours) + "\n\n" +
         trans("auth.theirFingerprint", context.username, theirs);
       let opts = document.getElementById("verifiedOption");
-      let select = context.trust ? "have" : "not";
+      let select = context.trust ? "yes" : "no";
       for (let i = 0; i < opts.menupopup.childNodes.length; i ++) {
         let item = opts.menupopup.childNodes[i];
         if (select === item.value) {
@@ -98,7 +98,7 @@ let otrAuth = {
         return startSMP(context, secret);
       case "manualVerification":
         let opts = document.getElementById("verifiedOption");
-        let trust = (opts.selectedItem.value === "have");
+        let trust = (opts.selectedItem.value === "yes");
         otr.setTrust(context, trust);
         return true;
       }

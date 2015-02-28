@@ -52,13 +52,13 @@
     <description style="width: 300px; white-space: pre-wrap;">&authDialog.manualInstruction;</description>
     <textbox id="fingerprints" rows="5" multiline="true" readonly="true" />
     <hbox align="center">
+      <label value="&authDialog.verified;" />
       <menulist id="verifiedOption">
         <menupopup>
-          <menuitem label="&authDialog.have;" value="have" />
-          <menuitem label="&authDialog.haveNot;" value="not" />
+          <menuitem label="&authDialog.yes;" value="yes" />
+          <menuitem label="&authDialog.no;" value="no" />
         </menupopup>
       </menulist>
-      <label value="&authDialog.verified;" />
     </hbox>
   </groupbox>
 
