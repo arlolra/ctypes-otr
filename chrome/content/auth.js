@@ -22,6 +22,9 @@ function showSection(selected, hideMenu, hideAccept) {
   if (hideAccept) {
     document.documentElement.getButton("accept").hidden = true;
   }
+  if (selected === "finished") {
+    document.documentElement.getButton("cancel").label = trans("auth.done");
+  }
   [ "questionAndAnswer",
     "sharedSecret",
     "manualVerification",
