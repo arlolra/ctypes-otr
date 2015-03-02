@@ -122,9 +122,24 @@ let otrAuth = {
     }
   },
 
+  oninput: function(e) {
+    document.documentElement.getButton("accept").disabled = !e.value;
+  },
+
   how: function() {
-    let how = document.getElementById("howOption");
-    showSection(how.selectedItem.value);
+    let how = document.getElementById("howOption").selectedItem.value;
+    switch(how) {
+    case "questionAndAnswer":
+      this.oninput(document.getElementById("answer"));
+      break;
+    case "sharedSecret":
+      this.oninput(document.getElementById("secret"));
+      break;
+    case "manualVerification":
+      this.oninput({ value: true });
+      break;
+    }
+    showSection(how);
   },
 
   help: function() {

@@ -16,7 +16,8 @@
   buttonlabelhelp="&authDialog.help;"
   ondialogaccept="return otrAuth.accept()"
   ondialogcancel="otrAuth.cancel()"
-  ondialoghelp="otrAuth.help()">
+  ondialoghelp="otrAuth.help()"
+  buttondisabledaccept="true">
 
   <script type="application/javascript" src="chrome://otr/content/auth.js" />
 
@@ -37,14 +38,14 @@
     <label value="&authDialog.question;" control="question" flex="1" />
     <textbox id="question" />
     <label value="&authDialog.answer;" control="answer" flex="1" />
-    <textbox id="answer" />
+    <textbox id="answer" oninput="otrAuth.oninput(this)" />
   </groupbox>
 
   <groupbox id="sharedSecret" hidden="true">
     <caption label="&authDialog.sharedSecret;" />
     <description style="width: 300px; white-space: pre-wrap;">&authDialog.secretInstruction;</description>
     <label value="&authDialog.secret;" control="secret" flex="1" />
-    <textbox id="secret" />
+    <textbox id="secret" oninput="otrAuth.oninput(this)" />
   </groupbox>
 
   <groupbox id="manualVerification" hidden="true">
@@ -69,7 +70,7 @@
 
   <groupbox id="ask" hidden="true">
     <description id="askLabel" style="width: 300px; white-space: pre-wrap;" />
-    <textbox id="response" />
+    <textbox id="response" oninput="otrAuth.oninput(this)" />
   </groupbox>
 
   <groupbox id="finished" hidden="true">
