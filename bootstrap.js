@@ -19,8 +19,6 @@ let trustMap;
 function setTrustMap() {
   trustMap = new Map([
     [otr.trustState.TRUST_NOT_PRIVATE, {
-      trustLabel: trans("trust.not_private"),
-      alertState: trans("state.not_private"),
       startLabel: trans("start.label"),
       authLabel: trans("auth.label"),
       disableStart: false,
@@ -29,8 +27,6 @@ function setTrustMap() {
       class: "not_private"
     }],
     [otr.trustState.TRUST_UNVERIFIED, {
-      trustLabel: trans("trust.unverified"),
-      alertState: trans("state.unverified"),
       startLabel: trans("refresh.label"),
       authLabel: trans("auth.label"),
       disableStart: false,
@@ -38,8 +34,6 @@ function setTrustMap() {
       class: "unverified"
     }],
     [otr.trustState.TRUST_PRIVATE, {
-      trustLabel: trans("trust.private"),
-      alertState: trans("state.private"),
       startLabel: trans("refresh.label"),
       authLabel: trans("reauth.label"),
       disableStart: false,
@@ -48,8 +42,6 @@ function setTrustMap() {
       class: "private"
     }],
     [otr.trustState.TRUST_FINISHED, {
-      trustLabel: trans("trust.finished"),
-      alertState: trans("state.finished"),
       startLabel: trans("start.label"),
       authLabel: trans("auth.label"),
       disableStart: false,
@@ -214,7 +206,7 @@ let ui = {
     ui.setMsgState(context, otrButton, otrStart, otrEnd, otrAuth);
 
     let trust = ui.getTrustSettings(context);
-    uiConv.systemMessage(trust.alertState);
+    uiConv.systemMessage(trans("state." + trust.class, context.username));
   },
 
   updateButton: function(context) {
@@ -245,7 +237,7 @@ let ui = {
   // set msg state on toolbar button
   setMsgState: function(context, otrButton, otrStart, otrEnd, otrAuth) {
     let trust = ui.getTrustSettings(context);
-    otrButton.setAttribute("tooltiptext", trust.trustLabel);
+    otrButton.setAttribute("tooltiptext", trans("state." + trust.class, context.username));
     otrButton.className = "otr-button" + " otr-" + trust.class;
     otrStart.setAttribute("label", trust.startLabel);
     otrStart.setAttribute("disabled", trust.disableStart);
