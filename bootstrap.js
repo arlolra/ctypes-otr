@@ -294,6 +294,7 @@ let ui = {
     let msg = trans("finger." + seen, context.username);
     let buttons = [{
       label: trans("finger.verify"),
+      accessKey: trans("verify.accessKey"),
       callback: function() {
         let name = uiConv.target.normalizedName;
         ui.openAuth(window, otrAuth, name, "start", uiConv);
