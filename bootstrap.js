@@ -315,10 +315,13 @@ let ui = {
       ui.addButton(aObject);
       break;
     case "conversation-closed":
+      if (aObject.isChat)
+        return;
       ui.closeAuth(otr.getContext(aObject));
-      // fall through
+      ui.disconnect(aObject);
+      break;
     case "prpl-quit":
-      ui.disconnect(aTopic === "prpl-quit" ? null : aObject);
+      ui.disconnect(null);
       break;
     case "otr:disconnected":
       ui.closeAuth(aObject);

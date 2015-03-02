@@ -683,6 +683,9 @@ let otr = {
       return;
 
     let conv = om.conversation;
+    if (conv.isChat)
+      return;
+
     let newMessage = new ctypes.char.ptr();
 
     this.log("pre sending: " + om.message);
@@ -730,13 +733,16 @@ let otr = {
     if (im.cancelled || im.system)
       return;
 
+    let conv = im.conversation;
+    if (conv.isChat)
+      return;
+
     if (im.outgoing) {
       this.log("outgoing message to display: " + im.displayMessage);
       this.pluckMsg(im);
       return;
     }
 
-    let conv = im.conversation;
     let newMessage = new ctypes.char.ptr();
     let tlvs = new libOTR.OtrlTLV.ptr();
 
