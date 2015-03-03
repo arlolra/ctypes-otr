@@ -2,12 +2,17 @@ let EXPORTED_SYMBOLS = ["otr"];
 
 const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
+Cu.import("resource:///modules/imServices.jsm");
+Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("resource://gre/modules/ctypes.jsm");
-Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/osfile.jsm");
 Cu.import("chrome://otr/content/libotr.js");
 
 const privDialog = "chrome://otr/content/priv.xul";
+
+XPCOMUtils.defineLazyGetter(this, "_", function()
+  l10nHelper("chrome://otr/locale/otr.properties")
+);
 
 // some helpers
 
@@ -19,15 +24,6 @@ function setInterval(fn, delay) {
 
 function clearInterval(timer) {
   timer.cancel();
-}
-
-let bundle = Services.strings.createBundle("chrome://otr/locale/otr.properties");
-
-function trans(name) {
-  let args = Array.prototype.slice.call(arguments, 1);
-  return args.length > 0
-    ? bundle.formatStringFromName(name, args, args.length)
-    : bundle.GetStringFromName(name);
 }
 
 function profilePath(filename) {
@@ -137,7 +133,7 @@ let otr = {
       protocol: protocol
     };
     args.wrappedJSObject = args;
-    Services.ww.openWindow(null, privDialog, trans("priv.label"), features, args);
+    Services.ww.openWindow(null, privDialog, _("priv.label"), features, args);
   },
   _generatePrivateKey: function(account, protocol) {
     if (libOTR.otrl_privkey_generate(
@@ -254,7 +250,7 @@ let otr = {
     // Use the default msg to format the version.
     // We don't supprt v1 of the protocol so this should be fine.
     var queryMsg = /^\?OTR.*?\?/.exec(query.readString())[0] + "\n";
-    queryMsg += trans("query.msg", conv.account.normalizedName);
+    queryMsg += _("query.msg", conv.account.normalizedName);
     conv.sendMsg(queryMsg);
     libOTR.otrl_message_free(query);
   },
@@ -358,7 +354,7 @@ let otr = {
     context = new Context(context);
     let str = "context.gone_secure_" + (context.trust ? "private" : "unverified");
     this.notifyObservers(context, "otr:msg-state");
-    this.sendAlert(context, trans(str, context.username));
+    this.sendAlert(context, _(str, context.username));
   },
 
   // A ConnContext has left a secure state.
@@ -373,7 +369,7 @@ let otr = {
     if (!is_reply) {
       context = new Context(context);
       this.notifyObservers(context, "otr:msg-state");
-      this.sendAlert(context, trans("context.still_secure", context.username));
+      this.sendAlert(context, _("context.still_secure", context.username));
     }
   },
 
@@ -423,16 +419,16 @@ let otr = {
     let msg;
     switch(err_code) {
     case libOTR.errorCode.OTRL_ERRCODE_ENCRYPTION_ERROR:
-      msg = trans("error.enc");
+      msg = _("error.enc");
       break;
     case libOTR.errorCode.OTRL_ERRCODE_MSG_NOT_IN_PRIVATE:
-      msg = trans("error.not_priv", context.username);
+      msg = _("error.not_priv", context.username);
       break;
     case libOTR.errorCode.OTRL_ERRCODE_MSG_UNREADABLE:
-      msg = trans("error.unreadable");
+      msg = _("error.unreadable");
       break;
     case libOTR.errorCode.OTRL_ERRCODE_MSG_MALFORMED:
-      msg = trans("error.malformed");
+      msg = _("error.malformed");
       break;
     default:
       return null;
@@ -448,7 +444,7 @@ let otr = {
 
   // Return a string that will be prefixed to any resent message.
   resent_msg_prefix_cb: function(opdata, context) {
-    return libC.strdup(trans("resent"));
+    return libC.strdup(_("resent"));
   },
 
   // Deallocate a string returned by resent_msg_prefix.
@@ -500,50 +496,50 @@ let otr = {
     case libOTR.messageEvent.OTRL_MSGEVENT_NONE:
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_ENCRYPTION_REQUIRED:
-      this.sendAlert(context, trans("msgevent.encryption_required_part1", context.username));
-      this.sendAlert(context, trans("msgevent.encryption_required_part2"));
+      this.sendAlert(context, _("msgevent.encryption_required_part1", context.username));
+      this.sendAlert(context, _("msgevent.encryption_required_part2"));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_ENCRYPTION_ERROR:
-      this.sendAlert(context, trans("msgevent.encryption_error"));
+      this.sendAlert(context, _("msgevent.encryption_error"));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_CONNECTION_ENDED:
-      this.sendAlert(context, trans("msgevent.connection_ended", context.username));
+      this.sendAlert(context, _("msgevent.connection_ended", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_SETUP_ERROR:
-      this.sendAlert(context, trans("msgevent.setup_error"));
+      this.sendAlert(context, _("msgevent.setup_error"));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_MSG_REFLECTED:
-      this.sendAlert(context, trans("msgevent.msg_reflected"));
+      this.sendAlert(context, _("msgevent.msg_reflected"));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_MSG_RESENT:
-      this.sendAlert(context, trans("msgevent.msg_resent"));
+      this.sendAlert(context, _("msgevent.msg_resent"));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
-      this.sendAlert(context, trans("msgevent.rcvdmsg_not_private", context.username));
+      this.sendAlert(context, _("msgevent.rcvdmsg_not_private", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNREADABLE:
-      this.sendAlert(context, trans("msgevent.rcvdmsg_unreadable", context.username));
+      this.sendAlert(context, _("msgevent.rcvdmsg_unreadable", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_MALFORMED:
-      this.sendAlert(context, trans("msgevent.rcvdmsg_malformed", context.username));
+      this.sendAlert(context, _("msgevent.rcvdmsg_malformed", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_RCVD:
-      this.log(trans("msgevent.log_heartbeat_rcvd", context.username));
+      this.log(_("msgevent.log_heartbeat_rcvd", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_LOG_HEARTBEAT_SENT:
-      this.log(trans("msgevent.log_heartbeat_sent", context.username));
+      this.log(_("msgevent.log_heartbeat_sent", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_GENERAL_ERR:
-      this.sendAlert(context, trans("msgevent.rcvdmsg_general_err", message.isNull() ? "" : message.readString()));
+      this.sendAlert(context, _("msgevent.rcvdmsg_general_err", message.isNull() ? "" : message.readString()));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
-      this.sendAlert(context, trans("msgevent.rcvdmsg_unecrypted", context.username, message.isNull() ? "" : message.readString()));
+      this.sendAlert(context, _("msgevent.rcvdmsg_unecrypted", context.username, message.isNull() ? "" : message.readString()));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNRECOGNIZED:
-      this.sendAlert(context, trans("msgevent.rcvdmsg_unrecognized", context.username));
+      this.sendAlert(context, _("msgevent.rcvdmsg_unrecognized", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_FOR_OTHER_INSTANCE:
-      this.log(trans("msgevent.rcvdmsg_for_other_instance", context.username));
+      this.log(_("msgevent.rcvdmsg_for_other_instance", context.username));
       break;
     default:
       this.log("msg event: " + msg_event);
@@ -773,7 +769,7 @@ let otr = {
     if (!tlv.isNull()) {
       let context = this.getContext(conv);
       this.notifyObservers(context, "otr:disconnected");
-      this.sendAlert(context, trans("tlv.disconnected", conv.normalizedName));
+      this.sendAlert(context, _("tlv.disconnected", conv.normalizedName));
     }
 
     if (res) {

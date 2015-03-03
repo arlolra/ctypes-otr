@@ -1,17 +1,12 @@
 const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
-Cu.import("resource://gre/modules/Services.jsm");
+Cu.import("resource:///modules/imServices.jsm");
+Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("chrome://otr/content/otr.js");
 
-let prompt = Cc["@mozilla.org/embedcomp/prompt-service;1"].getService(Ci.nsIPromptService);
-let bundle = Services.strings.createBundle("chrome://otr/locale/auth.properties");
-
-function trans(name) {
-  let args = Array.prototype.slice.call(arguments, 1);
-  return args.length > 0
-    ? bundle.formatStringFromName(name, args, args.length)
-    : bundle.GetStringFromName(name);
-}
+XPCOMUtils.defineLazyGetter(this, "_", function()
+  l10nHelper("chrome://otr/locale/auth.properties")
+);
 
 let [mode, uiConv, aObject] = window.arguments;
 
@@ -23,7 +18,7 @@ function showSection(selected, hideMenu, hideAccept) {
     document.documentElement.getButton("accept").hidden = true;
   }
   if (selected === "finished") {
-    document.documentElement.getButton("cancel").label = trans("auth.done");
+    document.documentElement.getButton("cancel").label = _("auth.done");
   }
   [ "questionAndAnswer",
     "sharedSecret",
@@ -61,8 +56,8 @@ let otrAuth = {
         throw new Error("Fingerprint should already be generated.");
       let theirs = otr.hashToHuman(context);
       fingers.value =
-        trans("auth.yourFingerprint", context.account, yours) + "\n\n" +
-        trans("auth.theirFingerprint", context.username, theirs);
+        _("auth.yourFingerprint", context.account, yours) + "\n\n" +
+        _("auth.theirFingerprint", context.username, theirs);
       let opts = document.getElementById("verifiedOption");
       let select = context.trust ? "yes" : "no";
       for (let i = 0; i < opts.menupopup.childNodes.length; i ++) {
@@ -76,8 +71,8 @@ let otrAuth = {
     case "ask":
       otrAuth.waiting = true;
       document.getElementById("askLabel").textContent = aObject.question
-        ? trans("auth.question", aObject.question)
-        : trans("auth.secret");
+        ? _("auth.question", aObject.question)
+        : _("auth.secret");
       showSection("ask", true);
       break;
     }
@@ -143,7 +138,8 @@ let otrAuth = {
   },
 
   help: function() {
-    prompt.alert(window, trans("auth.helpTitle"), trans("auth.help"));
+    let prompt = Cc["@mozilla.org/embedcomp/prompt-service;1"].getService(Ci.nsIPromptService);
+    prompt.alert(window, _("auth.helpTitle"), _("auth.help"));
   },
 
   updateProgress: function(aObj) {
@@ -152,7 +148,7 @@ let otrAuth = {
 
     if (!aObj.progress) {
       otrAuth.finished = true;
-      document.getElementById("finLabel").textContent = trans("auth.error");
+      document.getElementById("finLabel").textContent = _("auth.error");
       showSection("finished", true, true);
     } else if (aObj.progress === 100) {
       otrAuth.finished = true;
@@ -169,7 +165,7 @@ let otrAuth = {
         if (!aObj.context.trust)
           otr.notifyTrust(aObj.context);
       }
-      document.getElementById("finLabel").textContent = trans(str);
+      document.getElementById("finLabel").textContent = _(str);
       showSection("finished", true, true);
     } else {
       document.getElementById("progress").value = aObj.progress;

@@ -1,49 +1,45 @@
 const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
 Cu.import("resource:///modules/imServices.jsm");
+Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("resource:///modules/imWindows.jsm");
 
 const authDialog = "chrome://otr/content/auth.xul";
 const authVerify = "otr-auth-unverified";
 
-let bundle = Services.strings.createBundle("chrome://otr/locale/ui.properties");
-
-function trans(name) {
-  let args = Array.prototype.slice.call(arguments, 1);
-  return args.length > 0
-    ? bundle.formatStringFromName(name, args, args.length)
-    : bundle.GetStringFromName(name);
-}
+XPCOMUtils.defineLazyGetter(this, "_", function()
+  l10nHelper("chrome://otr/locale/ui.properties")
+);
 
 let trustMap;
 function setTrustMap() {
   trustMap = new Map([
     [otr.trustState.TRUST_NOT_PRIVATE, {
-      startLabel: trans("start.label"),
-      authLabel: trans("auth.label"),
+      startLabel: _("start.label"),
+      authLabel: _("auth.label"),
       disableStart: false,
       disableEnd: true,
       disableAuth: true,
       class: "not_private"
     }],
     [otr.trustState.TRUST_UNVERIFIED, {
-      startLabel: trans("refresh.label"),
-      authLabel: trans("auth.label"),
+      startLabel: _("refresh.label"),
+      authLabel: _("auth.label"),
       disableStart: false,
       disableEnd: false,
       class: "unverified"
     }],
     [otr.trustState.TRUST_PRIVATE, {
-      startLabel: trans("refresh.label"),
-      authLabel: trans("reauth.label"),
+      startLabel: _("refresh.label"),
+      authLabel: _("reauth.label"),
       disableStart: false,
       disableEnd: false,
       disableAuth: false,
       class: "private"
     }],
     [otr.trustState.TRUST_FINISHED, {
-      startLabel: trans("start.label"),
-      authLabel: trans("auth.label"),
+      startLabel: _("start.label"),
+      authLabel: _("auth.label"),
       disableStart: false,
       disableEnd: false,
       disableAuth: true,
@@ -158,13 +154,13 @@ let ui = {
       if (!e.target.disabled) {
         let context = otr.getContext(conv);
         if (context.msgstate === otr.messageState.OTRL_MSGSTATE_ENCRYPTED)
-          uiConv.systemMessage(trans("alert.refresh", conv.normalizedName));
+          uiConv.systemMessage(_("alert.refresh", conv.normalizedName));
         otr.sendQueryMsg(conv);
       }
     });
 
     let otrEnd = doc.createElement("menuitem");
-    otrEnd.setAttribute("label", trans("end.label"));
+    otrEnd.setAttribute("label", _("end.label"));
     otrEnd.classList.add("otr-end");
     otrEnd.addEventListener("click", function(e) {
       e.preventDefault();
@@ -172,7 +168,7 @@ let ui = {
         let context = otr.getContext(conv);
         ui.closeAuth(context);
         otr.disconnect(conv, false);
-        uiConv.systemMessage(trans("alert.gone_insecure", conv.normalizedName));
+        uiConv.systemMessage(_("alert.gone_insecure", conv.normalizedName));
       }
     });
 
@@ -206,7 +202,7 @@ let ui = {
     ui.setMsgState(context, otrButton, otrStart, otrEnd, otrAuth);
 
     let trust = ui.getTrustSettings(context);
-    uiConv.systemMessage(trans("state." + trust.class, context.username));
+    uiConv.systemMessage(_("state." + trust.class, context.username));
   },
 
   updateButton: function(context) {
@@ -227,7 +223,7 @@ let ui = {
   alertTrust: function(context) {
     let uiConv = otr.getUIConvFromContext(context);
     let trust = ui.getTrustSettings(context);
-    uiConv.systemMessage(trans("afterauth." + trust.class, context.username));
+    uiConv.systemMessage(_("afterauth." + trust.class, context.username));
   },
 
   getTrustSettings: function(context) {
@@ -237,7 +233,7 @@ let ui = {
   // set msg state on toolbar button
   setMsgState: function(context, otrButton, otrStart, otrEnd, otrAuth) {
     let trust = ui.getTrustSettings(context);
-    otrButton.setAttribute("tooltiptext", trans("state." + trust.class, context.username));
+    otrButton.setAttribute("tooltiptext", _("state." + trust.class, context.username));
     otrButton.className = "otr-button" + " otr-" + trust.class;
     otrStart.setAttribute("label", trust.startLabel);
     otrStart.setAttribute("disabled", trust.disableStart);
@@ -291,10 +287,10 @@ let ui = {
     let window = cti.ownerDocument.defaultView;
     let otrAuth = cti.querySelector(".otr-auth");
 
-    let msg = trans("finger." + seen, context.username);
+    let msg = _("finger." + seen, context.username);
     let buttons = [{
-      label: trans("finger.verify"),
-      accessKey: trans("verify.accessKey"),
+      label: _("finger.verify"),
+      accessKey: _("verify.accessKey"),
       callback: function() {
         let name = uiConv.target.normalizedName;
         ui.openAuth(window, otrAuth, name, "start", uiConv);
