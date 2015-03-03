@@ -363,13 +363,21 @@ let ui = {
 
 };
 
+function initializer() {
+  ui.init();
+  Services.obs.removeObserver(initializer, "prpl-init");
+}
+
 function startup(data, reason) {
   Cu.import("chrome://otr/content/otr.js");
   let sss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
   let ios = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
   let uri = ios.newURI("chrome://otr/skin/otr.css", null, null);
   sss.loadAndRegisterSheet(uri, sss.USER_SHEET);
-  ui.init()
+  if (Services.core.initialized)
+    ui.init();
+  else
+    Services.obs.addObserver(initializer, "prpl-init", false);
 }
 
 function shutdown(data, reason) {

@@ -51,6 +51,45 @@ Context.prototype = {
   }
 };
 
+// shared commands
+
+function ircActionCommand(aMsg, aConv) {
+  let protocol = aConv.account.protocol.normalizedName;
+  if (["irc", "prpl-irc"].indexOf(protocol) === -1)
+    return false;
+  if (aConv.isChat)
+    return false;
+  let conv = Services.conversations.getUIConversation(aConv);
+  if (conv) {
+    conv.sendMsg("/me " + aMsg);
+  }
+  return true;
+}
+
+function ircMessageCommand(aMsg, aConv) {
+  let protocol = aConv.account.protocol.normalizedName;
+  if (["irc", "prpl-irc"].indexOf(protocol) === -1)
+    return false;
+
+  aMsg = aMsg.trim();
+  let sep = aMsg.indexOf(" ");
+  let user = aMsg.slice(0, sep < 0 ? aMsg.length : sep);
+  aMsg = aMsg.slice(sep < 0 ? aMsg.length : sep + 1);
+
+  if (!user.length)
+    return true;
+
+  let userConv = aConv.account.createConversation(user);
+
+  if (aMsg.length) {
+    let conv = Services.conversations.getUIConversation(userConv);
+    if (conv)
+      conv.sendMsg(aMsg);
+  }
+
+  return true;
+}
+
 // otr module
 
 let otr = {
@@ -61,6 +100,7 @@ let otr = {
     libOTR.init();
     this.setPolicy(opts.requireEncryption);
     this.initUiOps();
+    this.registerCommands();
     this.userstate = libOTR.otrl_userstate_create();
 
     // A map of UIConvs, keyed on the target.id
@@ -92,6 +132,7 @@ let otr = {
   close: () => {
     libOTR.close();
     libC.close();
+    this.unregisterCommands();
   },
 
   log: function(msg) {
@@ -123,6 +164,34 @@ let otr = {
         )) throw new Error("Failed to read instance tags.");
       })
     ]);
+  },
+
+  commands: [{
+    name: "me",
+    run: ircActionCommand
+  }, {
+    name: "action",
+    run: ircActionCommand
+  }, {
+    name: "msg",
+    run: ircMessageCommand
+  }, {
+    name: "query",
+    run: ircMessageCommand
+  }],
+
+  registerCommands: function() {
+    this.commands.forEach(function(cmd) {
+      cmd.priority = Ci.imICommand.CMD_PRIORITY_HIGH;
+      cmd.usageContext = Ci.imICommand.CMD_CONTEXT_ALL;
+      cmd.QueryInterface = XPCOMUtils.generateQI([Ci.imICommand]);
+      // don't replace the former command by specifying a protocol id
+      Services.cmd.registerCommand(cmd);
+    })
+  },
+
+  unregisterCommands: function() {
+    this.commands.forEach(cmd => Services.cmd.unregisterCommand(cmd));
   },
 
   // generate a private key
