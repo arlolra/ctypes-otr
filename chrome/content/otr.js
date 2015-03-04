@@ -60,9 +60,8 @@ function ircActionCommand(aMsg, aConv) {
   if (aConv.isChat)
     return false;
   let conv = Services.conversations.getUIConversation(aConv);
-  if (conv) {
+  if (conv)
     conv.sendMsg("/me " + aMsg);
-  }
   return true;
 }
 
@@ -129,7 +128,7 @@ let otr = {
   fingerprintsPath: profilePath("otr.fingerprints"),
   instanceTagsPath: profilePath("otr.instance_tags"),
 
-  close: () => {
+  close: function() {
     libOTR.close();
     libC.close();
     this.unregisterCommands();
