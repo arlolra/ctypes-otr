@@ -65,30 +65,6 @@ function ircActionCommand(aMsg, aConv) {
   return true;
 }
 
-function ircMessageCommand(aMsg, aConv) {
-  let protocol = aConv.account.protocol.normalizedName;
-  if (["irc", "prpl-irc"].indexOf(protocol) === -1)
-    return false;
-
-  aMsg = aMsg.trim();
-  let sep = aMsg.indexOf(" ");
-  let user = aMsg.slice(0, sep < 0 ? aMsg.length : sep);
-  aMsg = aMsg.slice(sep < 0 ? aMsg.length : sep + 1);
-
-  if (!user.length)
-    return true;
-
-  let userConv = aConv.account.createConversation(user);
-
-  if (aMsg.length) {
-    let conv = Services.conversations.getUIConversation(userConv);
-    if (conv)
-      conv.sendMsg(aMsg);
-  }
-
-  return true;
-}
-
 // otr module
 
 let otr = {
@@ -171,12 +147,6 @@ let otr = {
   }, {
     name: "action",
     run: ircActionCommand
-  }, {
-    name: "msg",
-    run: ircMessageCommand
-  }, {
-    name: "query",
-    run: ircMessageCommand
   }],
 
   registerCommands: function() {
