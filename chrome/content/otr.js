@@ -720,6 +720,15 @@ let otr = {
     if (conv.isChat)
       return;
 
+    // check for irc action messages
+    if (om.action) {
+      om.cancelled = true;
+      let uiConv = this._convos.get(conv.id);
+      if (uiConv)
+        uiConv.sendMsg("/me " + om.message);
+      return;
+    }
+
     let newMessage = new ctypes.char.ptr();
 
     this.log("pre sending: " + om.message);
