@@ -1,0 +1,21 @@
+<!ENTITY authDialog.title "مصادقة جهة الاتصال">
+<!ENTITY authDialog.authenticate "مصادقة">
+<!ENTITY authDialog.cancel "إلغاء">
+<!ENTITY authDialog.help "مساعدة">
+<!ENTITY authDialog.yes "نعم">
+<!ENTITY authDialog.no "لا">
+<!ENTITY authDialog.verified "لقد تحققت من أن هذه البصمة صحيحة.">
+<!ENTITY authDialog.yourFingerprint "بصمتك">
+<!ENTITY authDialog.theirFingerprint "بصمتهم المزعومة">
+<!ENTITY authDialog.manualVerification "تحقق يدوي من البصمة">
+<!ENTITY authDialog.questionAndAnswer "سؤال وجواب">
+<!ENTITY authDialog.sharedSecret "سر مشترك">
+<!ENTITY authDialog.manualInstruction "للتحقق من البصمة، اتصل بصديقك من خلال وسيلة مصدقة أخري، مثل الهاتف أو بريد إلكتروني تم توقيعه بـGPG.يجب علي كل منكم أن يخبر الأخر ببصمته. إذا كان كل شيئ متطابق، فقم بالإشارة بأنك تحققت من البصمة.">
+<!ENTITY authDialog.choose "اختار">
+<!ENTITY authDialog.how "كيف تريد مصادقة صديقك؟">
+<!ENTITY authDialog.qaInstruction "للمصادقة باستخدام سؤال، قم باختيار سؤال و جوابه لا يعرفه إلا انت و صديقك. أدخل السؤال والإجابة ثم انتظر ان يدخل صديقك الإجابة أيضًا. إذا كانت الإجابة لا تتطابق، فأنت تتكلم حاليًا مع محتال.">
+<!ENTITY authDialog.secretInstruction "للمصادقة، قم باختيار سر لا يعرفه إلا انت و صديقك. أدخل السر ثم انتظر ان يدخله صديقك أيضًا. إذا كان السر غير متطابق، فأنت تتكلم حاليًا مع محتال.">
+<!ENTITY authDialog.question "أدخل السؤال هنا:">
+<!ENTITY authDialog.answer "أدخل الإجابة السرية هنا (ادخل الحروف كما هي):">
+<!ENTITY authDialog.secret "أدخل السر هنا:">
+<!ENTITY authDialog.waiting "في انتظار صديقك ...">
