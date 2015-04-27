@@ -1,0 +1,21 @@
+<!ENTITY authDialog.title "Identität des Gesprächspartner überprüfen">
+<!ENTITY authDialog.authenticate "Überprüfen">
+<!ENTITY authDialog.cancel "Abbrechen">
+<!ENTITY authDialog.help "Hilfe">
+<!ENTITY authDialog.yes "Ja">
+<!ENTITY authDialog.no "Nein">
+<!ENTITY authDialog.verified "Ich habe überprüft, dass dies tatsächlich der richtige Fingerabdruck ist.">
+<!ENTITY authDialog.yourFingerprint "Ihr Fingerabdruck">
+<!ENTITY authDialog.theirFingerprint "Der angegebene Fingerabdruck des Gesprächspartners">
+<!ENTITY authDialog.manualVerification "Manuelle Überprüfung des Fingerabdrucks">
+<!ENTITY authDialog.questionAndAnswer "Frage und Antwort">
+<!ENTITY authDialog.sharedSecret "Gemeinsames Geheimnis">
+<!ENTITY authDialog.manualInstruction "Um den Fingerabdruck zu überprüfen kontaktieren Sie Ihren Gesprächspartner über einen anderen Kanal wie Telefon oder verschlüsselte E-Mail. Jeder von Ihnen sollte seinem Gegenüber seinen Fingerabdruck mitteilen. Wenn alles übereinstimmt sollten Sie im Dialog unten angeben, dass Sie den Fingerabdruck überprüft haben.">
+<!ENTITY authDialog.choose "Auswählen">
+<!ENTITY authDialog.how "Wie möchten Sie die Identität Ihres Gesprächspartners überprüfen?">
+<!ENTITY authDialog.qaInstruction "Um die Identität über eine Frage zu überprüfen wählen Sie eine Frage, deren Antwort nur Sie und Ihr Gesprächspartner wissen. Geben Sie diese Frage und die Antwort ein und warten Sie darauf, dass Ihr Gesprächspartner die Antwort ebenfalls eingibt. Falls die Antworten nicht übereinstimmen könnte es sein, dass Sie mit einem Betrüger sprechen.">
+<!ENTITY authDialog.secretInstruction "Um die Identität zu überprüfen wählen Sie ein Geheimnis aus, dass nur Sie und Ihr Gesprächspartner kennen. Geben Sie dieses Geheimnis ein und warten Sie darauf, dass Ihr Gesprächstpartner es ebenfalls eingibt. Falls die Geheimnisse nicht übereinstimmen könnte es sein, dass Sie mit einem Betrüger sprechen.">
+<!ENTITY authDialog.question "Geben Sie die Frage hier ein:">
+<!ENTITY authDialog.answer "Geben Sie die geheime Antwort hier ein (Groß-/Kleinschreibung ist wichtig):">
+<!ENTITY authDialog.secret "Geben Sie das Geheimnis hier ein:">
+<!ENTITY authDialog.waiting "Warten Sie auf Ihren Gesprächspartner...">
