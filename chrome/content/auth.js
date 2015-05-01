@@ -10,6 +10,8 @@ XPCOMUtils.defineLazyGetter(this, "_", function()
 
 let [mode, uiConv, aObject] = window.arguments;
 
+document.title = _("auth.title", uiConv.normalizedName);
+
 function showSection(selected, hideMenu, hideAccept) {
   if (hideMenu) {
     document.getElementById("how").hidden = true;

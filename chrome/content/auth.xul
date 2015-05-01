@@ -7,7 +7,6 @@
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   id="otrAuthDialog"
   windowtype="OTR:Auth"
-  title="&authDialog.title;"
   onload="otrAuth.onload()"
   onunload="otrAuth.onunload()"
   buttons="accept,cancel,help"
