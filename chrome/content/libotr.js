@@ -446,6 +446,12 @@ let libOTR = {
     Fingerprint.ptr, ctypes.char.ptr
   ),
 
+ // Forget a fingerprint (and maybe the whole context).
+  otrl_context_forget_fingerprint: libotr.declare(
+    "otrl_context_forget_fingerprint", abi, ctypes.void_t,
+    Fingerprint.ptr, ctypes.int
+  ),
+
   // dh.h
 
   sessionIdHalf: {

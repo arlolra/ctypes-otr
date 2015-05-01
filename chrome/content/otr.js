@@ -276,15 +276,48 @@ let otr = {
           }
         }
         fps.push({
+          fpointer: fingerprint,
           fingerprint: otr.hashToHuman(fingerprint),
           screenname: wContext.username,
           account: wContext.account + " (" + wContext.protocol + ")",
           verified: verified,
           status: used ? getStatus(best_level) : _("trust.unused"),
+          purge: false,
         });
       }
     }
     return fps;
+  },
+
+  forgetFingerprints(fps) {
+    let write = false;
+    fps.forEach(function(obj, i) {
+      if (!obj.purge)
+        return;
+      else
+        obj.purge = false;  // reset early
+      let fingerprint = obj.fpointer;
+      if (fingerprint.isNull())
+        return;
+      // don't do anything if fp is active and we're in an encrypted state
+      let context = fingerprint.contents.context.contents.m_context;
+      for (
+        let context_itr = context;
+        !context_itr.isNull() &&
+          comparePointers(context_itr.contents.m_context, context);
+        context_itr = context_itr.contents.next
+      ) {
+        if (
+          context_itr.contents.msgstate === otr.messageState.OTRL_MSGSTATE_ENCRYPTED &&
+          comparePointers(context_itr.contents.active_fingerprint, fingerprint)
+        ) return;
+      }
+      write = true;
+      libOTR.otrl_context_forget_fingerprint(fingerprint, 1);
+      fps[i] = null;  // null out removed fps
+    });
+    if (write)
+      otr.writeFingerprints();
   },
 
   // update trust in fingerprint

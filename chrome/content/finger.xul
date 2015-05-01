@@ -16,7 +16,7 @@
     <tree flex="1"
           width="750"
           style="height: 20em;"
-          onselect=""
+          onselect="otrFinger.select()"
           id="fingerTree">
       <treecols>
         <treecol id="screenname" label="&finger.screenName;" flex="40" />
@@ -32,14 +32,15 @@
       </treecols>
       <treechildren/>
     </tree>
-    <!-- <separator class="thin"/>
+    <separator class="thin"/>
     <hbox>
-      <button disabled="true"
+      <!-- <button disabled="true"
               label="&finger.verify;"
-              oncommand=""/>
-      <button disabled="true"
-              label="&finger.remove;"
-              oncommand=""/>
-    </hbox> -->
+              oncommand=""/> -->
+      <button label="&finger.remove;"
+              disabled="true"
+              id="remove"
+              oncommand="otrFinger.remove()"/>
+    </hbox>
   </vbox>
 </window>
