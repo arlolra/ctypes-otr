@@ -54,7 +54,7 @@ let otrAuth = {
       let yours = otr.privateKeyFingerprint(context.account, context.protocol);
       if (!yours)
         throw new Error("Fingerprint should already be generated.");
-      let theirs = otr.hashToHuman(context);
+      let theirs = otr.hashToHuman(context.fingerprint);
       fingers.value =
         _("auth.yourFingerprint", context.account, yours) + "\n\n" +
         _("auth.theirFingerprint", context.username, theirs);

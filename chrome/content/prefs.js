@@ -42,6 +42,19 @@ let otrPref = {
     let accountList = document.getElementById("accountlist");
     let acc = Services.accounts.getAccountById(accountList.selectedItem.value);
     this._displayFinger(acc);
-  }
+  },
+
+  fingwin: null,
+  showFingers: function() {
+    if (this.fingwin) {
+      return this.fingwin.focus();
+    }
+    this.fingwin = document.documentElement.openWindow(
+      "otr-pref-fingerprints", "chrome://otr/content/finger.xul", "", null
+    );
+    this.fingwin.addEventListener("close", function() {
+      otrPref.fingwin = null;
+    });
+  },
 
 };

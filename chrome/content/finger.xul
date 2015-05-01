@@ -1,0 +1,45 @@
+<?xml version="1.0" ?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css" ?>
+
+<!DOCTYPE window SYSTEM "chrome://otr/locale/finger.dtd">
+
+<window id="otr-fingerwindow"
+        onload="otrFinger.onload()"
+        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        title="&finger.title;">
+
+  <script type="application/javascript" src="chrome://otr/content/finger.js"/>
+
+  <label value="&finger.intro;" />
+  <separator class="thin"/>
+  <vbox id="fingerprints" class="contentPane" flex="1">
+    <tree flex="1"
+          width="750"
+          style="height: 20em;"
+          onselect=""
+          id="fingerTree">
+      <treecols>
+        <treecol id="screenname" label="&finger.screenName;" flex="40" />
+        <splitter class="tree-splitter"/>
+        <treecol id="status" label="&finger.status;" flex="25" />
+        <splitter class="tree-splitter"/>
+        <treecol id="verified" label="&finger.verified;" flex="15" />
+        <splitter class="tree-splitter"/>
+        <treecol id="fingerprint" label="&finger.fingerprint;" flex="10" />
+        <splitter class="tree-splitter"/>
+        <treecol id="account" label="&finger.account;" flex="10" />
+        <splitter class="tree-splitter"/>
+      </treecols>
+      <treechildren/>
+    </tree>
+    <!-- <separator class="thin"/>
+    <hbox>
+      <button disabled="true"
+              label="&finger.verify;"
+              oncommand=""/>
+      <button disabled="true"
+              label="&finger.remove;"
+              oncommand=""/>
+    </hbox> -->
+  </vbox>
+</window>

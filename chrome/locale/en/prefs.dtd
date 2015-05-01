@@ -4,3 +4,6 @@
 <!ENTITY prefs.otrKeys "My Private Keys">
 <!ENTITY prefs.keyForAccount "Key for account:">
 <!ENTITY prefs.fingerprint "Fingerprint:">
+<!ENTITY prefs.knownFingers "Known fingerprints">
+<!ENTITY prefs.introFingers "This space unintentionally left blank.">
+<!ENTITY prefs.showFingers "View">

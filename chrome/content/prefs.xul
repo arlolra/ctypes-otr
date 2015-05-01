@@ -29,6 +29,15 @@
     </groupbox>
 
     <groupbox>
+      <caption label="&prefs.knownFingers;" />
+      <description>&prefs.introFingers;</description>
+      <hbox>
+        <spacer flex="1"/>
+        <button label="&prefs.showFingers;" oncommand="otrPref.showFingers();" />
+      </hbox>
+    </groupbox>
+
+    <groupbox>
       <caption label="&prefs.otrSettings;" />
       <checkbox id="requireencryption" label="&prefs.requireEncryption;" preference="pref_require_encryption" />
     </groupbox>

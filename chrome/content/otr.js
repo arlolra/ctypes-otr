@@ -30,6 +30,32 @@ function profilePath(filename) {
   return OS.Path.join(OS.Constants.Path.profileDir, filename);
 }
 
+// See: https://developer.mozilla.org/en-US/docs/Mozilla/js-ctypes/Using_js-ctypes/Working_with_data#Determining_if_two_pointers_are_equal
+function comparePointers(p, q) {
+  p = ctypes.cast(p, ctypes.uintptr_t).value.toString();
+  q = ctypes.cast(q, ctypes.uintptr_t).value.toString();
+  return p === q;
+}
+
+function trustFingerprint(fingerprint) {
+  return (!fingerprint.isNull() &&
+    !fingerprint.contents.trust.isNull() &&
+    fingerprint.contents.trust.readString().length > 0);
+}
+
+function getStatus(level) {
+  switch(level) {
+  case otr.trustState.TRUST_NOT_PRIVATE:
+    return _("trust.not_private");
+  case otr.trustState.TRUST_UNVERIFIED:
+    return _("trust.unverified");
+  case otr.trustState.TRUST_PRIVATE:
+    return _("trust.private");
+  case otr.trustState.TRUST_FINISHED:
+    return _("trust.finished");
+  }
+}
+
 // libotr context wrapper
 
 function Context(context) {
@@ -43,12 +69,7 @@ Context.prototype = {
   get protocol() this._context.contents.protocol.readString(),
   get msgstate() this._context.contents.msgstate,
   get fingerprint() this._context.contents.active_fingerprint,
-  get fingerprint_hash() this.fingerprint.contents.fingerprint,
-  get trust() {
-    return (!this.fingerprint.isNull() &&
-      !this.fingerprint.contents.trust.isNull() &&
-      this.fingerprint.contents.trust.readString().length > 0);
-  }
+  get trust() { return trustFingerprint(this.fingerprint); },
 };
 
 // shared commands
@@ -201,14 +222,69 @@ let otr = {
     return fingerprint.isNull() ? null : fingerprint.readString();
   },
 
-  // return a human readable string of their active fingerprint
-  hashToHuman: function(context) {
-    let hash = context.fingerprint_hash;
+  // return a human readable string for a fingerprint
+  hashToHuman: function(fingerprint) {
+    let hash = fingerprint.contents.fingerprint;
     if (hash.isNull())
       throw Error("No fingerprint found.");
-    let fingerprint = new libOTR.fingerprint_t();
-    libOTR.otrl_privkey_hash_to_human(fingerprint, hash);
-    return fingerprint.readString();
+    let human = new libOTR.fingerprint_t();
+    libOTR.otrl_privkey_hash_to_human(human, hash);
+    return human.readString();
+  },
+
+  // get list of known fingerprints
+  knownFingerprints: function() {
+    let fps = [];
+    for (
+      let context = this.userstate.contents.context_root;
+      !context.isNull();
+      context = context.contents.next
+    ) {
+      // skip child contexts
+      if (!comparePointers(context.contents.m_context, context))
+        continue;
+      let wContext = new Context(context);
+      for (
+        let fingerprint = context.contents.fingerprint_root.next;
+        !fingerprint.isNull();
+        fingerprint = fingerprint.contents.next
+      ) {
+        let verified = trustFingerprint(fingerprint) ?
+          _("verified.yes") : _("verified.no");
+        let used = false;
+        let best_level = otr.trustState.TRUST_NOT_PRIVATE;
+        for (
+          let context_itr = context;
+          !context_itr.isNull() &&
+            comparePointers(context_itr.contents.m_context, context);
+          context_itr = context_itr.contents.next
+        ) {
+          if (comparePointers(
+            context_itr.contents.active_fingerprint, fingerprint
+          )) {
+            used = true;
+            let level = otr.trust(new Context(context_itr));
+            if (level === otr.trustState.TRUST_PRIVATE) {
+              best_level = otr.trustState.TRUST_PRIVATE;
+            } else if (level === otr.trustState.TRUST_UNVERIFIED
+                && best_level !== otr.trustState.TRUST_PRIVATE) {
+              best_level = otr.trustState.TRUST_UNVERIFIED;
+            } else if (level === otr.trustState.TRUST_FINISHED
+                && best_level === otr.trustState.TRUST_NOT_PRIVATE) {
+              best_level = otr.trustState.TRUST_FINISHED;
+            }
+          }
+        }
+        fps.push({
+          fingerprint: otr.hashToHuman(fingerprint),
+          screenname: wContext.username,
+          account: wContext.account + " (" + wContext.protocol + ")",
+          verified: verified,
+          status: used ? getStatus(best_level) : _("trust.unused"),
+        });
+      }
+    }
+    return fps;
   },
 
   // update trust in fingerprint

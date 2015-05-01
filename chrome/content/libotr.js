@@ -57,9 +57,13 @@ const ConnContextPriv = ctypes.StructType("context_priv");
 const OtrlMessageAppOps = ctypes.StructType("s_OtrlMessageAppOps");
 const OtrlAuthInfo = ctypes.StructType("OtrlAuthInfo");
 const Fingerprint = ctypes.StructType("s_fingerprint");
-const OtrlUserState = ctypes.StructType("s_OtrlUserState").ptr;
+const s_OtrlUserState = ctypes.StructType("s_OtrlUserState");
+const OtrlUserState = s_OtrlUserState.ptr;
 const OtrlSMState = ctypes.StructType("OtrlSMState");
 const DH_keypair = ctypes.StructType("DH_keypair");
+const OtrlPrivKey = ctypes.StructType("s_OtrlPrivKey");
+const OtrlInsTag = ctypes.StructType("s_OtrlInsTag");
+const OtrlPendingPrivKey = ctypes.StructType("s_OtrlPendingPrivKey");
 
 const OTRL_PRIVKEY_FPRINT_HUMAN_LEN = 45;
 const fingerprint_t = ctypes.char.array(OTRL_PRIVKEY_FPRINT_HUMAN_LEN);
@@ -187,6 +191,14 @@ const timer_control_cb_t = ctypes.FunctionType(abi, ctypes.void_t, [
 ]).ptr;
 
 // defines
+
+s_OtrlUserState.define([
+  { context_root: ConnContext.ptr },
+  { privkey_root: OtrlPrivKey.ptr },
+  { instag_root: OtrlInsTag.ptr },
+  { pending_root: OtrlPendingPrivKey.ptr },
+  { timer_running: ctypes.int }
+]);
 
 Fingerprint.define([
   { next: Fingerprint.ptr },
