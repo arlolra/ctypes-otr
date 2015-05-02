@@ -66,7 +66,8 @@ let ui = {
   setPrefs: function() {
     let branch = "extensions.otr.";
     let prefs = {
-      "requireEncryption": true
+      requireEncryption: true,
+      verifyNudge: true
     };
     let defaults = Services.prefs.getDefaultBranch(branch);
     Object.keys(prefs).forEach(function(key) {
@@ -79,7 +80,8 @@ let ui = {
     setTrustMap();
     this.setPrefs();
     otr.init({
-      requireEncryption: ui.prefs.getBoolPref("requireEncryption")
+      requireEncryption: ui.prefs.getBoolPref("requireEncryption"),
+      verifyNudge: ui.prefs.getBoolPref("verifyNudge")
     });
     otr.addObserver(ui);
     otr.loadFiles().then(function() {
@@ -107,6 +109,9 @@ let ui = {
     switch(aMsg) {
     case "requireEncryption":
       otr.setPolicy(ui.prefs.getBoolPref("requireEncryption"));
+      break;
+    case "verifyNudge":
+      otr.verifyNudge = ui.prefs.getBoolPref("verifyNudge");
       break;
     default:
       ui.log(aMsg);
@@ -320,13 +325,15 @@ let ui = {
       ui.disconnect(null);
       break;
     case "otr:disconnected":
-      ui.closeAuth(aObject);
-      ui.closeVerify(aObject);
-      // fall through
     case "otr:msg-state":
+      if (aTopic === "otr:disconnected" ||
+          otr.trust(aObject) !== otr.trustState.TRUST_UNVERIFIED) {
+        ui.closeAuth(aObject);
+        ui.closeVerify(aObject);
+      }
       ui.updateButton(aObject);
       break;
-    case "otr:new-unverified":
+    case "otr:unverified":
       ui.notifyBox(aObject, aMsg);
       break;
     case "otr:trust-state":

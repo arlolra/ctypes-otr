@@ -7,3 +7,4 @@
 <!ENTITY prefs.knownFingers "Known fingerprints">
 <!ENTITY prefs.introFingers "This space unintentionally left blank.">
 <!ENTITY prefs.showFingers "View">
+<!ENTITY prefs.verifyNudge "Always nudge to verify your contact's identity">

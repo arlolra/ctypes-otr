@@ -12,6 +12,7 @@
 
     <preferences id="otr-preferences">
       <preference id="pref_require_encryption" name="extensions.otr.requireEncryption" type="bool" />
+      <preference id="pref_verify_nudge" name="extensions.otr.verifyNudge" type="bool" />
     </preferences>
 
     <script type="application/javascript" src="chrome://otr/content/prefs.js" />
@@ -40,6 +41,7 @@
     <groupbox>
       <caption label="&prefs.otrSettings;" />
       <checkbox id="requireencryption" label="&prefs.requireEncryption;" preference="pref_require_encryption" />
+      <checkbox id="verifynudge" label="&prefs.verifyNudge;" preference="pref_verify_nudge" />
     </groupbox>
 
   </prefpane>

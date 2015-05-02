@@ -94,6 +94,7 @@ let otr = {
     opts = opts || {};
 
     libOTR.init();
+    this.verifyNudge = !!opts.verifyNudge;
     this.setPolicy(opts.requireEncryption);
     this.initUiOps();
     this.registerCommands();
@@ -484,11 +485,10 @@ let otr = {
       fp = fp.contents.next;
     }
 
-    this.notifyObservers(
-      new Context(context),
-      "otr:new-unverified",
-      (seen ? "seen" : "unseen")
-    );
+    // Only nudge on new fingerprint, as opposed to always.
+    if (!this.verifyNudge)
+      this.notifyObservers(new Context(context), "otr:unverified",
+        (seen ? "seen" : "unseen"));
   },
 
   // The list of known fingerprints has changed.  Write them to disk.
@@ -502,6 +502,8 @@ let otr = {
     let str = "context.gone_secure_" + (context.trust ? "private" : "unverified");
     this.notifyObservers(context, "otr:msg-state");
     this.sendAlert(context, _(str, context.username));
+    if (this.verifyNudge && !context.trust)
+      this.notifyObservers(context, "otr:unverified", "unseen");
   },
 
   // A ConnContext has left a secure state.
