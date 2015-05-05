@@ -127,8 +127,7 @@ let otr = {
   instanceTagsPath: profilePath("otr.instance_tags"),
 
   close: function() {
-    libOTR.close();
-    libC.close();
+    clearInterval(this._poll_timer);
     this.unregisterCommands();
   },
 
@@ -182,7 +181,7 @@ let otr = {
   },
 
   unregisterCommands: function() {
-    this.commands.forEach(cmd => Services.cmd.unregisterCommand(cmd));
+    this.commands.forEach(cmd => Services.cmd.unregisterCommand(cmd.name));
   },
 
   // generate a private key
@@ -772,13 +771,17 @@ let otr = {
       this.onReceive(aObject);
       break;
     case "new-ui-conversation":
-      let conv = aObject.target;
-      if (conv.isChat)
-        return;
-      this._convos.set(conv.id, aObject);
-      aObject.addObserver(this);
+      this.addConversation(aObject);
       break;
     }
+  },
+
+  addConversation: function(uiConv) {
+    let conv = uiConv.target;
+    if (conv.isChat)
+      return;
+    this._convos.set(conv.id, uiConv);
+    uiConv.addObserver(this);
   },
 
   removeConversation: function(uiConv) {

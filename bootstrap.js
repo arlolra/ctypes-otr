@@ -90,6 +90,7 @@ let ui = {
       Services.obs.addObserver(ui, "conversation-closed", false);
       Services.obs.addObserver(ui, "prpl-quit", false);
       ui.prefs.addObserver("", ui, false);
+      Conversations._conversations.forEach(ui.initConv);
     }).catch(function(err) { throw err; });
   },
 
@@ -141,8 +142,7 @@ let ui = {
       win.close();
   },
 
-  addButton: function(aObject) {
-    let binding = aObject.ownerDocument.getBindingParent(aObject);
+  addButton: function(binding) {
     let uiConv = binding._conv;
     let conv = uiConv.target;
     if (conv.isChat)
@@ -313,7 +313,8 @@ let ui = {
       ui.changePref(aMsg);
       break;
     case "conversation-loaded":
-      ui.addButton(aObject);
+      let binding = aObject.ownerDocument.getBindingParent(aObject);
+      ui.addButton(binding);
       break;
     case "conversation-closed":
       if (aObject.isChat)
@@ -346,6 +347,11 @@ let ui = {
       ui.log("otr: " + aObject);
       break;
     }
+  },
+
+  initConv: function(binding) {
+    otr.addConversation(binding._conv);
+    ui.addButton(binding);
   },
 
   resetConv: function(binding) {
@@ -390,6 +396,7 @@ function startup(data, reason) {
 function shutdown(data, reason) {
   if (reason === APP_SHUTDOWN)
     return;
+  ui.disconnect(null);
   ui.destroy();
   Cu.unload("chrome://otr/content/otr.js");
 }

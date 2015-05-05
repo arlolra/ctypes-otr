@@ -337,8 +337,6 @@ let libOTR = {
       throw new Error("Couldn't initialize libotr.");
   },
 
-  close: () => libotr.close(),
-
   // proto.h
 
   OTRL_POLICY_OPPORTUNISTIC: new ctypes.unsigned_int(
@@ -754,7 +752,6 @@ let libOTR = {
 let libc = ctypes.open(libcPath);
 
 let libC = {
-  close: () => libc.close(),
   memcmp: libc.declare(
     "memcmp", abi, ctypes.int,
     ctypes.void_t.ptr,
