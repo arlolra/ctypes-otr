@@ -22,6 +22,10 @@ let otrPref = {
         this._displayFinger(acc);
       }
     }
+    if (accountList.itemCount) {
+      document.getElementById("emptyal").hidden = true;
+      accountList.hidden = false;
+    }
   },
 
   getAccounts: function am_getAccounts() {

@@ -21,7 +21,9 @@
       <caption label="&prefs.otrKeys;" />
       <hbox align="baseline">
         <label control="accountlist" value="&prefs.keyForAccount;" />
-        <menulist id="accountlist" oncommand="otrPref.displayFinger();"></menulist>
+        <menulist id="accountlist" oncommand="otrPref.displayFinger();" hidden="true"></menulist>
+        <textbox id="emptyal" class="plain" flex="1" readonly="true"
+          value="&prefs.emptyAccountList;" />
       </hbox>
       <hbox align="baseline">
         <label control="fingerprint" value="&prefs.fingerprint;" />
