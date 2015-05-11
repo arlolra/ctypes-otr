@@ -7,6 +7,7 @@
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   id="otrAuthDialog"
   windowtype="OTR:Auth"
+  title="&authDialog.title;"
   onload="otrAuth.onload()"
   onunload="otrAuth.onunload()"
   buttons="accept,cancel,help"
@@ -20,7 +21,7 @@
 
   <script type="application/javascript" src="chrome://otr/content/auth.js" />
 
-  <groupbox id="how">
+  <groupbox id="how" hidden="true">
     <caption label="&authDialog.how;"/>
     <menulist id="howOption" oncommand="otrAuth.how();">
       <menupopup>
@@ -31,7 +32,7 @@
     </menulist>
   </groupbox>
 
-  <groupbox id="questionAndAnswer">
+  <groupbox id="questionAndAnswer" hidden="true">
     <caption label="&authDialog.questionAndAnswer;" />
     <description style="width: 300px; white-space: pre-wrap;">&authDialog.qaInstruction;</description>
     <label value="&authDialog.question;" control="question" flex="1" />

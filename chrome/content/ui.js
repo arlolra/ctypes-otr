@@ -313,6 +313,7 @@ let ui = {
 
   generate: function(args) {
     let features = "modal,centerscreen,resizable=no,minimizable=no";
+    args.wrappedJSObject = args;
     Services.ww.openWindow(null, privDialog, "", features, args);
   },
 

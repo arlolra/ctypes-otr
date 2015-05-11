@@ -14,29 +14,32 @@
   <separator class="thin"/>
   <vbox id="fingerprints" class="contentPane" flex="1">
     <tree flex="1"
-          width="750"
+          width="800"
           style="height: 20em;"
           onselect="otrFinger.select()"
           id="fingerTree">
       <treecols>
-        <treecol id="screenname" label="&finger.screenName;" flex="40" />
+        <treecol id="screenname" label="&finger.screenName;" flex="20" />
         <splitter class="tree-splitter"/>
-        <treecol id="status" label="&finger.status;" flex="25" />
+        <treecol id="status" label="&finger.status;" flex="10" />
         <splitter class="tree-splitter"/>
-        <treecol id="verified" label="&finger.verified;" flex="15" />
+        <treecol id="verified" label="&finger.verified;" flex="10" />
         <splitter class="tree-splitter"/>
-        <treecol id="fingerprint" label="&finger.fingerprint;" flex="10" />
+        <treecol id="fingerprint" label="&finger.fingerprint;" flex="120" />
         <splitter class="tree-splitter"/>
-        <treecol id="account" label="&finger.account;" flex="10" />
+        <treecol id="account" label="&finger.account;" flex="60" />
+        <splitter class="tree-splitter"/>
+        <treecol id="protocol" label="&finger.protocol;" flex="10" />
         <splitter class="tree-splitter"/>
       </treecols>
       <treechildren/>
     </tree>
     <separator class="thin"/>
     <hbox>
-      <!-- <button disabled="true"
-              label="&finger.verify;"
-              oncommand=""/> -->
+      <button label="&finger.verify;"
+              disabled="true"
+              id="verify"
+              oncommand="otrFinger.verify()"/>
       <button label="&finger.remove;"
               disabled="true"
               id="remove"

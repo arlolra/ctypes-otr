@@ -10,15 +10,12 @@ XPCOMUtils.defineLazyGetter(this, "_", function()
 
 let [mode, uiConv, aObject] = window.arguments;
 
-document.title = _("auth.title", uiConv.normalizedName);
+document.title = _("auth.title",
+  (mode === "pref") ? aObject.screenname : uiConv.normalizedName);
 
 function showSection(selected, hideMenu, hideAccept) {
-  if (hideMenu) {
-    document.getElementById("how").hidden = true;
-  }
-  if (hideAccept) {
-    document.documentElement.getButton("accept").hidden = true;
-  }
+  document.getElementById("how").hidden = !!hideMenu;
+  document.documentElement.getButton("accept").hidden = !!hideAccept;
   if (selected === "finished") {
     document.documentElement.getButton("cancel").label = _("auth.done");
   }
@@ -41,68 +38,93 @@ function startSMP(context, answer, question) {
   return false;
 }
 
+function populateFingers(context, theirs, trust) {
+  let fingers = document.getElementById("fingerprints");
+  let yours = otr.privateKeyFingerprint(context.account, context.protocol);
+  if (!yours)
+    throw new Error("Fingerprint should already be generated.");
+  fingers.value =
+    _("auth.yourFingerprint", context.account, yours) + "\n\n" +
+    _("auth.theirFingerprint", context.username, theirs);
+  let opts = document.getElementById("verifiedOption");
+  let verified = trust ? "yes" : "no";
+  for (let i = 0; i < opts.menupopup.childNodes.length; i ++) {
+    let item = opts.menupopup.childNodes[i];
+    if (verified === item.value) {
+      opts.selectedItem = item;
+      break;
+    }
+  };
+}
+
 let otrAuth = {
 
   waiting: false,
   finished: false,
 
   onload: function() {
-    otr.addObserver(otrAuth);
+    if (mode !== "pref")
+      otr.addObserver(otrAuth);
+    let context, theirs;
     switch(mode) {
-    case "start":
-      // populate manual verification
-      let context = otr.getContext(uiConv.target);
-      let fingers = document.getElementById("fingerprints");
-      let yours = otr.privateKeyFingerprint(context.account, context.protocol);
-      if (!yours)
-        throw new Error("Fingerprint should already be generated.");
-      let theirs = otr.hashToHuman(context.fingerprint);
-      fingers.value =
-        _("auth.yourFingerprint", context.account, yours) + "\n\n" +
-        _("auth.theirFingerprint", context.username, theirs);
-      let opts = document.getElementById("verifiedOption");
-      let select = context.trust ? "yes" : "no";
-      for (let i = 0; i < opts.menupopup.childNodes.length; i ++) {
-        let item = opts.menupopup.childNodes[i];
-        if (select === item.value) {
-          opts.selectedItem = item;
-          break;
-        }
-      };
-      break;
-    case "ask":
-      otrAuth.waiting = true;
-      document.getElementById("askLabel").textContent = aObject.question
-        ? _("auth.question", aObject.question)
-        : _("auth.secret");
-      showSection("ask", true);
-      break;
+      case "start":
+        context = otr.getContext(uiConv.target);
+        theirs = otr.hashToHuman(context.fingerprint);
+        populateFingers(context, theirs, context.trust);
+        showSection("questionAndAnswer");
+        break;
+      case "pref":
+        context = otr.getContextFromRecipient(
+          aObject.account,
+          aObject.protocol,
+          aObject.screenname
+        );
+        theirs = aObject.fingerprint;
+        populateFingers(context, theirs, aObject.trust);
+        showSection("manualVerification", true);
+        this.oninput({ value: true });
+        break;
+      case "ask":
+        otrAuth.waiting = true;
+        document.getElementById("askLabel").textContent = aObject.question
+          ? _("auth.question", aObject.question)
+          : _("auth.secret");
+        showSection("ask", true);
+        break;
     }
   },
 
   onunload: function() {
-    otr.removeObserver(otrAuth);
+    if (mode !== "pref")
+      otr.removeObserver(otrAuth);
   },
 
   accept: function() {
-    let context = otr.getContext(uiConv.target);
-    if (mode === "start") {
+    let context, opts, trust;
+    if (mode === "pref") {
+      opts = document.getElementById("verifiedOption");
+      trust = (opts.selectedItem.value === "yes");
+      otr.setTrust(aObject.fpointer, trust);
+      return true;
+    } else if (mode === "start") {
+      context = otr.getContext(uiConv.target);
       let how = document.getElementById("howOption");
       switch(how.selectedItem.value) {
-      case "questionAndAnswer":
-        let question = document.getElementById("question").value;
-        let answer = document.getElementById("answer").value;
-        return startSMP(context, answer, question);
-      case "sharedSecret":
-        let secret = document.getElementById("secret").value;
-        return startSMP(context, secret);
-      case "manualVerification":
-        let opts = document.getElementById("verifiedOption");
-        let trust = (opts.selectedItem.value === "yes");
-        otr.setTrust(context, trust);
-        return true;
+        case "questionAndAnswer":
+          let question = document.getElementById("question").value;
+          let answer = document.getElementById("answer").value;
+          return startSMP(context, answer, question);
+        case "sharedSecret":
+          let secret = document.getElementById("secret").value;
+          return startSMP(context, secret);
+        case "manualVerification":
+          opts = document.getElementById("verifiedOption");
+          trust = (opts.selectedItem.value === "yes");
+          otr.setTrust(context.fingerprint, trust, context);
+          return true;
       }
     } else if (mode === "ask") {
+      context = otr.getContext(uiConv.target);
       let response = document.getElementById("response").value;
       document.getElementById("progress").value = aObject.progress;
       document.getElementById("waitingLabel").hidden = true;
@@ -177,9 +199,9 @@ let otrAuth = {
 
   observe: function(aObj, aTopic, aMsg) {
     switch(aTopic) {
-    case "otr:auth-update":
-      otrAuth.updateProgress(aObj);
-      break;
+      case "otr:auth-update":
+        otrAuth.updateProgress(aObj);
+        break;
     }
   }
 

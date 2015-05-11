@@ -450,6 +450,12 @@ let libOTR = {
     Fingerprint.ptr, ctypes.int
   ),
 
+  // Return true iff the given fingerprint is marked as trusted.
+  otrl_context_is_fingerprint_trusted: libotr.declare(
+    "otrl_context_is_fingerprint_trusted", abi, ctypes.int,
+    Fingerprint.ptr
+  ),
+
   // dh.h
 
   sessionIdHalf: {

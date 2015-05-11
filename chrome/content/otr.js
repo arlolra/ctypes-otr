@@ -133,8 +133,14 @@ let otr = {
   },
 
   close: function() {
-    clearInterval(this._poll_timer);
-    clearInterval(this._pluck_timer);
+    if (this._poll_timer) {
+      clearInterval(this._poll_timer);
+      this._poll_timer = null;
+    }
+    if (this._pluck_timer) {
+      clearInterval(this._pluck_timer);
+      this._pluck_timer = null;
+    }
     this._buffer = null;
     this.unregisterCommands();
   },
@@ -248,8 +254,7 @@ let otr = {
         !fingerprint.isNull();
         fingerprint = fingerprint.contents.next
       ) {
-        let verified = trustFingerprint(fingerprint) ?
-          _("verified.yes") : _("verified.no");
+        let trust = trustFingerprint(fingerprint);
         let used = false;
         let best_level = otr.trustState.TRUST_NOT_PRIVATE;
         for (
@@ -278,8 +283,9 @@ let otr = {
           fpointer: fingerprint,
           fingerprint: otr.hashToHuman(fingerprint),
           screenname: wContext.username,
-          account: wContext.account + " (" + wContext.protocol + ")",
-          verified: verified,
+          account: wContext.account,
+          protocol: wContext.protocol,
+          trust: trust,
           status: used ? getStatus(best_level) : _("trust.unused"),
           purge: false,
         });
@@ -319,13 +325,19 @@ let otr = {
       otr.writeFingerprints();
   },
 
+  isFingerprintTrusted: function(fingerprint) {
+    return !!libOTR.otrl_context_is_fingerprint_trusted(fingerprint);
+  },
+
   // update trust in fingerprint
-  setTrust: function(context, trust) {
-    if (trust === context.trust)
-      return;  // ignore if no change in trust
-    libOTR.otrl_context_set_trust(context.fingerprint, trust ? "verified" : "");
+  setTrust: function(fingerprint, trust, context) {
+    // ignore if no change in trust
+    if (context && (trust === context.trust))
+      return
+    libOTR.otrl_context_set_trust(fingerprint, trust ? "verified" : "");
     this.writeFingerprints();
-    this.notifyTrust(context);
+    if (context)
+      this.notifyTrust(context);
   },
 
   notifyTrust: function(context) {
@@ -343,6 +355,14 @@ let otr = {
       conv.normalizedName,
       conv.account.normalizedName,
       conv.account.protocol.normalizedName,
+      libOTR.instag.OTRL_INSTAG_BEST, 1, null, null, null
+    );
+    return new Context(context);
+  },
+
+  getContextFromRecipient(account, protocol, recipient) {
+    let context = libOTR.otrl_context_find(
+      this.userstate, recipient, account, protocol,
       libOTR.instag.OTRL_INSTAG_BEST, 1, null, null, null
     );
     return new Context(context);
@@ -443,7 +463,6 @@ let otr = {
       account: accountname.readString(),
       protocol: protocol.readString(),
     };
-    args.wrappedJSObject = args;
     this.notifyObservers(args, "otr:generate");
   },
 

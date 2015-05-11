@@ -4,6 +4,8 @@ Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("chrome://otr/content/otr.js");
 
+const authDialog = "chrome://otr/content/auth.xul";
+
 XPCOMUtils.defineLazyGetter(this, "_", function()
   l10nHelper("chrome://otr/locale/finger.properties")
 );
@@ -18,7 +20,12 @@ let fingerTreeView = {
   getCellValue: function(row, column) {},
   getCellText: function(row, column) {
     let finger = fingers[row];
-    return finger[column.id] || "";
+    switch(column.id) {
+      case "verified":
+        return finger.trust ? _("verified.yes") : _("verified.no");
+      default:
+        return finger[column.id] || "";
+    }
   },
   isSeparator: function(index) { return false; },
   isSorted: function() { return false; },
@@ -59,10 +66,8 @@ let otrFinger = {
 
   select: function() {
     let selections = getSelections(fingerTree);
-    if (selections.length)
-      document.getElementById("remove").removeAttribute("disabled");
-    else
-      document.getElementById("remove").setAttribute("disabled", "true");
+    document.getElementById("verify").disabled = (selections.length !== 1);
+    document.getElementById("remove").disabled = !selections.length;
   },
 
   remove: function() {
@@ -82,6 +87,29 @@ let otrFinger = {
         fingerTree.treeBoxObject.rowCountChanged(j, j - k);  // negative
       }
     }
+    fingerTreeView.selection.selectEventsSuppressed = false;
+  },
+
+  verify: function() {
+    fingerTreeView.selection.selectEventsSuppressed = true;
+    let selections = getSelections(fingerTree);
+    if (selections.length !== 1)
+      return;
+    let row = selections[0];
+    let finger = fingers[row];
+    let features = "modal,centerscreen,resizable=no,minimizable=no";
+    let name = "auth=" + finger.screenname;
+    let uiConv = null;
+    // try {
+    //   uiConv = otr.getUIConvForRecipient(
+    //     finger.account,
+    //     finger.protocol,
+    //     finger.screenname
+    //   );
+    // } catch (e) {}
+    let win = window.openDialog(authDialog, name, features, "pref", uiConv, finger);
+    finger.trust = otr.isFingerprintTrusted(finger.fpointer);
+    fingerTree.treeBoxObject.invalidateRow(row);
     fingerTreeView.selection.selectEventsSuppressed = false;
   },
 

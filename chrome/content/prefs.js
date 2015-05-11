@@ -5,6 +5,7 @@ Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("chrome://otr/content/otr.js");
 
 const fingerDialog = "chrome://otr/content/finger.xul";
+const privDialog = "chrome://otr/content/priv.xul";
 
 XPCOMUtils.defineLazyGetter(this, "_", function()
   l10nHelper("chrome://otr/locale/auth.properties")
@@ -73,7 +74,8 @@ let otrPref = {
       protocol: acc.protocol.normalizedName,
     };
     args.wrappedJSObject = args;
-    otr.notifyObservers(args, "otr:generate");
+    let features = "modal,centerscreen,resizable=no,minimizable=no";
+    Services.ww.openWindow(null, privDialog, "", features, args);
     this.swapFinger(acc);
   },
 

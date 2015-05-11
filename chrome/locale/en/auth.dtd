@@ -1,3 +1,4 @@
+<!ENTITY authDialog.title "Verify contact's identity">
 <!ENTITY authDialog.authenticate "Verify">
 <!ENTITY authDialog.cancel "Cancel">
 <!ENTITY authDialog.help "Help">
