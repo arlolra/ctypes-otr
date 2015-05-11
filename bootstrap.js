@@ -4,6 +4,7 @@ Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("resource:///modules/imWindows.jsm");
 
+const privDialog = "chrome://otr/content/priv.xul";
 const authDialog = "chrome://otr/content/auth.xul";
 const authVerify = "otr-auth-unverified";
 
@@ -307,6 +308,11 @@ let ui = {
     notification.appendNotification(msg, authVerify, null, priority, buttons, null);
   },
 
+  generate: function(args) {
+    let features = "modal,centerscreen,resizable=no,minimizable=no";
+    Services.ww.openWindow(null, privDialog, "", features, args);
+  },
+
   observe: function(aObject, aTopic, aMsg) {
     switch(aTopic) {
     case "nsPref:changed":
@@ -324,6 +330,9 @@ let ui = {
       break;
     case "prpl-quit":
       ui.disconnect(null);
+      break;
+    case "otr:generate":
+      ui.generate(aObject);
       break;
     case "otr:disconnected":
     case "otr:msg-state":

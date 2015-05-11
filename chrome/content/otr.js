@@ -8,8 +8,6 @@ Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/osfile.jsm");
 Cu.import("chrome://otr/content/libotr.js");
 
-const privDialog = "chrome://otr/content/priv.xul";
-
 XPCOMUtils.defineLazyGetter(this, "_", function()
   l10nHelper("chrome://otr/locale/otr.properties")
 );
@@ -80,9 +78,9 @@ function ircActionCommand(aMsg, aConv) {
     return false;
   if (aConv.isChat)
     return false;
-  let conv = Services.conversations.getUIConversation(aConv);
-  if (conv)
-    conv.sendMsg("/me " + aMsg);
+  let uiConv = otr.getUIConvFromConv(aConv);
+  if (uiConv)
+    uiConv.sendMsg("/me " + aMsg);
   return true;
 }
 
@@ -186,15 +184,6 @@ let otr = {
 
   // generate a private key
   generatePrivateKey: function(account, protocol) {
-    let features = "modal,centerscreen,resizable=no,minimizable=no";
-    let args = {
-      account: account,
-      protocol: protocol
-    };
-    args.wrappedJSObject = args;
-    Services.ww.openWindow(null, privDialog, _("priv.label"), features, args);
-  },
-  _generatePrivateKey: function(account, protocol) {
     if (libOTR.otrl_privkey_generate(
       this.userstate, this.privateKeyPath, account, protocol
     )) throw new Error("Failed to generate private key.");
@@ -369,6 +358,11 @@ let otr = {
     throw new Error("Couldn't find conversation.");
   },
 
+  getUIConvFromConv: function(conv) {
+    // Maybe prefer Services.conversations.getUIConversation(conv);
+    return this._convos.get(conv.id);
+  },
+
   disconnect: function(conv, remove) {
     libOTR.otrl_message_disconnect(
       this.userstate,
@@ -379,9 +373,11 @@ let otr = {
       conv.normalizedName,
       libOTR.instag.OTRL_INSTAG_BEST
     );
-    if (remove)
-      this.removeConversation(Services.conversations.getUIConversation(conv));
-    else
+    if (remove) {
+      let uiConv = this.getUIConvFromConv(conv)
+      if (uiConv)
+        this.removeConversation(uiConv);
+    } else
       this.notifyObservers(this.getContext(conv), "otr:msg-state");
   },
 
@@ -433,7 +429,12 @@ let otr = {
 
   // Create a private key for the given accountname/protocol if desired.
   create_privkey_cb: function(opdata, accountname, protocol) {
-    this.generatePrivateKey(accountname.readString(), protocol.readString());
+    let args = {
+      account: accountname.readString(),
+      protocol: protocol.readString(),
+    };
+    args.wrappedJSObject = args;
+    this.notifyObservers(args, "otr:generate");
   },
 
   // Report whether you think the given user is online. Return 1 if you think
@@ -837,7 +838,7 @@ let otr = {
     // check for irc action messages
     if (om.action) {
       om.cancelled = true;
-      let uiConv = this._convos.get(conv.id);
+      let uiConv = this.getUIConvFromConv(conv);
       if (uiConv)
         uiConv.sendMsg("/me " + om.message);
       return;

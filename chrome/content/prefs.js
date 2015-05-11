@@ -4,6 +4,8 @@ Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("chrome://otr/content/otr.js");
 
+const fingerDialog = "chrome://otr/content/finger.xul";
+
 XPCOMUtils.defineLazyGetter(this, "_", function()
   l10nHelper("chrome://otr/locale/auth.properties")
 );
@@ -19,12 +21,12 @@ let otrPref = {
       );
       if (!accountList.selectedItem) {
         accountList.selectedItem = menuItem;
-        this._displayFinger(acc);
+        this.swapFinger(acc);
       }
     }
     if (accountList.itemCount) {
       document.getElementById("emptyal").hidden = true;
-      accountList.hidden = false;
+      document.getElementById("myKeys").hidden = false;
     }
   },
 
@@ -34,18 +36,20 @@ let otrPref = {
       yield accounts.getNext();
   },
 
-  _displayFinger: function(acc) {
-    let finger = document.getElementById("fingerprint");
-    finger.value = otr.privateKeyFingerprint(
+  swapFinger: function(acc) {
+    let display = otr.privateKeyFingerprint(
       acc.normalizedName,
       acc.protocol.normalizedName
     ) || "";
+    document.getElementById("fingerprint").value = display;
+    document.getElementById("display").hidden = !display;
+    document.getElementById("generate").hidden = !!display;
   },
 
   displayFinger: function() {
     let accountList = document.getElementById("accountlist");
     let acc = Services.accounts.getAccountById(accountList.selectedItem.value);
-    this._displayFinger(acc);
+    this.swapFinger(acc);
   },
 
   fingwin: null,
@@ -54,11 +58,23 @@ let otrPref = {
       return this.fingwin.focus();
     }
     this.fingwin = document.documentElement.openWindow(
-      "otr-pref-fingerprints", "chrome://otr/content/finger.xul", "", null
+      "otr-pref-fingerprints", fingerDialog, "", null
     );
     this.fingwin.addEventListener("close", function() {
       otrPref.fingwin = null;
     });
+  },
+
+  generate: function() {
+    let accountList = document.getElementById("accountlist");
+    let acc = Services.accounts.getAccountById(accountList.selectedItem.value);
+    let args = {
+      account: acc.normalizedName,
+      protocol: acc.protocol.normalizedName,
+    };
+    args.wrappedJSObject = args;
+    otr.notifyObservers(args, "otr:generate");
+    this.swapFinger(acc);
   },
 
 };

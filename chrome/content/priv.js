@@ -15,7 +15,7 @@ let otrPriv = {
     let priv = document.getElementById("priv");
     priv.textContent = _("priv.account", args.account, args.protocol);
     setTimeout(function() {
-      otr._generatePrivateKey(args.account, args.protocol);
+      otr.generatePrivateKey(args.account, args.protocol);
       // document.documentElement.acceptDialog();
       document.documentElement.getButton("accept").disabled = false;
     }, 1000);

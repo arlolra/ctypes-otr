@@ -19,23 +19,32 @@
 
     <groupbox>
       <caption label="&prefs.otrKeys;" />
-      <hbox align="baseline">
-        <label control="accountlist" value="&prefs.keyForAccount;" />
-        <menulist id="accountlist" oncommand="otrPref.displayFinger();" hidden="true"></menulist>
-        <textbox id="emptyal" class="plain" flex="1" readonly="true"
-          value="&prefs.emptyAccountList;" />
-      </hbox>
-      <hbox align="baseline">
-        <label control="fingerprint" value="&prefs.fingerprint;" />
-        <textbox id="fingerprint" class="plain" flex="1" size="56" readonly="true" />
-      </hbox>
+      <vbox id="myKeys" hidden="true" width="460">
+        <hbox align="baseline">
+          <label control="accountlist" value="&prefs.keyForAccount;" />
+          <menulist id="accountlist" oncommand="otrPref.displayFinger();" flex="1"></menulist>
+        </hbox>
+        <hbox align="baseline">
+          <vbox flex="1">
+            <hbox id="display" hidden="true">
+              <label control="fingerprint" value="&prefs.fingerprint;" />
+              <textbox id="fingerprint" class="plain" size="56" flex="1" align="right" readonly="true" />
+            </hbox>
+            <hbox id="generate" hidden="true" flex="1">
+              <button label="&prefs.generate;" oncommand="otrPref.generate();" flex="1" />
+            </hbox>
+          </vbox>
+        </hbox>
+      </vbox>
+      <textbox id="emptyal" class="plain" flex="1" readonly="true"
+        value="&prefs.emptyAccountList;" />
     </groupbox>
 
     <groupbox>
       <caption label="&prefs.knownFingers;" />
       <description>&prefs.introFingers;</description>
       <hbox>
-        <spacer flex="1"/>
+        <spacer flex="1" />
         <button label="&prefs.showFingers;" oncommand="otrPref.showFingers();" />
       </hbox>
     </groupbox>
