@@ -88,13 +88,25 @@ function ircActionCommand(aMsg, aConv) {
 
 let otr = {
 
+  hasRan: false,
+  once: function() {
+    libOTR.init();
+    this.initUiOps();
+    this.hasRan = true;
+  },
+
+  privateKeyPath: profilePath("otr.private_key"),
+  fingerprintsPath: profilePath("otr.fingerprints"),
+  instanceTagsPath: profilePath("otr.instance_tags"),
+
   init: function(opts) {
     opts = opts || {};
 
-    libOTR.init();
+    if (!this.hasRan)
+      this.once();
+
     this.verifyNudge = !!opts.verifyNudge;
     this.setPolicy(opts.requireEncryption);
-    this.initUiOps();
     this.registerCommands();
     this.userstate = libOTR.otrl_userstate_create();
 
@@ -120,12 +132,10 @@ let otr = {
     }.bind(this), pluck_time);
   },
 
-  privateKeyPath: profilePath("otr.private_key"),
-  fingerprintsPath: profilePath("otr.fingerprints"),
-  instanceTagsPath: profilePath("otr.instance_tags"),
-
   close: function() {
     clearInterval(this._poll_timer);
+    clearInterval(this._pluck_timer);
+    this._buffer = null;
     this.unregisterCommands();
   },
 
