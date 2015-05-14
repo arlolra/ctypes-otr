@@ -1,9 +1,9 @@
-<!ENTITY finger.title "Known fingerprints">
-<!ENTITY finger.screenName "Screenname">
-<!ENTITY finger.status "Status">
-<!ENTITY finger.verified "Verified">
-<!ENTITY finger.fingerprint "Fingerprint">
-<!ENTITY finger.account "Account">
-<!ENTITY finger.verify "Verify">
-<!ENTITY finger.remove "Remove">
-<!ENTITY finger.intro "This space unintentionally left blank.">
+<!ENTITY finger.title "已知指纹">
+<!ENTITY finger.screenName "显示名">
+<!ENTITY finger.status "状态">
+<!ENTITY finger.verified "已验证">
+<!ENTITY finger.fingerprint "指纹">
+<!ENTITY finger.account "账号">
+<!ENTITY finger.verify " 验证">
+<!ENTITY finger.remove "移除">
+<!ENTITY finger.intro "此次留空。">

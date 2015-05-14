@@ -1,20 +1,20 @@
-<!ENTITY authDialog.authenticate "Verify">
-<!ENTITY authDialog.cancel "Cancel">
-<!ENTITY authDialog.help "Help">
-<!ENTITY authDialog.yes "Yes">
-<!ENTITY authDialog.no "No">
-<!ENTITY authDialog.verified "I have verified that this is in fact the correct fingerprint.">
-<!ENTITY authDialog.yourFingerprint "Your fingerprint">
-<!ENTITY authDialog.theirFingerprint "Their purported fingerprint">
-<!ENTITY authDialog.manualVerification "Manual fingerprint verification">
-<!ENTITY authDialog.questionAndAnswer "Question and answer">
-<!ENTITY authDialog.sharedSecret "Shared secret">
-<!ENTITY authDialog.manualInstruction "To verify the fingerprint, contact your buddy via some other authenticated channel, such as the telephone or GPG-signed email. Each of you should tell your fingerprint to the other. If everything matches up, you should indicate in the dialog below that you have verified the fingerprint.">
-<!ENTITY authDialog.choose "Choose">
-<!ENTITY authDialog.how "How would you like to verify your contact's identity?">
-<!ENTITY authDialog.qaInstruction "To verify their identity, pick a question whose answer is known only to you and your contact. Enter this question and answer, then wait for your contact to enter the answer as well. If the answers do not match, then you may be talking to an imposter.">
-<!ENTITY authDialog.secretInstruction "To verify their identity, pick a secret known only to you and your contact. Enter this secret, then wait for your contact to enter it as well. If the secrets do not match, then you may be talking to an imposter.">
-<!ENTITY authDialog.question "Enter question here:">
-<!ENTITY authDialog.answer "Enter secret answer here (case sensitive):">
-<!ENTITY authDialog.secret "Enter secret here:">
-<!ENTITY authDialog.waiting "Waiting for contact ...">
+<!ENTITY authDialog.authenticate "验证">
+<!ENTITY authDialog.cancel "取消">
+<!ENTITY authDialog.help "帮助">
+<!ENTITY authDialog.yes "是">
+<!ENTITY authDialog.no "否">
+<!ENTITY authDialog.verified "已验证该指纹为真。">
+<!ENTITY authDialog.yourFingerprint "你的指纹">
+<!ENTITY authDialog.theirFingerprint "他们提供的指纹">
+<!ENTITY authDialog.manualVerification "手动指纹验证">
+<!ENTITY authDialog.questionAndAnswer "问答">
+<!ENTITY authDialog.sharedSecret "分享的秘密">
+<!ENTITY authDialog.manualInstruction "为了验证指纹，请通过其他已认证的渠道，比如电话或GPG签名邮件，与好友联系。双方应告知对方自己的指纹。如果匹配无误，即可在下面的对话框中确认你已经对指纹进行了验证。">
+<!ENTITY authDialog.choose "选择">
+<!ENTITY authDialog.how "如何验证联系人身份？">
+<!ENTITY authDialog.qaInstruction "为了验证身份，可选择一个问题，答案只有你和该联系人知道。输入该问题和相应的答案，然后等待联系人回答。如果答案不匹配，那对方可能是骗子。">
+<!ENTITY authDialog.secretInstruction "为了验证身份，可选择一个只有你和该联系人知道的秘密。输入这个秘密，然后等待联系人输入。如果结果不匹配，那么对方可能是骗子。">
+<!ENTITY authDialog.question "请在此处输入问题：">
+<!ENTITY authDialog.answer "请在此处输入分享秘密的答案（区分大小写）：">
+<!ENTITY authDialog.secret "请在此处输入秘密：">
+<!ENTITY authDialog.waiting "等待联系人 ...">
