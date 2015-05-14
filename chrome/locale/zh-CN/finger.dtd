@@ -1,0 +1,9 @@
+<!ENTITY finger.title "Known fingerprints">
+<!ENTITY finger.screenName "Screenname">
+<!ENTITY finger.status "Status">
+<!ENTITY finger.verified "Verified">
+<!ENTITY finger.fingerprint "Fingerprint">
+<!ENTITY finger.account "Account">
+<!ENTITY finger.verify "Verify">
+<!ENTITY finger.remove "Remove">
+<!ENTITY finger.intro "This space unintentionally left blank.">

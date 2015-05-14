@@ -1,0 +1,11 @@
+<!ENTITY prefs.otrPreferences "OTR Preferences">
+<!ENTITY prefs.otrSettings "OTR Settings">
+<!ENTITY prefs.requireEncryption "Require encryption">
+<!ENTITY prefs.otrKeys "My Private Keys">
+<!ENTITY prefs.keyForAccount "Key for account:">
+<!ENTITY prefs.fingerprint "Fingerprint:">
+<!ENTITY prefs.knownFingers "Known fingerprints">
+<!ENTITY prefs.introFingers "This space unintentionally left blank.">
+<!ENTITY prefs.showFingers "View">
+<!ENTITY prefs.verifyNudge "Always nudge to verify your contact's identity">
+<!ENTITY prefs.emptyAccountList "No accounts configured">
