@@ -5,20 +5,25 @@ const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
+let abi = ctypes.default_abi;
+
 // Set the abi and path to libc based on the OS.
-let abi, libcPath;
+let libcAbi, libcPath, strdup;
 switch(Services.appinfo.OS) {
   case "WINNT":
-    abi = ctypes.stdcall_abi;
+    libcAbi = ctypes.winapi_abi;
     libcPath = ctypes.libraryName("msvcrt");
+    strdup = "_strdup";
     break;
   case "Darwin":
-    abi = ctypes.default_abi;
+    libcAbi = ctypes.default_abi;
     libcPath = ctypes.libraryName("c");
+    strdup = "strdup";
     break;
   case "Linux":
-    abi = ctypes.default_abi;
+    libcAbi = ctypes.default_abi;
     libcPath = "libc.so.6";
+    strdup = "strdup";
     break;
   default:
     throw new Error("Unknown OS");
@@ -759,17 +764,17 @@ let libc = ctypes.open(libcPath);
 
 let libC = {
   memcmp: libc.declare(
-    "memcmp", abi, ctypes.int,
+    "memcmp", libcAbi, ctypes.int,
     ctypes.void_t.ptr,
     ctypes.void_t.ptr,
     ctypes.size_t
   ),
   free: libc.declare(
-    "free", abi, ctypes.void_t,
+    "free", libcAbi, ctypes.void_t,
     ctypes.void_t.ptr
   ),
   strdup: libc.declare(
-    "strdup", abi, ctypes.char.ptr,
+    strdup, libcAbi, ctypes.char.ptr,
     ctypes.char.ptr
   )
 };
