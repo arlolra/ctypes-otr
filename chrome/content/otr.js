@@ -497,10 +497,7 @@ let otr = {
   // A new fingerprint for the given user has been received.
   new_fingerprint_cb: function(opdata, us, accountname, protocol, username, fingerprint) {
     let context = libOTR.otrl_context_find(
-      this.userstate,
-      username.readString(),
-      accountname.readString(),
-      protocol.readString(),
+      us, username, accountname, protocol,
       libOTR.instag.OTRL_INSTAG_MASTER, 1, null, null, null
     );
 

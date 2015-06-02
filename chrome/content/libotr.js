@@ -5,25 +5,28 @@ const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
-let abi = ctypes.default_abi;
+const abi = ctypes.default_abi;
 
 // Set the abi and path to libc based on the OS.
-let libcAbi, libcPath, strdup;
+let libcAbi, libcPath, strdup, time_t;
 switch(Services.appinfo.OS) {
   case "WINNT":
     libcAbi = ctypes.winapi_abi;
     libcPath = ctypes.libraryName("msvcrt");
     strdup = "_strdup";
+    time_t = ctypes.long_long;
     break;
   case "Darwin":
     libcAbi = ctypes.default_abi;
     libcPath = ctypes.libraryName("c");
     strdup = "strdup";
+    time_t = ctypes.long;
     break;
   case "Linux":
     libcAbi = ctypes.default_abi;
     libcPath = "libc.so.6";
     strdup = "strdup";
+    time_t = ctypes.long;
     break;
   default:
     throw new Error("Unknown OS");
@@ -48,7 +51,6 @@ const otrl_version = [4, 1, 0];
 
 // type defs
 
-const time_t = ctypes.long;
 const gcry_error_t = ctypes.unsigned_int;
 const gcry_cipher_hd_t = ctypes.StructType("gcry_cipher_handle").ptr;
 const gcry_md_hd_t = ctypes.StructType("gcry_md_handle").ptr
@@ -241,7 +243,7 @@ OtrlAuthInfo.define([
   { context: ConnContext.ptr },
   { our_dh: DH_keypair },
   { our_keyid: ctypes.unsigned_int },
-  { encgx: ctypes.unsigned_int.ptr },
+  { encgx: ctypes.unsigned_char.ptr },
   { encgx_len: ctypes.size_t },
   { r: ctypes.unsigned_char.array(16) },
   { hashgx: ctypes.unsigned_char.array(32) },
@@ -449,7 +451,13 @@ let libOTR = {
     Fingerprint.ptr, ctypes.char.ptr
   ),
 
- // Forget a fingerprint (and maybe the whole context).
+  // Find a fingerprint in a given context, perhaps adding it if not present.
+  otrl_context_find_fingerprint: libotr.declare(
+    "otrl_context_find_fingerprint", abi, ConnContext.ptr,
+    hash_t, ctypes.int, ctypes.int.ptr
+  ),
+
+  // Forget a fingerprint (and maybe the whole context).
   otrl_context_forget_fingerprint: libotr.declare(
     "otrl_context_forget_fingerprint", abi, ctypes.void_t,
     Fingerprint.ptr, ctypes.int
