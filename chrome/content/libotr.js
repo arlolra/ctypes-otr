@@ -8,25 +8,22 @@ Cu.import("resource://gre/modules/Services.jsm");
 const abi = ctypes.default_abi;
 
 // Set the abi and path to libc based on the OS.
-let libcAbi, libcPath, strdup, time_t;
+let libcAbi, libcPath, strdup;
 switch(Services.appinfo.OS) {
   case "WINNT":
     libcAbi = ctypes.winapi_abi;
     libcPath = ctypes.libraryName("msvcrt");
     strdup = "_strdup";
-    time_t = ctypes.long_long;
     break;
   case "Darwin":
     libcAbi = ctypes.default_abi;
     libcPath = ctypes.libraryName("c");
     strdup = "strdup";
-    time_t = ctypes.long;
     break;
   case "Linux":
     libcAbi = ctypes.default_abi;
     libcPath = "libc.so.6";
     strdup = "strdup";
-    time_t = ctypes.long;
     break;
   default:
     throw new Error("Unknown OS");
@@ -51,6 +48,7 @@ const otrl_version = [4, 1, 0];
 
 // type defs
 
+const time_t = ctypes.long;
 const gcry_error_t = ctypes.unsigned_int;
 const gcry_cipher_hd_t = ctypes.StructType("gcry_cipher_handle").ptr;
 const gcry_md_hd_t = ctypes.StructType("gcry_md_handle").ptr
