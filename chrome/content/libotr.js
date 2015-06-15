@@ -35,8 +35,8 @@ let libotr;
 try {
   // try in chrome
   let uri = "chrome://otr/content/" + ctypes.libraryName("otr");
-  let Cr = Cc["@mozilla.org/chrome/chrome-registry;1"].getService(Ci.nsIXULChromeRegistry);
-  uri = Cr.convertChromeURL(Services.io.newURI(uri, null, null));
+  let chromeReg = Cc["@mozilla.org/chrome/chrome-registry;1"].getService(Ci.nsIXULChromeRegistry);
+  uri = chromeReg.convertChromeURL(Services.io.newURI(uri, null, null));
   libotr = ctypes.open(uri.QueryInterface(Ci.nsIFileURL).file.path);
 } catch(e) {
   // look in standard locations
@@ -51,7 +51,7 @@ const otrl_version = [4, 1, 0];
 const time_t = ctypes.long;
 const gcry_error_t = ctypes.unsigned_int;
 const gcry_cipher_hd_t = ctypes.StructType("gcry_cipher_handle").ptr;
-const gcry_md_hd_t = ctypes.StructType("gcry_md_handle").ptr
+const gcry_md_hd_t = ctypes.StructType("gcry_md_handle").ptr;
 const gcry_mpi_t = ctypes.StructType("gcry_mpi").ptr;
 
 const otrl_instag_t = ctypes.unsigned_int;
