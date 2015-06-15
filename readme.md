@@ -12,11 +12,21 @@ Intro
 Dev Env
 -------
 
-Download a [nightly build of Instantbird][3], and create a profile,
+Download a [nightly build of Instantbird][3] and install it. Then create a profile,
+
+On darwin,
+
+```
+~/Applications/Instantbird.app/Contents/MacOS/instantbird-bin -p
+```
+
+On linux,
 
 ```
 instantbird -ProfileManager
 ```
+
+Now clone this repo and link to the extension.
 
 On darwin,
 
@@ -24,7 +34,8 @@ On darwin,
 brew install libotr
 git clone https://github.com/arlolra/ctypes-otr.git
 cd ctypes-otr
-pwd > ~/Library/Application\ Support/Instantbird/Profiles/<profile>/extensions/ctypes-otr@tormessenger
+mkdir -p ~/Library/Application\ Support/Instantbird/Profiles/<profile>/extensions
+pwd > ~/Library/Application\ Support/Instantbird/Profiles/<profile>/extensions/ctypes-otr\@tormessenger
 ```
 
 On linux,
@@ -33,12 +44,14 @@ On linux,
 sudo apt-get install libotr5-dev
 git clone https://github.com/arlolra/ctypes-otr.git
 cd ctypes-otr
-pwd > ~/.instantbird/<profile>/extensions/ctypes-otr@tormessenger
+mkdir -p ~/.instantbird/<profile>/extensions
+pwd > ~/.instantbird/<profile>/extensions/ctypes-otr\@tormessenger
 ```
 
-Now launch Instantbird w/ OTR enabled. The default policy is to require
-encryption. That can be changed to optimistically enable it in the add-on
-settings.
+Now launch Instantbird and OTR should be enabled. This is confirmed by the
+little lock in the top right of private conversations.
+
+The default policies can be changed in `Tools > Add-ons > ctypes-otr > Preferences`.
 
 [3]: http://ftp.instantbird.com/instantbird/nightly/latest-trunk/
 
