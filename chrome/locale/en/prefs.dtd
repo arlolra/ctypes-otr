@@ -5,7 +5,7 @@
 <!ENTITY prefs.keyForAccount "Key for account:">
 <!ENTITY prefs.fingerprint "Fingerprint:">
 <!ENTITY prefs.knownFingers "Known fingerprints">
-<!ENTITY prefs.introFingers "This space unintentionally left blank.">
+<!ENTITY prefs.introFingers "Manage the list of fingerprints you've seen.">
 <!ENTITY prefs.showFingers "View">
 <!ENTITY prefs.verifyNudge "Always nudge to verify your contact's identity">
 <!ENTITY prefs.emptyAccountList "No accounts configured">

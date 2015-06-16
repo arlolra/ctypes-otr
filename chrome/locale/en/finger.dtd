@@ -7,4 +7,4 @@
 <!ENTITY finger.protocol "Protocol">
 <!ENTITY finger.verify "Verify">
 <!ENTITY finger.remove "Remove">
-<!ENTITY finger.intro "This space unintentionally left blank.">
+<!ENTITY finger.intro "Manage the list of fingerprints you've seen.">
