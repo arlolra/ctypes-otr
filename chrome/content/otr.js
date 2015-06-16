@@ -280,7 +280,7 @@ let otr = {
           }
         }
         fps.push({
-          fpointer: fingerprint,
+          fpointer: fingerprint.contents.address(),
           fingerprint: otr.hashToHuman(fingerprint),
           screenname: wContext.username,
           account: wContext.account,
