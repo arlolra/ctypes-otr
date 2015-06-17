@@ -92,6 +92,7 @@ let otr = {
       this.once();
 
     this.verifyNudge = !!opts.verifyNudge;
+    this.noLog = !!opts.noLog;
     this.setPolicy(opts.requireEncryption);
     this.registerCommands();
     this.userstate = libOTR.otrl_userstate_create();
@@ -894,11 +895,17 @@ let otr = {
   },
 
   onReceive: function(im) {
-    if (im.cancelled || im.system)
-      return;
-
     let conv = im.conversation;
     if (conv.isChat)
+      return;
+
+    let context = this.getContext(conv);
+
+    if (this.noLog && (this.policy === libOTR.OTRL_POLICY_ALWAYS ||
+        context.msgstate !== this.messageState.OTRL_MSGSTATE_PLAINTEXT))
+      im.noLog = true;
+
+    if (im.cancelled || im.system)
       return;
 
     if (im.outgoing) {
@@ -935,7 +942,6 @@ let otr = {
     // https://bugs.otr.im/issues/54
     let tlv = libOTR.otrl_tlv_find(tlvs, libOTR.tlvs.OTRL_TLV_DISCONNECTED);
     if (!tlv.isNull()) {
-      let context = this.getContext(conv);
       this.notifyObservers(context, "otr:disconnected");
       this.sendAlert(context, _("tlv.disconnected", conv.normalizedName));
     }

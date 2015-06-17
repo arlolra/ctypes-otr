@@ -71,7 +71,8 @@ let ui = {
     let branch = "extensions.otr.";
     let prefs = {
       requireEncryption: true,
-      verifyNudge: true
+      verifyNudge: true,
+      noLog: true,
     };
     let defaults = Services.prefs.getDefaultBranch(branch);
     Object.keys(prefs).forEach(function(key) {
@@ -85,7 +86,8 @@ let ui = {
     this.setPrefs();
     otr.init({
       requireEncryption: ui.prefs.getBoolPref("requireEncryption"),
-      verifyNudge: ui.prefs.getBoolPref("verifyNudge")
+      verifyNudge: ui.prefs.getBoolPref("verifyNudge"),
+      noLog: ui.prefs.getBoolPref("noLog"),
     });
     otr.addObserver(ui);
     otr.loadFiles().then(function() {
@@ -115,8 +117,9 @@ let ui = {
     case "requireEncryption":
       otr.setPolicy(ui.prefs.getBoolPref("requireEncryption"));
       break;
+    case "noLog":
     case "verifyNudge":
-      otr.verifyNudge = ui.prefs.getBoolPref("verifyNudge");
+      otr[aMsg] = ui.prefs.getBoolPref(aMsg);
       break;
     default:
       ui.log(aMsg);
