@@ -70,20 +70,6 @@ Context.prototype = {
   get trust() { return trustFingerprint(this.fingerprint); },
 };
 
-// shared commands
-
-function ircActionCommand(aMsg, aConv) {
-  let protocol = aConv.account.protocol.normalizedName;
-  if (["irc", "prpl-irc"].indexOf(protocol) === -1)
-    return false;
-  if (aConv.isChat)
-    return false;
-  let uiConv = otr.getUIConvFromConv(aConv);
-  if (uiConv)
-    uiConv.sendMsg("/me " + aMsg);
-  return true;
-}
-
 // otr module
 
 let otr = {
@@ -176,13 +162,7 @@ let otr = {
     ]);
   },
 
-  commands: [{
-    name: "me",
-    run: ircActionCommand
-  }, {
-    name: "action",
-    run: ircActionCommand
-  }],
+  commands: [],
 
   registerCommands: function() {
     this.commands.forEach(function(cmd) {
