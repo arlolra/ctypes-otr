@@ -162,8 +162,10 @@ let ui = {
       e.preventDefault();
       if (!e.target.disabled) {
         let context = otr.getContext(conv);
-        if (context.msgstate === otr.messageState.OTRL_MSGSTATE_ENCRYPTED)
-          uiConv.systemMessage(_("alert.refresh", conv.normalizedName));
+        uiConv.systemMessage(_("alert." + (
+          context.msgstate === otr.messageState.OTRL_MSGSTATE_ENCRYPTED ?
+          "refresh" : "start"
+        ), conv.normalizedName));
         otr.sendQueryMsg(conv);
       }
     });
