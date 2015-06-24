@@ -508,6 +508,41 @@ let libOTR = {
     OtrlUserState, ctypes.char.ptr, ctypes.char.ptr, ctypes.char.ptr
   ),
 
+  // Begin a private key generation that will potentially take place in
+  // a background thread. This routine must be called from the main
+  // thread. It will set *newkeyp, which you can pass to
+  // otrl_privkey_generate_calculate in a background thread.  If it
+  // returns gcry_error(GPG_ERR_EEXIST), then a privkey creation for
+  // this accountname/protocol is already in progress, and *newkeyp will
+  // be set to NULL.
+  otrl_privkey_generate_start: libotr.declare(
+    "otrl_privkey_generate_start", abi, gcry_error_t,
+    OtrlUserState, ctypes.char.ptr, ctypes.char.ptr, ctypes.void_t.ptr.ptr
+  ),
+
+  // Do the private key generation calculation. You may call this from a
+  // background thread.  When it completes, call
+  // otrl_privkey_generate_finish from the _main_ thread.
+  otrl_privkey_generate_calculate: libotr.declare(
+    "otrl_privkey_generate_calculate", abi, gcry_error_t,
+    ctypes.void_t.ptr
+  ),
+
+  // Call this from the main thread only. It will write the newly created
+  // private key into the given file and store it in the OtrlUserState.
+  otrl_privkey_generate_finish: libotr.declare(
+    "otrl_privkey_generate_finish", abi, gcry_error_t,
+    ctypes.void_t.ptr, ctypes.char.ptr
+  ),
+
+  // Call this from the main thread only, in the event that the background
+  // thread generating the key is cancelled. The newkey is deallocated,
+  // and must not be used further.
+  otrl_privkey_generate_cancelled: libotr.declare(
+    "otrl_privkey_generate_cancelled", abi, gcry_error_t,
+    ctypes.void_t.ptr
+  ),
+
   // Read a sets of private DSA keys from a file on disk into the given
   // OtrlUserState.
   otrl_privkey_read: libotr.declare(
