@@ -197,7 +197,7 @@ let otr = {
       libOTR.path, libOTR.otrl_version, newkey.toSource()
     ]).then(function(err) {
       if (!err)
-        libOTR.otrl_privkey_generate_finish(
+        err = libOTR.otrl_privkey_generate_finish(
           otr.userstate, newkey, otr.privateKeyPath
         );
       return err ? handleErr(err) : true;
