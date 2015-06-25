@@ -325,7 +325,10 @@ let ui = {
       ui.changePref(aMsg);
       break;
     case "conversation-loaded":
-      let binding = aObject.ownerDocument.getBindingParent(aObject);
+      let doc = aObject.ownerDocument;
+      if (/logs/.test(doc.documentElement.getAttribute("windowtype")))
+        return;
+      let binding = doc.getBindingParent(aObject);
       ui.addButton(binding);
       break;
     case "conversation-closed":
