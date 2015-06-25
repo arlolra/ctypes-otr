@@ -4,6 +4,7 @@ const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
+Cu.import("resource://gre/modules/PromiseWorker.jsm");
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/osfile.jsm");
 Cu.import("chrome://otr/content/libotr.js");
@@ -178,11 +179,29 @@ let otr = {
     this.commands.forEach(cmd => Services.cmd.unregisterCommand(cmd.name));
   },
 
-  // generate a private key
+  // generate a private key in a worker
   generatePrivateKey: function(account, protocol) {
-    if (libOTR.otrl_privkey_generate(
-      this.userstate, this.privateKeyPath, account, protocol
-    )) throw new Error("Failed to generate private key.");
+    let newkey = new ctypes.void_t.ptr();
+    let err = libOTR.otrl_privkey_generate_start(
+      otr.userstate, account, protocol, newkey.address()
+    );
+    if (err || newkey.isNull())
+      return Promise.resolve(false);
+    let worker = new BasePromiseWorker("chrome://otr/content/worker.js");
+    let handleErr = function(err) {
+      if (!newkey.isNull())
+        libOTR.otrl_privkey_generate_cancelled(otr.userstate, newkey);
+      return false;
+    };
+    return worker.post("generateKey", [
+      libOTR.path, libOTR.otrl_version, newkey.toSource()
+    ]).then(function(err) {
+      if (!err)
+        libOTR.otrl_privkey_generate_finish(
+          otr.userstate, newkey, otr.privateKeyPath
+        );
+      return err ? handleErr(err) : true;
+    }).catch(handleErr);
   },
 
   // write fingerprints to file synchronously

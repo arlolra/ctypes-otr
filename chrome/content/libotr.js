@@ -31,20 +31,19 @@ switch(Services.appinfo.OS) {
 
 // Open libotr. Determine the path to the chrome directory and look for it
 // there first. If not, fallback to searching the standard locations.
-let libotr;
+let libotr, libotrPath;
 try {
   // try in chrome
   let uri = "chrome://otr/content/" + ctypes.libraryName("otr");
   let chromeReg = Cc["@mozilla.org/chrome/chrome-registry;1"].getService(Ci.nsIXULChromeRegistry);
   uri = chromeReg.convertChromeURL(Services.io.newURI(uri, null, null));
-  libotr = ctypes.open(uri.QueryInterface(Ci.nsIFileURL).file.path);
+  libotrPath = uri.QueryInterface(Ci.nsIFileURL).file.path;
+  libotr = ctypes.open(libotrPath);
 } catch(e) {
   // look in standard locations
-  libotr = ctypes.open(ctypes.libraryName("otr"));
+  libotrPath = ctypes.libraryName("otr");
+  libotr = ctypes.open(libotrPath);
 }
-
-// libotr API version
-const otrl_version = [4, 1, 0];
 
 // type defs
 
@@ -336,9 +335,14 @@ const OTRL_POLICY_ERROR_START_AKE = 0x40;
 
 let libOTR = {
 
+  path: libotrPath,
+
+  // libotr API version
+  otrl_version: [4, 1, 0],
+
   init: function() {
     // apply version array as arguments to the init function
-    if (this.otrl_init.apply(this, otrl_version))
+    if (this.otrl_init.apply(this, this.otrl_version))
       throw new Error("Couldn't initialize libotr.");
   },
 
@@ -532,7 +536,7 @@ let libOTR = {
   // private key into the given file and store it in the OtrlUserState.
   otrl_privkey_generate_finish: libotr.declare(
     "otrl_privkey_generate_finish", abi, gcry_error_t,
-    ctypes.void_t.ptr, ctypes.char.ptr
+    OtrlUserState, ctypes.void_t.ptr, ctypes.char.ptr
   ),
 
   // Call this from the main thread only, in the event that the background
@@ -540,7 +544,7 @@ let libOTR = {
   // and must not be used further.
   otrl_privkey_generate_cancelled: libotr.declare(
     "otrl_privkey_generate_cancelled", abi, gcry_error_t,
-    ctypes.void_t.ptr
+    OtrlUserState, ctypes.void_t.ptr
   ),
 
   // Read a sets of private DSA keys from a file on disk into the given

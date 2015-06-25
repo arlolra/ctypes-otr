@@ -14,11 +14,12 @@ let otrPriv = {
     let args = window.arguments[0].wrappedJSObject;
     let priv = document.getElementById("priv");
     priv.textContent = _("priv.account", args.account, args.protocol);
-    setTimeout(function() {
-      otr.generatePrivateKey(args.account, args.protocol);
+    otr.generatePrivateKey(args.account, args.protocol).then(function(success) {
+      if (!success)
+        throw new Error("Generating key failed!")
       // document.documentElement.acceptDialog();
       document.documentElement.getButton("accept").disabled = false;
-    }, 1000);
-  }
+    });
+  },
 
 };
