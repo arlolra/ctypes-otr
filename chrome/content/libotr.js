@@ -348,6 +348,10 @@ let libOTR = {
 
   // proto.h
 
+  // If we ever see this sequence in a plaintext message, we'll assume the
+  // other side speaks OTR, and try to establish a connection.
+  OTRL_MESSAGE_TAG_BASE: " \t  \t\t\t\t \t \t \t  ",
+
   OTRL_POLICY_OPPORTUNISTIC: new ctypes.unsigned_int(
     OTRL_POLICY_ALLOW_V2 |
     // OTRL_POLICY_ALLOW_V3 |
@@ -425,6 +429,13 @@ let libOTR = {
   },
 
   // context.h
+
+  otr_offer: {
+    OFFER_NOT: 0,
+    OFFER_SENT: 1,
+    OFFER_REJECTED: 2,
+    OFFER_ACCEPTED: 3
+  },
 
   messageState: {
     OTRL_MSGSTATE_PLAINTEXT: 0,

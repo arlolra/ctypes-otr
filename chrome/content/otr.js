@@ -55,6 +55,15 @@ function getStatus(level) {
   }
 }
 
+function isOnline(conv) {
+  let ret = -1;
+  if (conv.buddy)
+    ret = conv.buddy.online ? 1 : 0;
+  else if (conv.account.protocol.normalizedName === "irc")
+    ret = 1;  // no presence in irc, but we want to send the disconnect msg
+  return ret;
+}
+
 // libotr context wrapper
 
 function Context(context) {
@@ -473,12 +482,7 @@ let otr = {
       protocol.readString(),
       recipient.readString()
     ).target;
-    let ret = -1;
-    if (conv.buddy)
-      ret = conv.buddy.online ? 1 : 0;
-    else if (protocol.readString() === "irc")
-      ret = 1;  // no presence in irc, but we want to send the disconnect msg
-    return ret;
+    return isOnline(conv);
   },
 
   // Send the given IM to the given recipient from the given
@@ -904,6 +908,17 @@ let otr = {
     }
 
     if (!om.cancelled) {
+      // If contact is offline, don't append whitespace tags.
+      // See: https://bugs.otr.im/issues/102
+      if (isOnline(conv) === 0) {
+        let ind = msg.indexOf(libOTR.OTRL_MESSAGE_TAG_BASE);
+        if (ind > -1) {
+          msg = msg.substring(0, ind);
+          let context = this.getContext(conv);
+          context._context.contents.otr_offer = libOTR.otr_offer.OFFER_NOT;
+        }
+      }
+
       this.bufferMsg(conv.id, om.message, msg);
       om.message = msg;
     }
