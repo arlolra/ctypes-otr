@@ -684,7 +684,7 @@ let otr = {
       this.sendAlert(context, _("msgevent.connection_ended", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_SETUP_ERROR:
-      this.sendAlert(context, _("msgevent.setup_error"));
+      this.sendAlert(context, _("msgevent.setup_error", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_MSG_REFLECTED:
       this.sendAlert(context, _("msgevent.msg_reflected"));
@@ -708,10 +708,10 @@ let otr = {
       this.log(_("msgevent.log_heartbeat_sent", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_GENERAL_ERR:
-      this.sendAlert(context, _("msgevent.rcvdmsg_general_err", message.isNull() ? "" : message.readString()));
+      this.sendAlert(context, _("msgevent.rcvdmsg_general_err"));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
-      this.sendAlert(context, _("msgevent.rcvdmsg_unecrypted", context.username, message.isNull() ? "" : message.readString()));
+      this.sendAlert(context, _("msgevent.rcvdmsg_unecrypted", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNRECOGNIZED:
       this.sendAlert(context, _("msgevent.rcvdmsg_unrecognized", context.username));
