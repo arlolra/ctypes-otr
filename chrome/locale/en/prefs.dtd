@@ -7,6 +7,7 @@
 <!ENTITY prefs.knownFingers "Known fingerprints">
 <!ENTITY prefs.introFingers "Manage the list of fingerprints you've seen.">
 <!ENTITY prefs.showFingers "View">
+<!ENTITY prefs.introSettings "These settings apply to all one-to-one conversations.">
 <!ENTITY prefs.verifyNudge "Always nudge to verify your contact's identity">
 <!ENTITY prefs.emptyAccountList "No accounts configured">
 <!ENTITY prefs.generate "Generate">

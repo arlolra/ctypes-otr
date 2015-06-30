@@ -51,6 +51,7 @@
 
     <groupbox>
       <caption label="&prefs.otrSettings;" />
+      <description>&prefs.introSettings;</description>
       <checkbox id="requireencryption" label="&prefs.requireEncryption;" preference="pref_require_encryption" />
       <checkbox id="verifynudge" label="&prefs.verifyNudge;" preference="pref_verify_nudge" />
     </groupbox>

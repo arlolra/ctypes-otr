@@ -9,6 +9,7 @@ Cu.import("chrome://otr/content/otr.js");
 
 const privDialog = "chrome://otr/content/priv.xul";
 const authDialog = "chrome://otr/content/auth.xul";
+const prefsDialog = "chrome://otr/content/prefs.xul";
 const authVerify = "otr-auth-unverified";
 
 XPCOMUtils.defineLazyGetter(this, "_", function()
@@ -193,10 +194,20 @@ let ui = {
       }
     });
 
+    let otrPrefs = doc.createElement("menuitem");
+    otrPrefs.classList.add("otr-prefs");
+    otrPrefs.setAttribute("label", _("prefs.label"));
+    otrPrefs.addEventListener("click", function(e) {
+      e.preventDefault();
+      let features = "centerscreen,resizable=no,minimizable=no";
+      prefsWindow = Services.ww.openWindow(null, prefsDialog, "otrPrefs", features, null);
+    });
+
     let otrMenu = doc.createElement("menupopup");
     otrMenu.appendChild(otrStart);
     otrMenu.appendChild(otrEnd);
     otrMenu.appendChild(otrAuth);
+    otrMenu.appendChild(otrPrefs);
 
     let otrButton = doc.createElement("toolbarbutton");
     otrButton.classList.add("otr-button");
