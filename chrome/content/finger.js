@@ -23,6 +23,8 @@ let fingerTreeView = {
     switch(column.id) {
       case "verified":
         return finger.trust ? _("verified.yes") : _("verified.no");
+      case "protocol":
+        return otr.protocolName(finger.protocol);
       default:
         return finger[column.id] || "";
     }

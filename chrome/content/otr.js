@@ -308,7 +308,7 @@ let otr = {
           fingerprint: otr.hashToHuman(fingerprint),
           screenname: wContext.username,
           account: wContext.account,
-          protocol: otr.protocolName(wContext.protocol),
+          protocol: wContext.protocol,
           trust: trust,
           status: used ? getStatus(best_level) : _("trust.unused"),
           purge: false,
