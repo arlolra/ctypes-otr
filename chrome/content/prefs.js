@@ -7,6 +7,12 @@ Cu.import("chrome://otr/content/otr.js");
 const fingerDialog = "chrome://otr/content/finger.xul";
 const privDialog = "chrome://otr/content/priv.xul";
 
+let account, protocol;
+if (window && window.arguments) {
+  let args = window.arguments[0].wrappedJSObject;
+  ({account, protocol} = args);
+}
+
 let otrPref = {
 
   onload: function() {
@@ -16,12 +22,19 @@ let otrPref = {
         `${acc.normalizedName} (${otr.protocolName(acc.protocol.normalizedName)})`,
         acc.id
       );
-      if (!accountList.selectedItem) {
+      if (acc.normalizedName === account &&
+          acc.protocol.normalizedName === protocol) {
         accountList.selectedItem = menuItem;
         this.swapFinger(acc);
       }
     }
     if (accountList.itemCount) {
+      if (!accountList.selectedItem) {
+        let menuItem = accountList.getItemAtIndex(0);
+        accountList.selectedItem = menuItem;
+        let acc = Services.accounts.getAccountById(menuItem.getAttribute("value"));
+        this.swapFinger(acc);
+      }
       document.getElementById("emptyal").hidden = true;
       document.getElementById("myKeys").hidden = false;
     }

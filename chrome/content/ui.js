@@ -200,7 +200,12 @@ let ui = {
     otrPrefs.addEventListener("click", function(e) {
       e.preventDefault();
       let features = "centerscreen,resizable=no,minimizable=no";
-      prefsWindow = Services.ww.openWindow(null, prefsDialog, "otrPrefs", features, null);
+      let args = {
+        account: conv.account.normalizedName,
+        protocol: conv.account.protocol.normalizedName,
+      };
+      args.wrappedJSObject = args;
+      Services.ww.openWindow(null, prefsDialog, "otrPrefs", features, args);
     });
 
     let otrMenu = doc.createElement("menupopup");
