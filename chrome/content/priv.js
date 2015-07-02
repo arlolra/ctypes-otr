@@ -13,7 +13,7 @@ let otrPriv = {
   onload: function() {
     let args = window.arguments[0].wrappedJSObject;
     let priv = document.getElementById("priv");
-    priv.textContent = _("priv.account", args.account, args.protocol);
+    priv.textContent = _("priv.account", args.account, otr.protocolName(args.protocol));
     otr.generatePrivateKey(args.account, args.protocol).then(function(success) {
       if (!success)
         throw new Error("Generating key failed!")

@@ -64,6 +64,20 @@ function isOnline(conv) {
   return ret;
 }
 
+// Use the protocol name in user facing strings. See trac #16490
+let names;
+function protocolName(aNormalizedName) {
+  if (!names) {
+    names = new Map();
+    let protocols = Services.core.getProtocols();
+    while (protocols.hasMoreElements()) {
+      let protocol = protocols.getNext();
+      names.set(protocol.normalizedName, protocol.name);
+    }
+  }
+  return names.get(aNormalizedName) || aNormalizedName;
+}
+
 // libotr context wrapper
 
 function Context(context) {
@@ -144,6 +158,8 @@ let otr = {
   log: function(msg) {
     this.notifyObservers(msg, "otr:log");
   },
+
+  protocolName: protocolName,
 
   setPolicy: function(requireEncryption) {
     this.policy = requireEncryption
@@ -292,7 +308,7 @@ let otr = {
           fingerprint: otr.hashToHuman(fingerprint),
           screenname: wContext.username,
           account: wContext.account,
-          protocol: wContext.protocol,
+          protocol: otr.protocolName(wContext.protocol),
           trust: trust,
           status: used ? getStatus(best_level) : _("trust.unused"),
           purge: false,
