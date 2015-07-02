@@ -337,7 +337,7 @@ let ui = {
       break;
     case "conversation-loaded":
       let doc = aObject.ownerDocument;
-      if (/logs/.test(doc.documentElement.getAttribute("windowtype")))
+      if (doc.documentElement.getAttribute("windowtype") !== "Messenger:convs")
         return;
       let binding = doc.getBindingParent(aObject);
       ui.addButton(binding);
