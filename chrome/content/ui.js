@@ -212,6 +212,7 @@ let ui = {
     otrMenu.appendChild(otrStart);
     otrMenu.appendChild(otrEnd);
     otrMenu.appendChild(otrAuth);
+    otrMenu.appendChild(doc.createElement("menuseparator"));
     otrMenu.appendChild(otrPrefs);
 
     let otrButton = doc.createElement("toolbarbutton");
