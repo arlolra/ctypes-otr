@@ -104,7 +104,9 @@ let otrAuth = {
     if (mode === "pref") {
       opts = document.getElementById("verifiedOption");
       trust = (opts.selectedItem.value === "yes");
-      otr.setTrust(aObject.fpointer, trust);
+      if (uiConv)
+        context = otr.getContext(uiConv.target);
+      otr.setTrust(aObject.fpointer, trust, context);
       return true;
     } else if (mode === "start") {
       context = otr.getContext(uiConv.target);

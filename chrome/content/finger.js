@@ -102,13 +102,13 @@ let otrFinger = {
     let features = "modal,centerscreen,resizable=no,minimizable=no";
     let name = "auth=" + finger.screenname;
     let uiConv = null;
-    // try {
-    //   uiConv = otr.getUIConvForRecipient(
-    //     finger.account,
-    //     finger.protocol,
-    //     finger.screenname
-    //   );
-    // } catch (e) {}
+    try {
+      uiConv = otr.getUIConvForRecipient(
+        finger.account,
+        finger.protocol,
+        finger.screenname
+      );
+    } catch (e) {}
     let win = window.openDialog(authDialog, name, features, "pref", uiConv, finger);
     finger.trust = otr.isFingerprintTrusted(finger.fpointer);
     fingerTree.treeBoxObject.invalidateRow(row);
