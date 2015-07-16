@@ -19,6 +19,8 @@
  */
 #include <mozilla/mozalloc.h>
 #include "pk11pub.h"
+#include "mpi.h"
+#include "blapi.h"
 #include "assert.h"
 
 /* Register a custom memory allocation functions. */
@@ -240,6 +242,7 @@ struct struct gcry_cipher_handle {
   size_t keylen;
   const void *ctr;
   size_t ctrlen;
+  AESContext *cx;
 };
 
 // Always used with the same settings, AES in CTR Mode. Let's assert that
@@ -250,43 +253,115 @@ gcry_error_t gcry_cipher_open(gcry_cipher_hd_t *hd, int algo, int mode,
   assert(mode == GCRY_CIPHER_MODE_CTR);
   assert(flags == GCRY_CIPHER_SECURE);
   *hd = moz_malloc(sizeof(gcry_cipher_hd_t));
+  if (!*hd)
+    return gpg_error(GPG_ERR_ENOMEM);
+  hd->key = NULL;
+  hd->keylen = 0;
+  hd->ctr = NULL;
+  hd->ctrlen = 0;
+  hd->cx = AES_AllocateContext();
+  return gpg_error(GPG_ERR_NO_ERROR);
 };
 
 // This always follows a `gcry_cipher_open`.
 gcry_error_t gcry_cipher_setkey(gcry_cipher_hd_t hd, const void *key,
                                 size_t keylen) {
-  hd->key = key;
+  hd->key = key;  // memcpy?
   hd->keylen = keylen;
+  return gpg_error(GPG_ERR_NO_ERROR);
 };
 
 // This always follows a `gcry_cipher_open` or `gcry_cipher_reset`.
 gpg_error_t gcry_cipher_setctr(gcry_cipher_hd_t hd, const void *ctr,
                                size_t ctrlen) {
-  hd->ctr = ctr;
+  hd->ctr = ctr;  // memcpy?
   hd->ctrlen = ctrlen;
+  return gpg_error(GPG_ERR_NO_ERROR);
 };
 
 gcry_error_t gcry_cipher_encrypt(gcry_cipher_hd_t h, void *out, size_t outsize,
                                  const void *in, size_t inlen) {
-  // TODO
+  SECStatus status;
+  unsigned int outputLen = 0;
+
+  assert(hd->ctrlen == 16);  // iv is the block size
+
+  status = AES_InitContext(
+    hd->cx,
+    (const unsigned char *)hd->key,
+    (unsigned int)hd->keylen,
+    (const unsigned char *)hd->ctr,  // iv
+    NSS_AES_CTR,
+    PR_TRUE,
+    16  // Rijndael w/ 128-bit block size for AES
+  );
+
+  if (status != SECSuccess)
+    return gpg_error(GPG_ERR_GENERAL);
+
+  status = AES_Encrypt(
+    hd->cx,
+    (unsigned char *)out,
+    &outputLen,  // does this accept NULL? we're throwing it away.
+    (unsigned int)outsize,
+    (const unsigned char *)in,
+    (unsigned int)inlen
+  );
+
+  return gpg_error((status == SECSuccess) ?
+    GPG_ERR_NO_ERROR : GPG_ERR_GENERAL);
 };
 
 gcry_error_t gcry_cipher_decrypt(gcry_cipher_hd_t hd, void *out, size_t outsize,
                                  const void *in, size_t inlen) {
-  // TODO
+  SECStatus status;
+  unsigned int outputLen = 0;
+
+  assert(hd->ctrlen == 16);  // iv is the block size
+
+  status = AES_InitContext(
+    hd->cx,
+    (const unsigned char *)hd->key,
+    (unsigned int)hd->keylen,
+    (const unsigned char *)hd->ctr,  // iv
+    NSS_AES_CTR,
+    PR_FALSE,  // CTR mode seems to override this to PR_TRUE.
+    16  // Rijndael w/ 128-bit block size for AES
+  );
+
+  if (status != SECSuccess)
+    return gpg_error(GPG_ERR_GENERAL);
+
+  status = AES_Decrypt(
+    hd->cx,
+    (unsigned char *)out,
+    &outputLen,  // does this accept NULL? we're throwing it away.
+    (unsigned int)outsize,
+    (const unsigned char *)in,
+    (unsigned int)inlen
+  );
+
+  return gpg_error((status == SECSuccess) ?
+    GPG_ERR_NO_ERROR : GPG_ERR_GENERAL);
 };
 
 // This is defined in terms of `gcry_cipher_ctl` in gcrypt.h
 // We should declare it differently since we don't otherwise need
 // `gcry_cipher_ctl`.
 gcry_error_t gcry_cipher_reset(gcry_cipher_hd_t hd) {
+  // Leave the key alone.
   hd->ctr = NULL;
   hd->ctrlen = 0;
+  if (hd->cx)
+    AES_DestroyContext(hd->cx, PR_FALSE);  // But don't free.
 };
 
 void gcry_cipher_close(gcry_cipher_hd_t hd) {
-  if (hd)
-    return moz_free(hd);
+  if (!hd)
+    return;
+  if (hd->cx)
+    AES_DestroyContext(hd->cx, PR_TRUE);  // And free it.
+  moz_free(hd);
 };
 
 
