@@ -362,16 +362,15 @@ void gcry_cipher_close(gcry_cipher_hd_t hd) {
     return;
   if (hd->cx)
     AES_DestroyContext(hd->cx, PR_TRUE);  // And free it.
-  moz_free(hd);
+  return moz_free(hd);
 };
 
 
 // We need to comment this out from gcrypt.h and just use our definition.
 typedef struct gcry_md_handle {
-  int algo;
-  const void *key;
-  size_t keylen;
-  // FIXME: some sort of buffer here
+  HASH_HashType algo;
+  HMACContext *cx;
+  unsigned char digest[256];  // The larger of SHA1 and SHA256.
 } *gcry_md_hd_t;
 
 // Always used with pretty much same settings, HMAC with SHA1 or SHA256. Let's
@@ -379,39 +378,66 @@ typedef struct gcry_md_handle {
 gcry_error_t gcry_md_open(gcry_md_hd_t *hd, int algo, unsigned int flags) {
   assert(flags == GCRY_MD_FLAG_HMAC);
   *hd = moz_malloc(sizeof(gcry_md_hd_t));
+  if (!*hd)
+    return gpg_error(GPG_ERR_ENOMEM);
   switch (algo) {
     case GCRY_MD_SHA1:
+      hd->algo = HASH_AlgSHA1;
+      break;
     case GCRY_MD_SHA256:
-      hd->algo = algo;
+      hd->algo = HASH_AlgSHA256;
       break;
     default:
       assert(false);
   }
+  hd->cx = NULL;
   return gpg_error(GPG_ERR_NO_ERROR);
 };
 
 // This always follows a `gcry_md_open`.
 gcry_error_t gcry_md_setkey(gcry_md_hd_t hd, const void *key, size_t keylen) {
-  hd->key = key;
-  hd->keylen = keylen;
+  SECHashObject *hash_obj = NULL;
+  hash_obj = (SECHashObject *)HASH_GetRawHashObject(hd->algo);
+  hd->cx = HMAC_Create(
+    hash_obj,
+    (const unsigned char *)key,
+    (unsigned int)keylen,
+    PR_FALSE  // Not FIPS Mode, as far as I can tell.
+  );
   return gpg_error(GPG_ERR_NO_ERROR);
 };
 
 void gcry_md_write(gcry_md_hd_t hd, const void *buffer, size_t length) {
-  switch (hd->algo) {
-    case GCRY_MD_SHA1:
-      // FIXME
-      break;
-    case GCRY_MD_SHA256:
-      // FIXME
-      break;
-    default:
-      assert(false);
-  }
+  return HMAC_Update(
+    hd->cx,
+    (const unsigned char *)buffer,
+    (unsigned int)length
+  );
 };
 
 unsigned char *gcry_md_read(gcry_md_hd_t hd, int algo) {
-  // TODO
+  SECStatus status;
+  unsigned int result_len = 0;
+  status = HMAC_Finish(
+    hd->cx,
+    hd->digest,
+    &result_len,  // does this accept NULL? we're throwing it away.
+    256
+  );
+  assert(status == SECSuccess);
+  return hd->digest;
+};
+
+void gcry_md_reset(gcry_md_hd_t hd) {
+  return HMAC_Begin(hd->cx);
+};
+
+void gcry_md_close(gcry_md_hd_t hd) {
+  if (!hd)
+    return;
+  if (hd->cx)
+    HMAC_Destroy(hd->cx, PR_TRUE);
+  return moz_free(hd);
 };
 
 void gcry_md_hash_buffer(int algo, void *digest, const void *buffer,
@@ -437,15 +463,6 @@ void gcry_md_hash_buffer(int algo, void *digest, const void *buffer,
       assert(false);
   }
   assert(status == SECSuccess);
-};
-
-void gcry_md_reset(gcry_md_hd_t hd) {
-  // TODO
-};
-
-void gcry_md_close(gcry_md_hd_t hd) {
-  if (hd)
-    return moz_free(hd);
 };
 
 
