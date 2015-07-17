@@ -354,6 +354,7 @@ gcry_error_t gcry_cipher_reset(gcry_cipher_hd_t hd) {
   hd->ctrlen = 0;
   if (hd->cx)
     AES_DestroyContext(hd->cx, PR_FALSE);  // But don't free.
+  return gpg_error(GPG_ERR_NO_ERROR);
 };
 
 void gcry_cipher_close(gcry_cipher_hd_t hd) {
@@ -386,12 +387,14 @@ gcry_error_t gcry_md_open(gcry_md_hd_t *hd, int algo, unsigned int flags) {
     default:
       assert(false);
   }
+  return gpg_error(GPG_ERR_NO_ERROR);
 };
 
 // This always follows a `gcry_md_open`.
 gcry_error_t gcry_md_setkey(gcry_md_hd_t hd, const void *key, size_t keylen) {
   hd->key = key;
   hd->keylen = keylen;
+  return gpg_error(GPG_ERR_NO_ERROR);
 };
 
 void gcry_md_write(gcry_md_hd_t hd, const void *buffer, size_t length) {
@@ -413,19 +416,27 @@ unsigned char *gcry_md_read(gcry_md_hd_t hd, int algo) {
 
 void gcry_md_hash_buffer(int algo, void *digest, const void *buffer,
                          size_t length) {
+  SECStatus status;
   switch (algo) {
     case GCRY_MD_SHA1:
-      // FIXME
+      status = SHA1_HashBuf(
+        (unsigned char *)digest,
+        (const unsigned char *)buffer,
+        (PRUint32)length
+      );
       break;
     case GCRY_MD_SHA256:
-      // FIXME
-      break;
-    case SM_HASH_ALGORITHM:
-      // FIXME
+    // case SM_HASH_ALGORITHM:  This is defined as GCRY_MD_SHA256.
+      status = SHA256_HashBuf(
+        (unsigned char *)digest,
+        (const unsigned char *)buffer,
+        (PRUint32)length
+      );
       break;
     default:
       assert(false);
   }
+  assert(status == SECSuccess);
 };
 
 void gcry_md_reset(gcry_md_hd_t hd) {
