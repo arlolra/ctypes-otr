@@ -238,9 +238,9 @@ void gcry_mpi_release(gcry_mpi_t a) {
 
 // `gcry_cipher_hd_t` is defined in terms of this.
 struct struct gcry_cipher_handle {
-  const void *key;
+  void *key;
   size_t keylen;
-  const void *ctr;
+  void *ctr;
   size_t ctrlen;
   AESContext *cx;
 };
@@ -281,7 +281,7 @@ gpg_error_t gcry_cipher_setctr(gcry_cipher_hd_t hd, const void *ctr,
 
 gcry_error_t gcry_cipher_encrypt(gcry_cipher_hd_t h, void *out, size_t outsize,
                                  const void *in, size_t inlen) {
-  SECStatus status;
+  SECStatus status = SECSuccess;
   unsigned int outputLen = 0;
 
   assert(hd->ctrlen == 16);  // iv is the block size
@@ -314,7 +314,7 @@ gcry_error_t gcry_cipher_encrypt(gcry_cipher_hd_t h, void *out, size_t outsize,
 
 gcry_error_t gcry_cipher_decrypt(gcry_cipher_hd_t hd, void *out, size_t outsize,
                                  const void *in, size_t inlen) {
-  SECStatus status;
+  SECStatus status = SECSuccess;
   unsigned int outputLen = 0;
 
   assert(hd->ctrlen == 16);  // iv is the block size
@@ -416,7 +416,7 @@ void gcry_md_write(gcry_md_hd_t hd, const void *buffer, size_t length) {
 };
 
 unsigned char *gcry_md_read(gcry_md_hd_t hd, int algo) {
-  SECStatus status;
+  SECStatus status = SECSuccess;
   unsigned int result_len = 0;
   status = HMAC_Finish(
     hd->cx,
@@ -442,7 +442,7 @@ void gcry_md_close(gcry_md_hd_t hd) {
 
 void gcry_md_hash_buffer(int algo, void *digest, const void *buffer,
                          size_t length) {
-  SECStatus status;
+  SECStatus status = SECSuccess;
   switch (algo) {
     case GCRY_MD_SHA1:
       status = SHA1_HashBuf(
@@ -466,7 +466,8 @@ void gcry_md_hash_buffer(int algo, void *digest, const void *buffer,
 };
 
 
-// All the s-expression stuff
+// All the s-expression stuff. We should just include libgcrypt's sexp.c and
+// be done with it. nss has no facilities for dealing with s-expressions.
 //gcry_sexp_t
 //gcry_sexp_new
 //gcry_sexp_build
@@ -479,7 +480,86 @@ void gcry_md_hash_buffer(int algo, void *digest, const void *buffer,
 //gcry_sexp_sprint
 
 
-// DSA stuff
-//gcry_pk_genkey
+// libotr only ever calls this with the s-exp "(genkey (dsa (nbits 4:1024)))".
+// We could validate the tokens, but punting for now.
+gcry_error_t gcry_pk_genkey(gcry_sexp_t *r_key, gcry_sexp_t s_parms) {
+  gcry_err_code_t err = GPG_ERR_NO_ERROR;
+  SECStatus status = SECSuccess;
+  mp_int p, q, g, x, y;
+  PQGParams *params = NULL;
+  PQGVerify *verify = NULL;
+  DSAPrivateKey *privKey = NULL;
+  unsigned int L = 1024;  // nbits, "4:" indicates the data length
+
+  status = PQG_ParamGenV2(
+    L,
+    0, 0,  // zeroes here will pick the defaults (smallest secure being 160)
+    &params,
+    &verify  // no FIPS, so won't use this
+  );
+
+  if (status != SECSuccess) {
+    err = GPG_ERR_GENERAL;
+    goto cleanup;
+  }
+
+  status = DSA_NewKey(
+    params,
+    &privKey
+  );
+
+  if (status != SECSuccess) {
+    err = GPG_ERR_GENERAL;
+    goto cleanup;
+  }
+
+  mp_init(&p);
+  mp_init(&q);
+  mp_init(&g);
+  mp_init(&x);
+  mp_init(&y);
+
+  SECITEM_TO_MPINT(privKey->params.prime, &p);
+  SECITEM_TO_MPINT(privKey->params.subPrime, &q);
+  SECITEM_TO_MPINT(privKey->params.base, &g);
+  SECITEM_TO_MPINT(keyprivKey->privateValue, &x);
+  SECITEM_TO_MPINT(key->publicValue, &y);
+
+  // FIXME: This will call gcry_mpi_print, which we've implemented above.
+  // But looks like it wants to output as hex.
+  err = sexp_build(
+    r_key,
+    NULL,
+    "(key-data"
+    " (public-key"
+    "  (dsa(p%m)(q%m)(g%m)(y%m)))"
+    " (private-key"
+    "  (dsa(p%m)(q%m)(g%m)(y%m)(x%m)))"
+    ")",
+    &p, &q, &g, &y,
+    &p, &q, &g, &y, &x
+  );
+
+cleanup:
+  mp_clear(&p);
+  mp_clear(&q);
+  mp_clear(&g);
+  mp_clear(&x);
+  mp_clear(&y);
+
+  if (params)
+    PQG_DestroyParams(params);
+
+  if (verify)
+    PQG_DestroyVerify(verify);
+
+  if (privKey) {
+    PORT_FreeArena(privKey->arena);
+    privKey = NULL;
+  }
+
+  return gpg_error(err);
+};
+
 //gcry_pk_sign
 //gcry_pk_verify
