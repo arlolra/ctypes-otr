@@ -232,7 +232,7 @@ gcry_error_t gcry_mpi_scan(gcry_mpi_t *ret_mpi, enum gcry_mpi_format format,
 void gcry_mpi_dump(const gcry_mpi_t a) {};
 
 void gcry_mpi_release(gcry_mpi_t a) {
-  return mp_clear((mp_int)a);
+  return mp_clear((mp_int *)a);
 };
 
 
@@ -483,7 +483,7 @@ void gcry_md_hash_buffer(int algo, void *digest, const void *buffer,
 // libotr only ever calls this with the s-exp "(genkey (dsa (nbits 4:1024)))".
 // We could validate the tokens, but punting for now.
 gcry_error_t gcry_pk_genkey(gcry_sexp_t *r_key, gcry_sexp_t s_parms) {
-  gcry_err_code_t err = GPG_ERR_NO_ERROR;
+  gcry_err_code_t err_code = GPG_ERR_NO_ERROR;
   SECStatus status = SECSuccess;
   mp_int p, q, g, x, y;
   PQGParams *params = NULL;
@@ -499,7 +499,7 @@ gcry_error_t gcry_pk_genkey(gcry_sexp_t *r_key, gcry_sexp_t s_parms) {
   );
 
   if (status != SECSuccess) {
-    err = GPG_ERR_GENERAL;
+    err_code = GPG_ERR_GENERAL;
     goto cleanup;
   }
 
@@ -509,7 +509,7 @@ gcry_error_t gcry_pk_genkey(gcry_sexp_t *r_key, gcry_sexp_t s_parms) {
   );
 
   if (status != SECSuccess) {
-    err = GPG_ERR_GENERAL;
+    err_code = GPG_ERR_GENERAL;
     goto cleanup;
   }
 
@@ -527,7 +527,7 @@ gcry_error_t gcry_pk_genkey(gcry_sexp_t *r_key, gcry_sexp_t s_parms) {
 
   // FIXME: This will call gcry_mpi_print, which we've implemented above.
   // But looks like it wants to output as hex.
-  err = sexp_build(
+  err_code = sexp_build(
     r_key,
     NULL,
     "(key-data"
@@ -561,5 +561,85 @@ cleanup:
   return gpg_error(err);
 };
 
-//gcry_pk_sign
-//gcry_pk_verify
+// From libgcrypt's dsa.c
+typedef struct {
+  gcry_mpi_t p;
+  gcry_mpi_t q;
+  gcry_mpi_t g;
+  gcry_mpi_t y;
+  gcry_mpi_t x;
+} DSA_secret_key;
+
+// Data is: (%m)
+// Result is expected to be: (dsa (r %m) (s %m))
+// Assuming a DSA skey. We can assert that but punting for now.
+gcry_error_t gcry_pk_sign(gcry_sexp_t *result, gcry_sexp_t data,
+                          gcry_sexp_t skey) {
+  SECStatus status = SECSuccess;
+  gcry_err_code_t err_code = GPG_ERR_NO_ERROR;
+  gcry_mpi_t data_mpi = NULL;
+  gcry_sexp_t list = NULL;
+  gcry_sexp_t l2 = NULL;
+  DSA_secret_key sk = { NULL, NULL, NULL, NULL, NULL };
+  SECItem digest = NULL;
+
+  data_mpi = sexp_nth_mpi(data, 0, 0);
+  if (!data_mpi) {
+    err_code = GPG_ERR_INV_OBJ;
+    goto cleanup;
+  }
+  MPINT_TO_SECITEM(data, digest, /* FIXME */ arena);
+  //PORT_FreeArena(arena);
+
+  // Get the key parameters. See the format above in `gcry_pk_genkey`.
+  list = sexp_find_token(skey, "private-key", 0);
+  if (!list) {
+    err_code = GPG_ERR_INV_OBJ;
+    goto cleanup;
+  }
+
+  l2 = sexp_cadr(list);
+  sexp_release(list);
+  list = l2;
+
+  // Can assert this == "dsa".
+  // But requires the free/malloc from sexp.c
+  // Probably need that for sexp_release anyways.
+  // char *name = NULL;
+  // name = sexp_nth_string(list, 0);
+
+  err_code = _gcry_sexp_extract_param(list, NULL, "pqgyx",
+                                      &sk.p, &sk.q, &sk.g, &sk.y, &sk.x, NULL);
+  if (err_code != GPG_ERR_NO_ERROR)
+    goto cleanup;
+
+  // Createk key
+
+  status = DSA_SignDigest(
+    DSAPrivateKey *key,
+    SECItem *signature,
+    const SECItem *digest
+  );
+
+  if (status != SECSuccess;) {
+    err_code = GPG_ERR_GENERAL;
+    goto cleanup;
+  }
+
+  
+
+cleanup:
+  gcry_mpi_release(data_mpi);
+  gcry_mpi_release(sk.p);
+  gcry_mpi_release(sk.q);
+  gcry_mpi_release(sk.g);
+  gcry_mpi_release(sk.y);
+  gcry_mpi_release(sk.x);
+  sexp_release(list);
+  return gpg_error(err_code);
+};
+
+gcry_error_t gcry_pk_verify(gcry_sexp_t sigval, gcry_sexp_t data,
+                            gcry_sexp_t pkey) {
+  // TODO
+};
