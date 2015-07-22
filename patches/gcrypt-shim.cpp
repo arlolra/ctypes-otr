@@ -522,8 +522,8 @@ gcry_error_t gcry_pk_genkey(gcry_sexp_t *r_key, gcry_sexp_t s_parms) {
   SECITEM_TO_MPINT(privKey->params.prime, &p);
   SECITEM_TO_MPINT(privKey->params.subPrime, &q);
   SECITEM_TO_MPINT(privKey->params.base, &g);
-  SECITEM_TO_MPINT(keyprivKey->privateValue, &x);
-  SECITEM_TO_MPINT(key->publicValue, &y);
+  SECITEM_TO_MPINT(privKey->privateValue, &x);
+  SECITEM_TO_MPINT(privKey->publicValue, &y);
 
   // FIXME: This will call gcry_mpi_print, which we've implemented above.
   // But looks like it wants to output as hex.
@@ -554,7 +554,7 @@ cleanup:
     PQG_DestroyVerify(verify);
 
   if (privKey) {
-    PORT_FreeArena(privKey->arena);
+    PORT_FreeArena(privKey->arena, PR_TRUE);
     privKey = NULL;
   }
 
@@ -581,15 +581,31 @@ gcry_error_t gcry_pk_sign(gcry_sexp_t *result, gcry_sexp_t data,
   gcry_sexp_t list = NULL;
   gcry_sexp_t l2 = NULL;
   DSA_secret_key sk = { NULL, NULL, NULL, NULL, NULL };
-  SECItem digest = NULL;
+  DSAPrivateKey *key = NULL;
+  SECItem *digest = NULL;
+  SECItem *signature = NULL;
+  PLArenaPool *arena = NULL;
+  mp_int r, s;
+  unsigned int len = 0;
+
+  arena = PORT_NewArena(NSS_FREEBL_DSA_DEFAULT_CHUNKSIZE);
+  if (!arena) {
+    err_code = GPG_ERR_ENOMEM;
+    goto cleanup;
+  }
 
   data_mpi = sexp_nth_mpi(data, 0, 0);
   if (!data_mpi) {
     err_code = GPG_ERR_INV_OBJ;
     goto cleanup;
   }
-  MPINT_TO_SECITEM(data, digest, /* FIXME */ arena);
-  //PORT_FreeArena(arena);
+
+  digest = (SECItem *)PORT_ArenaZAlloc(arena, sizeof(SECItem));
+  if (!digest) {
+    err_code = GPG_ERR_ENOMEM;
+    goto cleanup;
+  }
+  MPINT_TO_SECITEM((mp_int *)data_mpi, digest, arena);
 
   // Get the key parameters. See the format above in `gcry_pk_genkey`.
   list = sexp_find_token(skey, "private-key", 0);
@@ -613,22 +629,48 @@ gcry_error_t gcry_pk_sign(gcry_sexp_t *result, gcry_sexp_t data,
   if (err_code != GPG_ERR_NO_ERROR)
     goto cleanup;
 
-  // Createk key
+  signature = (SECItem *)PORT_ArenaZAlloc(arena, sizeof(SECItem));
+  if (!signature) {
+    err_code = GPG_ERR_ENOMEM;
+    goto cleanup;
+  }
 
-  status = DSA_SignDigest(
-    DSAPrivateKey *key,
-    SECItem *signature,
-    const SECItem *digest
-  );
+  key = (DSAPrivateKey *)PORT_ArenaZAlloc(arena, sizeof(DSAPrivateKey));
+  if (!key) {
+    err_code = GPG_ERR_ENOMEM;
+    goto cleanup;
+  }
 
-  if (status != SECSuccess;) {
+  MPINT_TO_SECITEM(&p, key->params.prime, arena);
+  MPINT_TO_SECITEM(&q, key->params.subPrime, arena);
+  MPINT_TO_SECITEM(&g, key->params.base, arena);
+  MPINT_TO_SECITEM(&x, key->privateValue, arena);
+  MPINT_TO_SECITEM(&y, key->publicValue, arena);
+
+  status = DSA_SignDigest(key, signature, digest);
+  if (status != SECSuccess) {
     err_code = GPG_ERR_GENERAL;
     goto cleanup;
   }
 
-  
+  if (signature.len % 2) {
+    err_code = GPG_ERR_INV_OBJ;
+    goto cleanup;
+  }
+  len = signature.len / 2;
+
+  mp_init(&r);
+  mp_init(&s);
+
+  OCTETS_TO_MPINT(signature.data[0], &r, len);
+  OCTETS_TO_MPINT(signature.data[len], &s, len);
+
+  err_code = sexp_build(result, NULL, "(sig-val(dsa(r%M)(s%M)))", &r, &s);
 
 cleanup:
+  mp_clear(&r);
+  mp_clear(&s);
+  PORT_FreeArena(arena, PR_TRUE);
   gcry_mpi_release(data_mpi);
   gcry_mpi_release(sk.p);
   gcry_mpi_release(sk.q);
