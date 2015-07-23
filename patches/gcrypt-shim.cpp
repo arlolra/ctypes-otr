@@ -18,10 +18,12 @@
  * The headers used to reimplement the above.
  */
 #include <mozilla/mozalloc.h>
+#include <gpg-error.h>
+#include <assert.h>
 #include "pk11pub.h"
 #include "mpi.h"
 #include "blapi.h"
-#include "assert.h"
+
 
 /* Register a custom memory allocation functions. */
 void gcry_set_allocation_handler(gcry_handler_alloc_t func_alloc,
@@ -51,17 +53,18 @@ const char *gcry_check_version(const char *req_version) {
   return GCRYPT_VERSION;
 }
 
+
 /*
  * Randomize functions.
  */
-// TODO Do we care about the PK11 return value?
-// TODO Handle the random level?
 
 /* Fill BUFFER with LENGTH bytes of random, using random numbers of
    quality LEVEL. */
 void gcry_randomize(void *buffer, size_t length, enum gcry_random_level level) {
   assert(level == GCRY_STRONG_RANDOM);
-  PK11_GenerateRandom((unsigned char*)buffer, length);
+  SECStatus status = SECSuccess;
+  status = PK11_GenerateRandom((unsigned char*)buffer, length);
+  assert(status == SECSuccess);
 }
 
 /* Return NBYTES of allocated random using a random numbers of quality
@@ -69,8 +72,8 @@ void gcry_randomize(void *buffer, size_t length, enum gcry_random_level level) {
 void *gcry_random_bytes(size_t nbytes, enum gcry_random_level level) {
   assert(level == GCRY_STRONG_RANDOM);
   void *data = gcry_malloc_secure(nbytes);
-  if (data != NULL)
-    gcry_randomize(data, nbytes, level);
+  assert(data != NULL);
+  gcry_randomize(data, nbytes, level);
   return data;
 }
 
@@ -99,9 +102,8 @@ void *gcry_random_bytes_secure(size_t nbytes, enum gcry_random_level level) {
 gcry_mpi_t gcry_mpi_new(unsigned int nbits) {
   mp_int *mp = NULL;
   mp_err err = 0;
-  // FIXME: bits to precision!
-  err = mp_init_size(mp, /* mp_size prec */);
-  assert(!mp_err);
+  err = mp_init_size(mp, MP_HOWMANY(nbits, MP_DIGIT_BIT));
+  assert(err == MP_OKAY);
   return (gcry_mpi_t)mp;
 };
 
