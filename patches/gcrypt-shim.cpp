@@ -525,16 +525,14 @@ gcry_error_t gcry_pk_genkey(gcry_sexp_t *r_key, gcry_sexp_t s_parms) {
   SECITEM_TO_MPINT(privKey->privateValue, &x);
   SECITEM_TO_MPINT(privKey->publicValue, &y);
 
-  // FIXME: This will call gcry_mpi_print, which we've implemented above.
-  // But looks like it wants to output as hex.
   rc = sexp_build(
     r_key,
     NULL,
     "(key-data"
     " (public-key"
-    "  (dsa(p%m)(q%m)(g%m)(y%m)))"
+    "  (dsa(p%M)(q%M)(g%M)(y%M)))"
     " (private-key"
-    "  (dsa(p%m)(q%m)(g%m)(y%m)(x%m)))"
+    "  (dsa(p%M)(q%M)(g%M)(y%M)(x%M)))"
     ")",
     &p, &q, &g, &y,
     &p, &q, &g, &y, &x
@@ -665,7 +663,7 @@ gcry_error_t gcry_pk_sign(gcry_sexp_t *result, gcry_sexp_t data,
   OCTETS_TO_MPINT(signature.data[0], &r, len);
   OCTETS_TO_MPINT(signature.data[len], &s, len);
 
-  rc = sexp_build(result, NULL, "(sig-val(dsa(r%m)(s%m)))", &r, &s);
+  rc = sexp_build(result, NULL, "(sig-val(dsa(r%M)(s%M)))", &r, &s);
 
 cleanup:
   mp_clear(&r);
