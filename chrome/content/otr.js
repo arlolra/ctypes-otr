@@ -727,7 +727,7 @@ let otr = {
       this.sendAlert(context, _("msgevent.rcvdmsg_general_err"));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNENCRYPTED:
-      this.sendAlert(context, _("msgevent.rcvdmsg_unecrypted", context.username));
+      this.sendAlert(context, _("msgevent.rcvdmsg_unecrypted", context.username, message.isNull() ? "" : message.readString()));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_UNRECOGNIZED:
       this.sendAlert(context, _("msgevent.rcvdmsg_unrecognized", context.username));
