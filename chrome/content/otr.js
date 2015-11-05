@@ -706,7 +706,7 @@ let otr = {
       this.sendAlert(context, _("msgevent.msg_reflected"));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_MSG_RESENT:
-      this.sendAlert(context, _("msgevent.msg_resent"));
+      this.sendAlert(context, _("msgevent.msg_resent", context.username));
       break;
     case libOTR.messageEvent.OTRL_MSGEVENT_RCVDMSG_NOT_IN_PRIVATE:
       this.sendAlert(context, _("msgevent.rcvdmsg_not_private", context.username));
