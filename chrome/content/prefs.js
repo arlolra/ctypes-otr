@@ -18,6 +18,8 @@ var otrPref = {
   onload: function() {
     let accountList = document.getElementById("accountlist");
     for (let acc in this.getAccounts()) {
+      if (acc.protocol.normalizedName === 'twitter')
+        continue;  // DMs aren't implemented yet.
       let menuItem = accountList.appendItem(
         `${acc.normalizedName} (${otr.protocolName(acc.protocol.normalizedName)})`,
         acc.id
