@@ -82,6 +82,48 @@ var ui = {
     ui.prefs = Services.prefs.getBranch(branch);
   },
 
+  // Kind of hacky but pretty effective.
+  _addedNodes: [],
+
+  addPrefMenu: function(win) {
+    let doc = win.document;
+    let toolsMenuPopup = doc.getElementById("toolsMenuPopup");
+    if (!toolsMenuPopup)
+      return;  // Not the tools menu
+
+    let sep = doc.createElement("menuseparator");
+
+    let menuitem = doc.createElement("menuitem");
+    menuitem.setAttribute("label", _("prefs.label"));
+    menuitem.addEventListener("command", function(e) {
+      e.preventDefault();
+      let features = "centerscreen,resizable=no,minimizable=no";
+      Services.ww.openWindow(null, prefsDialog, "otrPrefs", features, null);
+    });
+
+    toolsMenuPopup.appendChild(sep);
+    toolsMenuPopup.appendChild(menuitem);
+
+    ui._addedNodes.push(sep);
+    ui._addedNodes.push(menuitem);
+  },
+
+  removePrefMenus: function() {
+    ui._addedNodes.forEach(n => {
+      let p = n.parentNode;
+      if (p) p.removeChild(n);
+    });
+    ui._addedNodes.length = 0;
+    Services.obs.removeObserver(ui, "domwindowopened");
+  },
+
+  addPrefMenus: function() {
+    let iter = Services.ww.getWindowEnumerator();
+    while (iter.hasMoreElements())
+      ui.addPrefMenu(iter.getNext());
+    Services.obs.addObserver(ui, "domwindowopened", false);
+  },
+
   init: function() {
     setTrustMap();
     this.setPrefs();
@@ -97,6 +139,7 @@ var ui = {
       Services.obs.addObserver(ui, "prpl-quit", false);
       ui.prefs.addObserver("", ui, false);
       Conversations._conversations.forEach(ui.initConv);
+      ui.addPrefMenus();
     }).catch(function(err) { throw err; });
   },
 
@@ -358,6 +401,9 @@ var ui = {
     case "prpl-quit":
       ui.disconnect(null);
       break;
+    case "domwindowopened":
+      ui.addPrefMenu(aObject);
+      break;
     case "otr:generate":
       ui.generate(aObject);
       break;
@@ -409,6 +455,7 @@ var ui = {
     ui.prefs.removeObserver("", ui);
     otr.removeObserver(ui);
     otr.close();
+    ui.removePrefMenus();
   },
 
 };
