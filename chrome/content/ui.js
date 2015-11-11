@@ -87,6 +87,17 @@ var ui = {
 
   addPrefMenu: function(win) {
     let doc = win.document;
+
+    // Account for unready windows
+    if (doc.readyState !== "complete") {
+      let listen = function() {
+        win.removeEventListener("load", listen);
+        ui.addPrefMenu(win);
+      }
+      win.addEventListener("load", listen);
+      return;
+    }
+
     let toolsMenuPopup = doc.getElementById("toolsMenuPopup");
     if (!toolsMenuPopup)
       return;  // Not the tools menu
@@ -264,7 +275,7 @@ var ui = {
     otrButton.addEventListener("command", function(e) {
       e.preventDefault();
       otrMenu.openPopup(otrButton, "after_start");
-    }, false);
+    });
 
     otrButton.appendChild(otrMenu);
     cti.appendChild(otrButton);
