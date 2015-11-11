@@ -1,14 +1,14 @@
-const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
+var { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("chrome://otr/content/otr.js");
 
-XPCOMUtils.defineLazyGetter(this, "_", function()
+XPCOMUtils.defineLazyGetter(this, "_", () =>
   l10nHelper("chrome://otr/locale/auth.properties")
 );
 
-let [mode, uiConv, aObject] = window.arguments;
+var [mode, uiConv, aObject] = window.arguments;
 
 document.title = _("auth.title",
   (mode === "pref") ? aObject.screenname : uiConv.normalizedName);
@@ -57,7 +57,7 @@ function populateFingers(context, theirs, trust) {
   };
 }
 
-let otrAuth = {
+var otrAuth = {
 
   waiting: false,
   finished: false,

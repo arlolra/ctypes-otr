@@ -1,22 +1,22 @@
-let EXPORTED_SYMBOLS = ["ui"];
+this.EXPORTED_SYMBOLS = ["ui"];
 
-const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
+var { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("resource:///modules/imWindows.jsm");
 Cu.import("chrome://otr/content/otr.js");
 
-const privDialog = "chrome://otr/content/priv.xul";
-const authDialog = "chrome://otr/content/auth.xul";
-const prefsDialog = "chrome://otr/content/prefs.xul";
-const authVerify = "otr-auth-unverified";
+var privDialog = "chrome://otr/content/priv.xul";
+var authDialog = "chrome://otr/content/auth.xul";
+var prefsDialog = "chrome://otr/content/prefs.xul";
+var authVerify = "otr-auth-unverified";
 
-XPCOMUtils.defineLazyGetter(this, "_", function()
+XPCOMUtils.defineLazyGetter(this, "_", () =>
   l10nHelper("chrome://otr/locale/ui.properties")
 );
 
-let trustMap;
+var trustMap;
 function setTrustMap() {
   trustMap = new Map([
     [otr.trustState.TRUST_NOT_PRIVATE, {
@@ -32,6 +32,7 @@ function setTrustMap() {
       authLabel: _("auth.label"),
       disableStart: false,
       disableEnd: false,
+      disableAuth: false,
       class: "unverified"
     }],
     [otr.trustState.TRUST_PRIVATE, {
@@ -53,9 +54,9 @@ function setTrustMap() {
   ]);
 }
 
-let windowRefs = new Map();
+var windowRefs = new Map();
 
-let ui = {
+var ui = {
 
   debug: false,
   log: function log(msg) {

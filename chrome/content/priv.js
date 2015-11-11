@@ -1,14 +1,14 @@
-const Cu = Components.utils;
+var Cu = Components.utils;
 
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("chrome://otr/content/otr.js");
 
-XPCOMUtils.defineLazyGetter(this, "_", function()
+XPCOMUtils.defineLazyGetter(this, "_", () =>
   l10nHelper("chrome://otr/locale/priv.properties")
 );
 
-let otrPriv = {
+var otrPriv = {
 
   onload: function() {
     let args = window.arguments[0].wrappedJSObject;

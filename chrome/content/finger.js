@@ -1,17 +1,17 @@
-const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
+var { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("chrome://otr/content/otr.js");
 
-const authDialog = "chrome://otr/content/auth.xul";
+var authDialog = "chrome://otr/content/auth.xul";
 
-XPCOMUtils.defineLazyGetter(this, "_", function()
+XPCOMUtils.defineLazyGetter(this, "_", () =>
   l10nHelper("chrome://otr/locale/finger.properties")
 );
 
-let fingers;
-let fingerTreeView = {
+var fingers;
+var fingerTreeView = {
   selection: null,
   rowCount: 0,
   setTree: function(tree) {},
@@ -56,8 +56,8 @@ function getSelections(tree) {
   return selections;
 }
 
-let fingerTree;
-let otrFinger = {
+var fingerTree;
+var otrFinger = {
 
   onload: function() {
     fingerTree = document.getElementById("fingerTree");

@@ -1,19 +1,19 @@
-const Cu = Components.utils;
+var Cu = Components.utils;
 
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("chrome://otr/content/otr.js");
 
-const fingerDialog = "chrome://otr/content/finger.xul";
-const privDialog = "chrome://otr/content/priv.xul";
+var fingerDialog = "chrome://otr/content/finger.xul";
+var privDialog = "chrome://otr/content/priv.xul";
 
-let account, protocol;
+var account, protocol;
 if (window && window.arguments) {
   let args = window.arguments[0].wrappedJSObject;
   ({account, protocol} = args);
 }
 
-let otrPref = {
+var otrPref = {
 
   onload: function() {
     let accountList = document.getElementById("accountlist");

@@ -1,14 +1,14 @@
-let EXPORTED_SYMBOLS = ["libOTR", "libC"];
+this.EXPORTED_SYMBOLS = ["libOTR", "libC"];
 
-const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
+var { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
 Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/Services.jsm");
 
-const abi = ctypes.default_abi;
+var abi = ctypes.default_abi;
 
 // Set the abi and path to libc based on the OS.
-let libcAbi, libcPath, strdup;
+var libcAbi, libcPath, strdup;
 switch(Services.appinfo.OS) {
   case "WINNT":
     libcAbi = ctypes.winapi_abi;
@@ -31,7 +31,7 @@ switch(Services.appinfo.OS) {
 
 // Open libotr. Determine the path to the chrome directory and look for it
 // there first. If not, fallback to searching the standard locations.
-let libotr, libotrPath;
+var libotr, libotrPath;
 try {
   // try in chrome
   let uri = "chrome://otr/content/" + ctypes.libraryName("otr");
@@ -333,7 +333,7 @@ const OTRL_POLICY_SEND_WHITESPACE_TAG = 0x10;
 const OTRL_POLICY_WHITESPACE_START_AKE = 0x20;
 const OTRL_POLICY_ERROR_START_AKE = 0x40;
 
-let libOTR = {
+var libOTR = {
 
   path: libotrPath,
 
@@ -818,9 +818,9 @@ let libOTR = {
 
 // libc
 
-let libc = ctypes.open(libcPath);
+var libc = ctypes.open(libcPath);
 
-let libC = {
+var libC = {
   memcmp: libc.declare(
     "memcmp", libcAbi, ctypes.int,
     ctypes.void_t.ptr,

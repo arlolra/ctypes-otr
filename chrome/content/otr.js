@@ -1,6 +1,6 @@
-let EXPORTED_SYMBOLS = ["otr"];
+this.EXPORTED_SYMBOLS = ["otr"];
 
-const { interfaces: Ci, utils: Cu, classes: Cc } = Components;
+var { interfaces: Ci, utils: Cu, classes: Cc } = Components;
 
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
@@ -9,7 +9,7 @@ Cu.import("resource://gre/modules/ctypes.jsm");
 Cu.import("resource://gre/modules/osfile.jsm");
 Cu.import("chrome://otr/content/libotr.js");
 
-XPCOMUtils.defineLazyGetter(this, "_", function()
+XPCOMUtils.defineLazyGetter(this, "_", () =>
   l10nHelper("chrome://otr/locale/otr.properties")
 );
 
@@ -65,7 +65,7 @@ function isOnline(conv) {
 }
 
 // Use the protocol name in user facing strings. See trac #16490
-let names;
+var names;
 function protocolName(aNormalizedName) {
   if (!names) {
     names = new Map();
@@ -86,17 +86,17 @@ function Context(context) {
 
 Context.prototype = {
   constructor: Context,
-  get username() this._context.contents.username.readString(),
-  get account() this._context.contents.accountname.readString(),
-  get protocol() this._context.contents.protocol.readString(),
-  get msgstate() this._context.contents.msgstate,
-  get fingerprint() this._context.contents.active_fingerprint,
+  get username() { return this._context.contents.username.readString(); },
+  get account() { return this._context.contents.accountname.readString(); },
+  get protocol() { return this._context.contents.protocol.readString(); },
+  get msgstate() { return this._context.contents.msgstate; },
+  get fingerprint() { return this._context.contents.active_fingerprint; },
   get trust() { return trustFingerprint(this.fingerprint); },
 };
 
 // otr module
 
-let otr = {
+var otr = {
 
   hasRan: false,
   once: function() {
@@ -1009,7 +1009,7 @@ let otr = {
   },
 
   removeObserver: function(aObserver) {
-    this._observers = this._observers.filter(function(o) o !== aObserver);
+    this._observers = this._observers.filter(o => o !== aObserver);
   },
 
   notifyObservers: function(aSubject, aTopic, aData) {
