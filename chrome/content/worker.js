@@ -29,7 +29,8 @@ Funcs.generateKey = function(path, otrl_version, newkeySource) {
   otrl_init.apply(libotr, otrl_version);
   let err = otrl_privkey_generate_calculate(newkey);
   libotr.close();
-  return err;
+  if (err)
+    throw new Error("otrl_privkey_generate_calculate (" + err + ")");
 };
 
 var worker = new PromiseWorker.AbstractWorker();

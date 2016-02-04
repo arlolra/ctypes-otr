@@ -9,7 +9,8 @@ var abi = ctypes.default_abi;
 
 // Set the abi and path to libc based on the OS.
 var libcAbi, libcPath, strdup;
-switch(Services.appinfo.OS) {
+var OS = Services.appinfo.OS;
+switch(OS) {
   case "WINNT":
     libcAbi = ctypes.winapi_abi;
     libcPath = ctypes.libraryName("msvcrt");
@@ -45,9 +46,34 @@ try {
   libotr = ctypes.open(libotrPath);
 }
 
+// Helper function to open files with the path properly encoded.
+var callWithFILEp = function() {
+  // Windows filenames are in UTF-16.
+  var charType = (OS === "WINNT") ? "jschar" : "char";
+
+  var args = Array.from(arguments);
+  var func = args.shift() + "_FILEp";
+  var mode = ctypes[charType].array()(args.shift());
+  var ind = args.shift();
+  var filename = ctypes[charType].array()(args[ind]);
+
+  var file = libC.fopen(filename, mode);
+  if (file.isNull())
+    return 1;
+
+  // Swap filename with file.
+  args[ind] = file;
+
+  var ret = libOTR[func].apply(libOTR, args);
+  libC.fclose(file);
+  return ret;
+};
+
 // type defs
 
 const time_t = ctypes.long;
+const wchar_t = ctypes.char16_t;
+const FILE = ctypes.StructType("FILE");
 const gcry_error_t = ctypes.unsigned_int;
 const gcry_cipher_hd_t = ctypes.StructType("gcry_cipher_handle").ptr;
 const gcry_md_hd_t = ctypes.StructType("gcry_md_handle").ptr;
@@ -402,22 +428,28 @@ var libOTR = {
     OTRL_MIN_VALID_INSTAG: new ctypes.unsigned_int(0x100)
   },
 
-  // Get a new instance tag for the given account and write to file.
-  otrl_instag_generate: libotr.declare(
-    "otrl_instag_generate", abi, gcry_error_t,
-    OtrlUserState, ctypes.char.ptr, ctypes.char.ptr, ctypes.char.ptr
+  // Get a new instance tag for the given account and write to file.  The FILE*
+  // must be open for writing.
+  otrl_instag_generate: callWithFILEp.bind(null, "otrl_instag_generate", "wb", 1),
+  otrl_instag_generate_FILEp: libotr.declare(
+    "otrl_instag_generate_FILEp", abi, gcry_error_t,
+    OtrlUserState, FILE.ptr, ctypes.char.ptr, ctypes.char.ptr
   ),
 
   // Read our instance tag from a file on disk into the given OtrlUserState.
-  otrl_instag_read: libotr.declare(
-    "otrl_instag_read", abi, gcry_error_t,
-    OtrlUserState, ctypes.char.ptr
+  // The FILE* must be open for reading.
+  otrl_instag_read: callWithFILEp.bind(null, "otrl_instag_read", "rb", 1),
+  otrl_instag_read_FILEp: libotr.declare(
+    "otrl_instag_read_FILEp", abi, gcry_error_t,
+    OtrlUserState, FILE.ptr
   ),
 
-  // Write our instance tags to a file on disk.
-  otrl_instag_write: libotr.declare(
-    "otrl_instag_write", abi, gcry_error_t,
-    OtrlUserState, ctypes.char.ptr
+  // Write our instance tags to a file on disk.  The FILE* must be open for
+  // writing.
+  otrl_instag_write: callWithFILEp.bind(null, "otrl_instag_write", "wb", 1),
+  otrl_instag_write_FILEp: libotr.declare(
+    "otrl_instag_write_FILEp", abi, gcry_error_t,
+    OtrlUserState, FILE.ptr
   ),
 
   // auth.h
@@ -520,9 +552,10 @@ var libOTR = {
   // Generate a private DSA key for a given account, storing it into a file on
   // disk, and loading it into the given OtrlUserState. Overwrite any
   // previously generated keys for that account in that OtrlUserState.
-  otrl_privkey_generate: libotr.declare(
-    "otrl_privkey_generate", abi, gcry_error_t,
-    OtrlUserState, ctypes.char.ptr, ctypes.char.ptr, ctypes.char.ptr
+  otrl_privkey_generate: callWithFILEp.bind(null, "otrl_privkey_generate", "w+b", 1),
+  otrl_privkey_generate_FILEp: libotr.declare(
+    "otrl_privkey_generate_FILEp", abi, gcry_error_t,
+    OtrlUserState, FILE.ptr, ctypes.char.ptr, ctypes.char.ptr
   ),
 
   // Begin a private key generation that will potentially take place in
@@ -547,9 +580,10 @@ var libOTR = {
 
   // Call this from the main thread only. It will write the newly created
   // private key into the given file and store it in the OtrlUserState.
-  otrl_privkey_generate_finish: libotr.declare(
-    "otrl_privkey_generate_finish", abi, gcry_error_t,
-    OtrlUserState, ctypes.void_t.ptr, ctypes.char.ptr
+  otrl_privkey_generate_finish: callWithFILEp.bind(null, "otrl_privkey_generate_finish", "w+b", 2),
+  otrl_privkey_generate_finish_FILEp: libotr.declare(
+    "otrl_privkey_generate_finish_FILEp", abi, gcry_error_t,
+    OtrlUserState, ctypes.void_t.ptr, FILE.ptr
   ),
 
   // Call this from the main thread only, in the event that the background
@@ -562,22 +596,25 @@ var libOTR = {
 
   // Read a sets of private DSA keys from a file on disk into the given
   // OtrlUserState.
-  otrl_privkey_read: libotr.declare(
-    "otrl_privkey_read", abi, gcry_error_t,
-    OtrlUserState, ctypes.char.ptr
+  otrl_privkey_read: callWithFILEp.bind(null, "otrl_privkey_read", "rb", 1),
+  otrl_privkey_read_FILEp: libotr.declare(
+    "otrl_privkey_read_FILEp", abi, gcry_error_t,
+    OtrlUserState, FILE.ptr
   ),
 
   // Read the fingerprint store from a file on disk into the given
   // OtrlUserState.
-  otrl_privkey_read_fingerprints: libotr.declare(
-    "otrl_privkey_read_fingerprints", abi, gcry_error_t,
-    OtrlUserState, ctypes.char.ptr, ctypes.void_t.ptr, ctypes.void_t.ptr
+  otrl_privkey_read_fingerprints: callWithFILEp.bind(null, "otrl_privkey_read_fingerprints", "rb", 1),
+  otrl_privkey_read_fingerprints_FILEp: libotr.declare(
+    "otrl_privkey_read_fingerprints_FILEp", abi, gcry_error_t,
+    OtrlUserState, FILE.ptr, ctypes.void_t.ptr, ctypes.void_t.ptr
   ),
 
   // Write the fingerprint store from a given OtrlUserState to a file on disk.
-  otrl_privkey_write_fingerprints: libotr.declare(
-    "otrl_privkey_write_fingerprints", abi, gcry_error_t,
-    OtrlUserState, ctypes.char.ptr
+  otrl_privkey_write_fingerprints: callWithFILEp.bind(null, "otrl_privkey_write_fingerprints", "wb", 1),
+  otrl_privkey_write_fingerprints_FILEp: libotr.declare(
+    "otrl_privkey_write_fingerprints_FILEp", abi, gcry_error_t,
+    OtrlUserState, FILE.ptr
   ),
 
   // The length of a string representing a human-readable version of a
@@ -812,7 +849,7 @@ var libOTR = {
   otrl_tlv_free: libotr.declare(
     "otrl_tlv_free", abi, ctypes.void_t,
     OtrlTLV.ptr
-  )
+  ),
 
 };
 
@@ -834,5 +871,23 @@ var libC = {
   strdup: libc.declare(
     strdup, libcAbi, ctypes.char.ptr,
     ctypes.char.ptr
-  )
+  ),
+  fclose: libc.declare(
+    "fclose", libcAbi, ctypes.int,
+    FILE.ptr
+  ),
 };
+
+if (OS === "WINNT") {
+  libC.fopen = libc.declare(
+    "_wfopen", libcAbi, FILE.ptr,
+    wchar_t.ptr,
+    wchar_t.ptr
+  );
+} else {
+  libC.fopen = libc.declare(
+    "fopen", libcAbi, FILE.ptr,
+    ctypes.char.ptr,
+    ctypes.char.ptr
+  );
+}

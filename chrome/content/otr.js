@@ -211,22 +211,21 @@ var otr = {
       otr.userstate, account, protocol, newkey.address()
     );
     if (err || newkey.isNull())
-      return Promise.resolve(false);
+      return Promise.reject("otrl_privkey_generate_start (" + err + ")");
     let worker = new BasePromiseWorker("chrome://otr/content/worker.js");
-    let handleErr = function(err) {
-      if (!newkey.isNull())
-        libOTR.otrl_privkey_generate_cancelled(otr.userstate, newkey);
-      return false;
-    };
     return worker.post("generateKey", [
       libOTR.path, libOTR.otrl_version, newkey.toSource()
-    ]).then(function(err) {
-      if (!err)
-        err = libOTR.otrl_privkey_generate_finish(
-          otr.userstate, newkey, otr.privateKeyPath
-        );
-      return err ? handleErr(err) : true;
-    }).catch(handleErr);
+    ]).then(function() {
+      let err = libOTR.otrl_privkey_generate_finish(
+        otr.userstate, newkey, otr.privateKeyPath
+      );
+      if (err)
+        throw new Error("otrl_privkey_generate_calculate (" + err + ")");
+    }).catch(function(err) {
+      if (!newkey.isNull())
+        libOTR.otrl_privkey_generate_cancelled(otr.userstate, newkey);
+      throw err;
+    });
   },
 
   // write fingerprints to file synchronously
