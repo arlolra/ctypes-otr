@@ -574,8 +574,6 @@ var otr = {
       case "irc":
       case "prpl-irc":
         return 417;
-      case "twitter":
-        return 140;
       case "facebook":
       case "gtalk":
       case "odnoklassniki":
@@ -925,7 +923,9 @@ var otr = {
     if (!om.cancelled) {
       // If contact is offline, don't append whitespace tags.
       // See: https://bugs.otr.im/issues/102
-      if (isOnline(conv) === 0) {
+      if (isOnline(conv) === 0 ||
+          // Twitter trims tweets.
+          conv.account.protocol.normalizedName === "twitter") {
         let ind = msg.indexOf(libOTR.OTRL_MESSAGE_TAG_BASE);
         if (ind > -1) {
           msg = msg.substring(0, ind);
