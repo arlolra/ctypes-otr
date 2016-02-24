@@ -59,7 +59,7 @@ function isOnline(conv) {
   let ret = -1;
   if (conv.buddy)
     ret = conv.buddy.online ? 1 : 0;
-  else if (["irc", "twitter"].includes(conv.account.protocol.normalizedName))
+  else if (["irc", "twitter"].indexOf(conv.account.protocol.normalizedName) > -1)
     ret = 1;  // no presence, but we want to send the disconnect msg
   return ret;
 }
