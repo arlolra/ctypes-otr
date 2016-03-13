@@ -42,19 +42,6 @@ function trustFingerprint(fingerprint) {
     fingerprint.contents.trust.readString().length > 0);
 }
 
-function getStatus(level) {
-  switch(level) {
-  case otr.trustState.TRUST_NOT_PRIVATE:
-    return _("trust.not_private");
-  case otr.trustState.TRUST_UNVERIFIED:
-    return _("trust.unverified");
-  case otr.trustState.TRUST_PRIVATE:
-    return _("trust.private");
-  case otr.trustState.TRUST_FINISHED:
-    return _("trust.finished");
-  }
-}
-
 function isOnline(conv) {
   let ret = -1;
   if (conv.buddy)
@@ -260,6 +247,34 @@ var otr = {
     return human.readString();
   },
 
+  getTrustLevel: function(context) {
+    let best_level = otr.trustState.TRUST_NOT_PRIVATE;
+    let level = otr.trust(context);
+    if (level === otr.trustState.TRUST_PRIVATE) {
+      best_level = otr.trustState.TRUST_PRIVATE;
+    } else if (level === otr.trustState.TRUST_UNVERIFIED
+        && best_level !== otr.trustState.TRUST_PRIVATE) {
+      best_level = otr.trustState.TRUST_UNVERIFIED;
+    } else if (level === otr.trustState.TRUST_FINISHED
+        && best_level === otr.trustState.TRUST_NOT_PRIVATE) {
+      best_level = otr.trustState.TRUST_FINISHED;
+    }
+    return best_level;
+  },
+
+  getStatus: function(level) {
+    switch(level) {
+    case otr.trustState.TRUST_NOT_PRIVATE:
+      return _("trust.not_private");
+    case otr.trustState.TRUST_UNVERIFIED:
+      return _("trust.unverified");
+    case otr.trustState.TRUST_PRIVATE:
+      return _("trust.private");
+    case otr.trustState.TRUST_FINISHED:
+      return _("trust.finished");
+    }
+  },
+
   // get list of known fingerprints
   knownFingerprints: function() {
     let fps = [];
@@ -290,16 +305,7 @@ var otr = {
             context_itr.contents.active_fingerprint, fingerprint
           )) {
             used = true;
-            let level = otr.trust(new Context(context_itr));
-            if (level === otr.trustState.TRUST_PRIVATE) {
-              best_level = otr.trustState.TRUST_PRIVATE;
-            } else if (level === otr.trustState.TRUST_UNVERIFIED
-                && best_level !== otr.trustState.TRUST_PRIVATE) {
-              best_level = otr.trustState.TRUST_UNVERIFIED;
-            } else if (level === otr.trustState.TRUST_FINISHED
-                && best_level === otr.trustState.TRUST_NOT_PRIVATE) {
-              best_level = otr.trustState.TRUST_FINISHED;
-            }
+            best_level = otr.getTrustLevel(new Context(context_itr));
           }
         }
         fps.push({
@@ -309,7 +315,7 @@ var otr = {
           account: wContext.account,
           protocol: wContext.protocol,
           trust: trust,
-          status: used ? getStatus(best_level) : _("trust.unused"),
+          status: used ? otr.getStatus(best_level) : _("trust.unused"),
           purge: false,
         });
       }

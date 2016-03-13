@@ -109,8 +109,12 @@ var otrFinger = {
         finger.screenname
       );
     } catch (e) {}
-    let win = window.openDialog(authDialog, name, features, "pref", uiConv, finger);
+    let win = window.openDialog(authDialog, name, features, (uiConv ? "start" : "pref"), uiConv, finger);
     finger.trust = otr.isFingerprintTrusted(finger.fpointer);
+    if (uiConv) {
+      let context = otr.getContext(uiConv.target);
+      finger.status = otr.getStatus(otr.getTrustLevel(context));
+    }
     fingerTree.treeBoxObject.invalidateRow(row);
     fingerTreeView.selection.selectEventsSuppressed = false;
   },
