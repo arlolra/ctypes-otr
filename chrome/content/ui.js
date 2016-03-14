@@ -145,6 +145,7 @@ var ui = {
     otr.addObserver(ui);
     otr.loadFiles().then(function() {
       Services.obs.addObserver(otr, "new-ui-conversation", false);
+      Services.obs.addObserver(ui, "account-added", false);
       Services.obs.addObserver(ui, "conversation-loaded", false);
       Services.obs.addObserver(ui, "conversation-closed", false);
       Services.obs.addObserver(ui, "prpl-quit", false);
@@ -392,6 +393,15 @@ var ui = {
     Services.ww.openWindow(null, privDialog, "", features, args);
   },
 
+  onAccountCreated: function(acc) {
+    let account = acc.normalizedName;
+    let protocol = acc.protocol.normalizedName;
+    if (otr.privateKeyFingerprint(account, protocol) === null)
+      otr.generatePrivateKey(account, protocol).catch(function(err) {
+        Cu.reportError(err);
+      });
+  },
+
   observe: function(aObject, aTopic, aMsg) {
     switch(aTopic) {
     case "nsPref:changed":
@@ -440,6 +450,9 @@ var ui = {
     case "otr:log":
       ui.log("otr: " + aObject);
       break;
+    case "account-added":
+      ui.onAccountCreated(aObject);
+      break;
     }
   },
 
@@ -460,6 +473,7 @@ var ui = {
   destroy: function() {
     ui.disconnect(null);
     Services.obs.removeObserver(otr, "new-ui-conversation");
+    Services.obs.removeObserver(ui, "account-added");
     Services.obs.removeObserver(ui, "conversation-loaded");
     Services.obs.removeObserver(ui, "conversation-closed");
     Services.obs.removeObserver(ui, "prpl-quit");
