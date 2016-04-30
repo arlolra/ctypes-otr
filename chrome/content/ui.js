@@ -10,6 +10,7 @@ Cu.import("chrome://otr/content/otr.js");
 var privDialog = "chrome://otr/content/priv.xul";
 var authDialog = "chrome://otr/content/auth.xul";
 var prefsDialog = "chrome://otr/content/prefs.xul";
+var addFingerDialog = "chrome://otr/content/addfinger.xul";
 var authVerify = "otr-auth-unverified";
 
 XPCOMUtils.defineLazyGetter(this, "_", () =>
@@ -135,6 +136,48 @@ var ui = {
     Services.obs.addObserver(ui, "domwindowopened", false);
   },
 
+  addBuddyContextMenu: function() {
+    let blistWindow = Services.wm.getEnumerator("Messenger:blist");
+    while (blistWindow.hasMoreElements()) {
+      let win = blistWindow.getNext();
+      let document = win.document;
+
+      if (document.readyState !== "complete") {
+        let listen = function() {
+          win.removeEventListener("load", listen);
+          ui.addBuddyContextMenu();
+        }
+        win.addEventListener("load", listen);
+        return;
+      }
+
+      let buddyContextMenu = document.getElementById("buddyListContextMenu");
+      if (!buddyContextMenu)
+        return;
+
+      let sep = document.createElement("menuseparator");
+      let menuitem = document.createElement("menuitem");
+
+      menuitem.setAttribute("label", _("buddycontextmenu.label"));
+      menuitem.addEventListener("command", function() {
+        let target = buddyContextMenu.triggerNode;
+        if (target.localName == "contact") {
+          let contact = target.contact;
+          let args = ui.contactWrapper(contact);
+          args.wrappedJSObject = args;
+          let features = "chrome,modal,titlebar,centerscreen,resizable=no,minimizable=no";
+          Services.ww.openWindow(null, addFingerDialog, "", features, args);
+        }
+      });
+
+      buddyContextMenu.appendChild(sep);
+      buddyContextMenu.appendChild(menuitem);
+
+      ui._addedNodes.push(sep);
+      ui._addedNodes.push(menuitem);
+    }
+  },
+
   init: function() {
     setTrustMap();
     this.setPrefs();
@@ -145,6 +188,7 @@ var ui = {
     otr.addObserver(ui);
     otr.loadFiles().then(function() {
       Services.obs.addObserver(otr, "new-ui-conversation", false);
+      Services.obs.addObserver(ui, "contact-added", false);
       Services.obs.addObserver(ui, "account-added", false);
       Services.obs.addObserver(ui, "conversation-loaded", false);
       Services.obs.addObserver(ui, "conversation-closed", false);
@@ -152,6 +196,7 @@ var ui = {
       ui.prefs.addObserver("", ui, false);
       Conversations._conversations.forEach(ui.initConv);
       ui.addPrefMenus();
+      ui.addBuddyContextMenu();
     }).catch(function(err) { throw err; });
   },
 
@@ -402,6 +447,28 @@ var ui = {
       });
   },
 
+  contactWrapper: function(contact) {
+    let wrapper = {
+      account: contact.preferredBuddy.preferredAccountBuddy.account.normalizedName,
+      protocol: contact.preferredBuddy.protocol.normalizedName,
+      screenname: contact.preferredBuddy.preferredAccountBuddy.userName,
+    };
+    return wrapper;
+  },
+
+  onContactAdded: function(contact) {
+    let args = ui.contactWrapper(contact);
+    if (otr.getFingerprintsForRecipient(args.account, args.protocol, args.screenname).length > 0)
+      return;
+    args.wrappedJSObject = args;
+    let wm = Cc["@mozilla.org/appshell/window-mediator;1"]
+                   .getService(Ci.nsIWindowMediator);
+    let window = wm.getMostRecentWindow(null);
+    window.close();
+    let features = "chrome,modal,titlebar,centerscreen,resizable=no,minimizable=no";
+    Services.ww.openWindow(null, addFingerDialog, "", features, args);
+  },
+
   observe: function(aObject, aTopic, aMsg) {
     switch(aTopic) {
     case "nsPref:changed":
@@ -453,6 +520,9 @@ var ui = {
     case "account-added":
       ui.onAccountCreated(aObject);
       break;
+    case "contact-added":
+      ui.onContactAdded(aObject);
+      break;
     }
   },
 
@@ -473,6 +543,7 @@ var ui = {
   destroy: function() {
     ui.disconnect(null);
     Services.obs.removeObserver(otr, "new-ui-conversation");
+    Services.obs.removeObserver(ui, "contact-added");
     Services.obs.removeObserver(ui, "account-added");
     Services.obs.removeObserver(ui, "conversation-loaded");
     Services.obs.removeObserver(ui, "conversation-closed");

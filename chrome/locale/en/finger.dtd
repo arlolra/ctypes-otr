@@ -8,3 +8,8 @@
 <!ENTITY finger.verify "Verify">
 <!ENTITY finger.remove "Remove">
 <!ENTITY finger.intro "Manage the list of fingerprints you've seen.">
+<!ENTITY addFingerDialog.title "Add Fingerprint">
+<!ENTITY addFingerDialog.finger "Fingerprint">
+<!ENTITY addFingerDialog.accept "OK">
+<!ENTITY addFingerDialog.cancel "Skip">
+<!ENTITY addFingerDialog.tooltip "If you know the 40 hex char fingerprint of your contact's OTR private key, enter it now.">

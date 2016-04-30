@@ -354,6 +354,24 @@ var otr = {
       otr.writeFingerprints();
   },
 
+  addFingerprint: function(context, hex) {
+    let fingerprint = new libOTR.hash_t();
+    if (hex.length != 40) throw new Error("Invalid fingerprint value.");
+    let bytes = hex.match(/.{1,2}/g);
+    for (let i = 0; i < 20; i++)
+      fingerprint[i] = parseInt(bytes[i], 16);
+    return libOTR.otrl_context_find_fingerprint(context._context, fingerprint, 1, null);
+  },
+
+  getFingerprintsForRecipient: function(account, protocol, recipient) {
+    let fingers = otr.knownFingerprints();
+    return fingers.filter(function(fg) {
+      return fg.account == account &&
+             fg.protocol == protocol &&
+             fg.screenname == recipient;
+    });
+  },
+
   isFingerprintTrusted: function(fingerprint) {
     return !!libOTR.otrl_context_is_fingerprint_trusted(fingerprint);
   },

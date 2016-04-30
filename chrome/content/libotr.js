@@ -500,8 +500,8 @@ var libOTR = {
 
   // Find a fingerprint in a given context, perhaps adding it if not present.
   otrl_context_find_fingerprint: libotr.declare(
-    "otrl_context_find_fingerprint", abi, ConnContext.ptr,
-    hash_t, ctypes.int, ctypes.int.ptr
+    "otrl_context_find_fingerprint", abi, Fingerprint.ptr,
+    ConnContext.ptr, hash_t, ctypes.int, ctypes.int.ptr
   ),
 
   // Forget a fingerprint (and maybe the whole context).
@@ -623,6 +623,9 @@ var libOTR = {
 
   // Human readable fingerprint type
   fingerprint_t: fingerprint_t,
+
+  // fingerprint value
+  hash_t: hash_t,
 
   // Calculate a human-readable hash of our DSA public key. Return it in the
   // passed fingerprint buffer. Return NULL on error, or a pointer to the given
