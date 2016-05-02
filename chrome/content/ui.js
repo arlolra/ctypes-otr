@@ -17,6 +17,40 @@ XPCOMUtils.defineLazyGetter(this, "_", () =>
   l10nHelper("chrome://otr/locale/ui.properties")
 );
 
+var authLabelMap;
+function setAuthLabelMap() {
+  authLabelMap = new Map([
+    ["otr:auth-waiting", {
+      label: "otr-auth-waiting",
+      msg: _("auth.waiting")
+    }],
+    ["otr:auth-finished", {
+      label: "otr-auth-finished",
+      msg: _("auth.finished")
+    }],
+    ["otr:auth-error", {
+      label: "otr-auth-error",
+      msg: _("auth.error")
+    }],
+    ["otr:auth-success", {
+      label: "otr-auth-success",
+      msg: _("auth.success")
+    }],
+    ["otr:auth-successThem", {
+      label: "otr-auth-successThem",
+      msg: _("auth.successThem")
+    }],
+    ["otr:auth-fail", {
+      label: "otr-auth-fail",
+      msg: _("auth.fail")
+    }],
+    ["otr:auth-verifying", {
+      label: "otr-auth-verifying",
+      msg: _("auth.verifying")
+    }],
+  ]);
+}
+
 var trustMap;
 function setTrustMap() {
   trustMap = new Map([
@@ -180,6 +214,7 @@ var ui = {
 
   init: function() {
     setTrustMap();
+    setAuthLabelMap();
     this.setPrefs();
     otr.init({
       requireEncryption: ui.prefs.getBoolPref("requireEncryption"),
@@ -428,8 +463,67 @@ var ui = {
       }
     }];
 
-    let priority = notification.PRIORITY_WARNING_HIGH;
+    let priority = notification.PRIORITY_WARNING_MEDIUM;
     notification.appendNotification(msg, authVerify, null, priority, buttons, null);
+  },
+
+  notifyVerification: function(context, arg, cancelable) {
+    let cti, notification, uiConv = otr.getUIConvFromContext(context);
+    if (!Conversations._conversations.some(function(binding) {
+      if (binding._conv.id !== uiConv.id)
+        return false;
+      cti = binding.getElt("conv-top-info");
+      notification = binding.getElt("convNotificationBox");
+      return true;
+    })) return;
+
+    authLabelMap.forEach(function(key) {
+      var prevNotification = notification.getNotificationWithValue(key.label);
+      if (prevNotification)
+        prevNotification.close();
+    });
+
+    let buttons = [];
+    if (cancelable) {
+      buttons = [{
+        label: _("auth.cancel"),
+        accessKey: _("auth.cancelAccessKey"),
+        callback: function() {
+          let context = otr.getContext(uiConv.target);
+          otr.abortSMP(context);
+        }
+      }];
+    }
+    // higher priority to replace current notifyBox
+    let priority = notification.PRIORITY_WARNING_HIGH;
+    notification.appendNotification(arg.msg, arg.label, null, priority, buttons, null);
+  },
+
+  updateVerificationProgress: function(aObj) {
+    let uiConv = otr.getUIConvFromContext(aObj.context);
+    if (aObj.context.username !== uiConv.target.normalizedName)
+      return;
+
+    if (!aObj.progress) {
+      ui.notifyVerification(aObj.context, authLabelMap.get("otr:auth-error"), false);
+    } else if (aObj.progress === 100) {
+      let str;
+      if (aObj.success) {
+        if (aObj.context.trust) {
+          str = "otr:auth-success";
+          otr.notifyTrust(aObj.context);
+        } else {
+          str = "otr:auth-successThem";
+        }
+      } else {
+        str = "otr:auth-fail";
+        if (!aObj.context.trust)
+          otr.notifyTrust(aObj.context);
+      }
+      ui.notifyVerification(aObj.context, authLabelMap.get(str), false);
+    } else {
+      ui.notifyVerification(aObj.context, authLabelMap.get("otr:auth-verifying"), true);
+    }
   },
 
   generate: function(args) {
@@ -522,6 +616,11 @@ var ui = {
       break;
     case "contact-added":
       ui.onContactAdded(aObject);
+    case "otr:auth-waiting":
+      ui.notifyVerification(aObject, authLabelMap.get("otr:auth-waiting"), true);
+      break;
+    case "otr:auth-update":
+      ui.updateVerificationProgress(aObject);
       break;
     }
   },

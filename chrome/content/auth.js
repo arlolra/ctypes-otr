@@ -14,6 +14,13 @@ document.title = _("auth.title",
   (mode === "pref") ? aObject.screenname : uiConv.normalizedName);
 
 function showSection(selected, hideMenu, hideAccept) {
+  if (uiConv && selected === "waiting") {
+    otrAuth.dialogDisplaying = false;
+    let context = otr.getContext(uiConv.target);
+    otr.notifyVerification(context, "otr:auth-waiting");
+    document.documentElement.cancelDialog();
+    return;
+  }
   document.getElementById("how").hidden = !!hideMenu;
   document.documentElement.getButton("accept").hidden = !!hideAccept;
   if (selected === "finished") {
@@ -59,6 +66,7 @@ function populateFingers(context, theirs, trust) {
 
 var otrAuth = {
 
+  dialogDisplaying: true,
   waiting: false,
   finished: false,
 
@@ -137,6 +145,7 @@ var otrAuth = {
   },
 
   cancel: function() {
+    if (!otrAuth.dialogDisplaying) return;
     if (otrAuth.waiting && !otrAuth.finished) {
       let context = otr.getContext(uiConv.target);
       otr.abortSMP(context);

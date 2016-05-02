@@ -392,6 +392,10 @@ var otr = {
     this.notifyObservers(context, "otr:trust-state");
   },
 
+  notifyVerification: function(obj, msg) {
+    this.notifyObservers(obj, msg);
+  },
+
   // expose message states
   messageState: libOTR.messageState,
 
