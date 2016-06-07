@@ -392,8 +392,12 @@ var otr = {
     this.notifyObservers(context, "otr:trust-state");
   },
 
-  notifyVerification: function(obj, msg) {
-    this.notifyObservers(obj, msg);
+  authUpdate: function(context, progress, success) {
+    this.notifyObservers({
+      context: context,
+      progress: progress,
+      success: success,
+    }, "otr:auth-update");
   },
 
   // expose message states
@@ -459,7 +463,7 @@ var otr = {
       if (uiConv)
         this.removeConversation(uiConv);
     } else
-      this.notifyObservers(this.getContext(conv), "otr:msg-state");
+      this.notifyObservers(this.getContext(conv), "otr:disconnected");
   },
 
   sendQueryMsg: function(conv) {
@@ -693,11 +697,8 @@ var otr = {
     case libOTR.smpEvent.OTRL_SMPEVENT_SUCCESS:
     case libOTR.smpEvent.OTRL_SMPEVENT_FAILURE:
     case libOTR.smpEvent.OTRL_SMPEVENT_ABORT:
-      this.notifyObservers({
-        context: context,
-        progress: progress_percent,
-        success: (smp_event === libOTR.smpEvent.OTRL_SMPEVENT_SUCCESS)
-      }, "otr:auth-update");
+      this.authUpdate(context, progress_percent,
+        (smp_event === libOTR.smpEvent.OTRL_SMPEVENT_SUCCESS));
       break;
     case libOTR.smpEvent.OTRL_SMPEVENT_ERROR:
       otr.abortSMP(context);

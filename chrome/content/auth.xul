@@ -9,7 +9,6 @@
   windowtype="OTR:Auth"
   title="&authDialog.title;"
   onload="otrAuth.onload()"
-  onunload="otrAuth.onunload()"
   buttons="accept,cancel,help"
   buttonlabelaccept="&authDialog.authenticate;"
   buttonlabelcancel="&authDialog.cancel;"
@@ -63,18 +62,9 @@
     </hbox>
   </groupbox>
 
-  <groupbox id="waiting" hidden="true">
-    <caption id="waitingLabel" label="&authDialog.waiting;" />
-    <progressmeter id="progress" mode="determined" value="10" />
-  </groupbox>
-
   <groupbox id="ask" hidden="true">
     <description id="askLabel" style="width: 300px; white-space: pre-wrap;" />
     <textbox id="response" oninput="otrAuth.oninput(this)" />
-  </groupbox>
-
-  <groupbox id="finished" hidden="true">
-    <description id="finLabel" style="width: 300px; white-space: pre-wrap;" />
   </groupbox>
 
 </dialog>

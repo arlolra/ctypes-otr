@@ -11,83 +11,55 @@ var privDialog = "chrome://otr/content/priv.xul";
 var authDialog = "chrome://otr/content/auth.xul";
 var prefsDialog = "chrome://otr/content/prefs.xul";
 var addFingerDialog = "chrome://otr/content/addfinger.xul";
-var authVerify = "otr-auth-unverified";
 
 XPCOMUtils.defineLazyGetter(this, "_", () =>
   l10nHelper("chrome://otr/locale/ui.properties")
 );
 
-var authLabelMap;
-function setAuthLabelMap() {
-  authLabelMap = new Map([
-    ["otr:auth-waiting", {
-      label: "otr-auth-waiting",
-      msg: _("auth.waiting")
-    }],
-    ["otr:auth-finished", {
-      label: "otr-auth-finished",
-      msg: _("auth.finished")
-    }],
-    ["otr:auth-error", {
-      label: "otr-auth-error",
-      msg: _("auth.error")
-    }],
-    ["otr:auth-success", {
-      label: "otr-auth-success",
-      msg: _("auth.success")
-    }],
-    ["otr:auth-successThem", {
-      label: "otr-auth-successThem",
-      msg: _("auth.successThem")
-    }],
-    ["otr:auth-fail", {
-      label: "otr-auth-fail",
-      msg: _("auth.fail")
-    }],
-    ["otr:auth-verifying", {
-      label: "otr-auth-verifying",
-      msg: _("auth.verifying")
-    }],
-  ]);
-}
+var authVerify = "otr-auth-unverified";
 
-var trustMap;
-function setTrustMap() {
-  trustMap = new Map([
-    [otr.trustState.TRUST_NOT_PRIVATE, {
-      startLabel: _("start.label"),
-      authLabel: _("auth.label"),
-      disableStart: false,
-      disableEnd: true,
-      disableAuth: true,
-      class: "not_private"
-    }],
-    [otr.trustState.TRUST_UNVERIFIED, {
-      startLabel: _("refresh.label"),
-      authLabel: _("auth.label"),
-      disableStart: false,
-      disableEnd: false,
-      disableAuth: false,
-      class: "unverified"
-    }],
-    [otr.trustState.TRUST_PRIVATE, {
-      startLabel: _("refresh.label"),
-      authLabel: _("reauth.label"),
-      disableStart: false,
-      disableEnd: false,
-      disableAuth: false,
-      class: "private"
-    }],
-    [otr.trustState.TRUST_FINISHED, {
-      startLabel: _("start.label"),
-      authLabel: _("auth.label"),
-      disableStart: false,
-      disableEnd: false,
-      disableAuth: true,
-      class: "finished"
-    }]
-  ]);
-}
+var authLabelMap = new Map([
+  ["otr:auth-error", _("auth.error")],
+  ["otr:auth-success", _("auth.success")],
+  ["otr:auth-successThem", _("auth.successThem")],
+  ["otr:auth-fail", _("auth.fail")],
+  ["otr:auth-waiting", _("auth.waiting")],
+]);
+
+var trustMap = new Map([
+  [otr.trustState.TRUST_NOT_PRIVATE, {
+    startLabel: _("start.label"),
+    authLabel: _("auth.label"),
+    disableStart: false,
+    disableEnd: true,
+    disableAuth: true,
+    class: "not_private",
+  }],
+  [otr.trustState.TRUST_UNVERIFIED, {
+    startLabel: _("refresh.label"),
+    authLabel: _("auth.label"),
+    disableStart: false,
+    disableEnd: false,
+    disableAuth: false,
+    class: "unverified",
+  }],
+  [otr.trustState.TRUST_PRIVATE, {
+    startLabel: _("refresh.label"),
+    authLabel: _("reauth.label"),
+    disableStart: false,
+    disableEnd: false,
+    disableAuth: false,
+    class: "private",
+  }],
+  [otr.trustState.TRUST_FINISHED, {
+    startLabel: _("start.label"),
+    authLabel: _("auth.label"),
+    disableStart: false,
+    disableEnd: false,
+    disableAuth: true,
+    class: "finished",
+  }],
+]);
 
 var windowRefs = new Map();
 
@@ -102,8 +74,6 @@ var ui = {
   },
 
   prefs: null,
-  origAddConv: null,
-
   setPrefs: function() {
     let branch = "extensions.otr.";
     let prefs = {
@@ -213,9 +183,7 @@ var ui = {
   },
 
   init: function() {
-    setTrustMap();
-    setAuthLabelMap();
-    this.setPrefs();
+    ui.setPrefs();
     otr.init({
       requireEncryption: ui.prefs.getBoolPref("requireEncryption"),
       verifyNudge: ui.prefs.getBoolPref("verifyNudge")
@@ -313,8 +281,6 @@ var ui = {
     otrEnd.addEventListener("click", function(e) {
       e.preventDefault();
       if (!e.target.disabled) {
-        let context = otr.getContext(conv);
-        ui.closeAuth(context);
         otr.disconnect(conv, false);
         uiConv.systemMessage(_("alert.gone_insecure", conv.normalizedName));
       }
@@ -369,14 +335,25 @@ var ui = {
     uiConv.systemMessage(_("state." + trust.class, context.username));
   },
 
-  updateButton: function(context) {
-    let cti, uiConv = otr.getUIConvFromContext(context);
-    if (!Conversations._conversations.some(function(binding) {
+  getConvElements: function(context) {
+    let cti, box, uiConv = otr.getUIConvFromContext(context);
+    if (Conversations._conversations.some(function(binding) {
       if (binding._conv.id !== uiConv.id)
         return false;
       cti = binding.getElt("conv-top-info");
+      box = binding.getElt("convNotificationBox");
       return true;
-    })) return;
+    }))
+      return { cti: cti, box: box, uiConv: uiConv };
+    else
+      return null;
+  },
+
+  updateButton: function(context) {
+    let els = ui.getConvElements(context);
+    if (!els) return;
+    let { cti, box, uiConv } = els;
+
     let otrButton = cti.querySelector(".otr-button");
     let otrStart = cti.querySelector(".otr-start");
     let otrEnd = cti.querySelector(".otr-end");
@@ -407,45 +384,32 @@ var ui = {
   },
 
   askAuth: function(aObject) {
-    let cti, uiConv = otr.getUIConvFromContext(aObject.context);
-    if (!Conversations._conversations.some(function(binding) {
-      if (binding._conv.id !== uiConv.id)
-        return false;
-      cti = binding.getElt("conv-top-info");
-      return true;
-    })) return;
+    let els = ui.getConvElements(aObject.context);
+    if (!els) return;
+    let { cti, box, uiConv } = els;
+
     let window = cti.ownerDocument.defaultView;
     let otrAuth = cti.querySelector(".otr-auth");
     let name = uiConv.target.normalizedName;
     ui.openAuth(window, otrAuth, name, "ask", uiConv, aObject);
   },
 
-  closeVerify: function(context) {
-    let cti, notification, uiConv = otr.getUIConvFromContext(context);
-    if (!Conversations._conversations.some(function(binding) {
-      if (binding._conv.id !== uiConv.id)
-        return false;
-      cti = binding.getElt("conv-top-info");
-      notification = binding.getElt("convNotificationBox")
-                            .getNotificationWithValue(authVerify);
-      return true;
-    })) return;
+  closeUnverified: function(context) {
+    let els = ui.getConvElements(context);
+    if (!els) return;
+    let { cti, box, uiConv } = els;
 
+    let notification = box.getNotificationWithValue(authVerify);
     if (notification)
       notification.close();
   },
 
-  notifyBox: function(context, seen) {
-    let cti, notification, uiConv = otr.getUIConvFromContext(context);
-    if (!Conversations._conversations.some(function(binding) {
-      if (binding._conv.id !== uiConv.id)
-        return false;
-      cti = binding.getElt("conv-top-info");
-      notification = binding.getElt("convNotificationBox");
-      return true;
-    })) return;
+  notifyUnverified: function(context, seen) {
+    let els = ui.getConvElements(context);
+    if (!els) return;
+    let { cti, box, uiConv } = els;
 
-    if (notification.getNotificationWithValue(authVerify))
+    if (box.getNotificationWithValue(authVerify))
       return;
 
     let window = cti.ownerDocument.defaultView;
@@ -463,26 +427,32 @@ var ui = {
       }
     }];
 
-    let priority = notification.PRIORITY_WARNING_MEDIUM;
-    notification.appendNotification(msg, authVerify, null, priority, buttons, null);
+    let priority = box.PRIORITY_WARNING_MEDIUM;
+    box.appendNotification(msg, authVerify, null, priority, buttons, null);
   },
 
-  notifyVerification: function(context, arg, cancelable) {
-    let cti, notification, uiConv = otr.getUIConvFromContext(context);
-    if (!Conversations._conversations.some(function(binding) {
-      if (binding._conv.id !== uiConv.id)
-        return false;
-      cti = binding.getElt("conv-top-info");
-      notification = binding.getElt("convNotificationBox");
-      return true;
-    })) return;
+  closeVerification: function(context) {
+    let els = ui.getConvElements(context);
+    if (!els) return;
+    let { cti, box, uiConv } = els;
 
-    authLabelMap.forEach(function(key) {
-      var prevNotification = notification.getNotificationWithValue(key.label);
+    authLabelMap.forEach(function(_, key) {
+      var prevNotification = box.getNotificationWithValue(key);
       if (prevNotification)
         prevNotification.close();
     });
+  },
 
+  notifyVerification: function(context, key, cancelable) {
+    let els = ui.getConvElements(context);
+    if (!els) return;
+    let { cti, box, uiConv } = els;
+
+    // TODO: maybe update the .label property on the notification instead
+    // of closing it ... although, buttons need to be updated too.
+    ui.closeVerification(context);
+
+    let msg = authLabelMap.get(key);
     let buttons = [];
     if (cancelable) {
       buttons = [{
@@ -494,35 +464,36 @@ var ui = {
         }
       }];
     }
-    // higher priority to replace current notifyBox
-    let priority = notification.PRIORITY_WARNING_HIGH;
-    notification.appendNotification(arg.msg, arg.label, null, priority, buttons, null);
+
+    // higher priority to overlay the current notifyUnverified
+    let priority = box.PRIORITY_WARNING_HIGH;
+    box.appendNotification(msg, key, null, priority, buttons, null);
   },
 
-  updateVerificationProgress: function(aObj) {
+  updateAuth: function(aObj) {
     let uiConv = otr.getUIConvFromContext(aObj.context);
-    if (aObj.context.username !== uiConv.target.normalizedName)
-      return;
-
     if (!aObj.progress) {
-      ui.notifyVerification(aObj.context, authLabelMap.get("otr:auth-error"), false);
+      ui.closeAuth(aObj.context);
+      ui.notifyVerification(aObj.context, "otr:auth-error", false);
     } else if (aObj.progress === 100) {
-      let str;
+      let key;
       if (aObj.success) {
         if (aObj.context.trust) {
-          str = "otr:auth-success";
+          key = "otr:auth-success";
           otr.notifyTrust(aObj.context);
         } else {
-          str = "otr:auth-successThem";
+          key = "otr:auth-successThem";
         }
       } else {
-        str = "otr:auth-fail";
+        key = "otr:auth-fail";
         if (!aObj.context.trust)
           otr.notifyTrust(aObj.context);
       }
-      ui.notifyVerification(aObj.context, authLabelMap.get(str), false);
+      ui.notifyVerification(aObj.context, key, false);
     } else {
-      ui.notifyVerification(aObj.context, authLabelMap.get("otr:auth-verifying"), true);
+      // TODO: show the aObj.progress to the user with a
+      //   <progressmeter mode="determined" value="10" />
+      ui.notifyVerification(aObj.context, "otr:auth-waiting", true);
     }
   },
 
@@ -595,18 +566,16 @@ var ui = {
       if (aTopic === "otr:disconnected" ||
           otr.trust(aObject) !== otr.trustState.TRUST_UNVERIFIED) {
         ui.closeAuth(aObject);
-        ui.closeVerify(aObject);
+        ui.closeUnverified(aObject);
+        ui.closeVerification(aObject);
       }
       ui.updateButton(aObject);
       break;
     case "otr:unverified":
-      ui.notifyBox(aObject, aMsg);
+      ui.notifyUnverified(aObject, aMsg);
       break;
     case "otr:trust-state":
       ui.alertTrust(aObject);
-      break;
-    case "otr:auth-ask":
-      ui.askAuth(aObject);
       break;
     case "otr:log":
       ui.log("otr: " + aObject);
@@ -616,11 +585,12 @@ var ui = {
       break;
     case "contact-added":
       ui.onContactAdded(aObject);
-    case "otr:auth-waiting":
-      ui.notifyVerification(aObject, authLabelMap.get("otr:auth-waiting"), true);
+      break;
+    case "otr:auth-ask":
+      ui.askAuth(aObject);
       break;
     case "otr:auth-update":
-      ui.updateVerificationProgress(aObject);
+      ui.updateAuth(aObject);
       break;
     }
   },
