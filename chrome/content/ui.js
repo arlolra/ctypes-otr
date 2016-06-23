@@ -174,6 +174,17 @@ var ui = {
         }
       });
 
+      buddyContextMenu.addEventListener('popupshowing', function(e) {
+        let target = e.target.triggerNode;
+        if (target.localName == "contact") {
+          menuitem.hidden = false;
+          sep.hidden = false;
+        } else {
+          menuitem.hidden = true;
+          sep.hidden = true;
+        }
+      }, false);
+
       buddyContextMenu.appendChild(sep);
       buddyContextMenu.appendChild(menuitem);
 
