@@ -2,7 +2,7 @@ var isNode = (typeof process === "object");
 var isJpm = !isNode && (typeof require === "function");
 var isIb = !isNode && !isJpm;
 
-var libC, libOTR, ctypes, OS, workerPath, helpers;
+var libC, libOTR, ctypes, workerPath, helpers;
 
 if (isNode) {
   ctypes = require("ctypes");
@@ -32,7 +32,6 @@ if (isNode) {
   }
   Cu.import("resource://gre/modules/PromiseWorker.jsm");
   Cu.import("resource://gre/modules/ctypes.jsm");
-  Cu.import("resource://gre/modules/osfile.jsm");
   XPCOMUtils.defineLazyGetter(this, "_", () =>
     l10nHelper("chrome://otr/locale/otr.properties")
   );
@@ -183,17 +182,17 @@ var otr = {
   // load stored files from my profile
   loadFiles: function() {
     return Promise.all([
-      OS.File.exists(this.privateKeyPath).then((exists) => {
+      helpers.fileExists(this.privateKeyPath).then((exists) => {
         if (exists && libOTR.otrl_privkey_read(
           this.userstate, this.privateKeyPath
         )) throw new Error("Failed to read private keys.");
       }),
-      OS.File.exists(this.fingerprintsPath).then((exists) => {
+      helpers.fileExists(this.fingerprintsPath).then((exists) => {
         if (exists && libOTR.otrl_privkey_read_fingerprints(
           this.userstate, this.fingerprintsPath, null, null
         )) throw new Error("Failed to read fingerprints.");
       }),
-      OS.File.exists(this.instanceTagsPath).then((exists) => {
+      helpers.fileExists(this.instanceTagsPath).then((exists) => {
         if (exists && libOTR.otrl_instag_read(
           this.userstate, this.instanceTagsPath
         )) throw new Error("Failed to read instance tags.");

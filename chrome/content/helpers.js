@@ -28,6 +28,24 @@ var helpers = {
       yield accounts.getNext();
   },
 
+  fileExists: function(filename) {
+    return OS.File.exists(filename);
+  },
+
+  readTextFile: function(filename) {
+    let decoder = new TextDecoder();
+    return OS.File.read(filename).then(function(array) {
+      return decoder.decode(array);
+    });
+  },
+
+  writeTextFile: function(filename, data) {
+    let encoder = new TextEncoder();
+    let array = encoder.encode(data);
+    // https://dutherenverseauborddelatable.wordpress.com/2014/02/05/is-my-data-on-the-disk-safety-properties-of-os-file-writeatomic/
+    return OS.File.writeAtomic(filename, array, { tmpPath: `${filename}.tmp` });
+  },
+
 };
 
 // exports

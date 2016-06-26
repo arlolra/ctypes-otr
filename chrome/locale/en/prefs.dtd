@@ -1,5 +1,6 @@
 <!ENTITY prefs.otrPreferences "OTR Preferences">
 <!ENTITY prefs.otrLabel "OTR">
+<!ENTITY prefs.coniksLabel "CONIKS">
 <!ENTITY prefs.otrSettings "OTR Settings">
 <!ENTITY prefs.requireEncryption "Require encryption">
 <!ENTITY prefs.otrKeys "My Private Keys">
@@ -12,3 +13,10 @@
 <!ENTITY prefs.verifyNudge "Always nudge to verify your contact's identity">
 <!ENTITY prefs.emptyAccountList "No accounts configured">
 <!ENTITY prefs.generate "Generate">
+<!ENTITY prefs.coniksConnection "Connection">
+<!ENTITY prefs.coniksServerAddress "Server Address">
+<!ENTITY prefs.coniksServerPort "Port">
+<!ENTITY prefs.coniksAccountPolicy "Account Policy">
+<!ENTITY prefs.coniksPoliciesForAccount "Policies for account:">
+<!ENTITY prefs.coniksPrivateLookups "Private lookups">
+<!ENTITY prefs.coniksSignedKeyChange "Signed key change">

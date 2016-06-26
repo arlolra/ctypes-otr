@@ -6,6 +6,7 @@ Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("resource:///modules/imWindows.jsm");
 Cu.import("chrome://otr/content/otr.js");
+Cu.import("chrome://otr/content/coniks/coniks.js");
 
 var privDialog = "chrome://otr/content/priv.xul";
 var authDialog = "chrome://otr/content/auth.xul";
@@ -212,6 +213,7 @@ var ui = {
       Conversations._conversations.forEach(ui.initConv);
       ui.addPrefMenus();
       ui.addBuddyContextMenu();
+      return coniks.init();
     }).catch(function(err) { throw err; });
   },
 
@@ -519,7 +521,10 @@ var ui = {
     let account = acc.normalizedName;
     let protocol = acc.protocol.normalizedName;
     if (otr.privateKeyFingerprint(account, protocol) === null)
-      otr.generatePrivateKey(account, protocol).catch(function(err) {
+      otr.generatePrivateKey(account, protocol).then(function() {
+        if (coniks.isEnabled)
+          return coniks.onAccountCreated(acc);
+      }).catch(function(err) {
         Cu.reportError(err);
       });
   },
@@ -630,6 +635,7 @@ var ui = {
     otr.removeObserver(ui);
     otr.close();
     ui.removePrefMenus();
+    coniks.destroy();
   },
 
 };

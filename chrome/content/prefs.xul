@@ -13,6 +13,9 @@
     <preferences id="otr-preferences">
       <preference id="pref_require_encryption" name="extensions.otr.requireEncryption" type="bool" />
       <preference id="pref_verify_nudge" name="extensions.otr.verifyNudge" type="bool" />
+
+      <preference id="pref_coniks_serverAddress" name="extensions.otr.coniks.serverAddress" type="string" />
+      <preference id="pref_coniks_serverPort" name="extensions.otr.coniks.serverPort" type="string" />
     </preferences>
 
     <script type="application/javascript" src="chrome://otr/content/prefs.js" />
@@ -20,6 +23,7 @@
     <tabbox id="otrPrefs" flex="1">
       <tabs id="tabsElement">
         <tab id="otrTab" label="&prefs.otrLabel;"/>
+        <tab id="coniksTab" label="&prefs.coniksLabel;" hidden="true"/>
       </tabs>
 
       <tabpanels flex="1">
@@ -62,6 +66,37 @@
             <description>&prefs.introSettings;</description>
             <checkbox id="requireencryption" label="&prefs.requireEncryption;" preference="pref_require_encryption" />
             <checkbox id="verifynudge" label="&prefs.verifyNudge;" preference="pref_verify_nudge" />
+          </groupbox>
+        </tabpanel>
+
+        <!-- CONIKS -->
+        <tabpanel id="coniksTab" orient="vertical">
+          <groupbox>
+            <caption label="&prefs.coniksConnection;" />
+            <hbox align="baseline">
+              <label value="&prefs.coniksServerAddress;" control="name"/>
+              <textbox preference="pref_coniks_serverAddress" id="coniksServerAddress" />
+              <label value="&prefs.coniksServerPort;" control="name"/>
+              <textbox preference="pref_coniks_serverPort" id="coniksServerPort" />
+            </hbox>
+          </groupbox>
+
+          <groupbox id="coniksuser" hidden="true">
+            <caption label="&prefs.coniksAccountPolicy;" />
+            <vbox id="user-policies" width="460">
+              <hbox align="baseline">
+                <label control="coniksaccountlist" value="&prefs.coniksPoliciesForAccount;" />
+                <menulist id="coniksaccountlist" oncommand="otrPref.displayPolicies();" flex="1"></menulist>
+              </hbox>
+              <hbox align="baseline">
+                <vbox flex="1">
+                  <checkbox id="privateLookups" label="&prefs.coniksPrivateLookups;"
+                            oncommand="otrPref.updateAccountPolicy();" />
+                  <checkbox id="signedKeyChange" label="&prefs.coniksSignedKeyChange;"
+                            oncommand="otrPref.updateAccountPolicy();" />
+                </vbox>
+              </hbox>
+            </vbox>
           </groupbox>
         </tabpanel>
 
