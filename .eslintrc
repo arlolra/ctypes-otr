@@ -1,0 +1,12 @@
+{
+  "plugins": [
+    "mozilla",
+  ],
+  "env": {
+    "es6": true,
+  },
+  "rules": {
+    "indent": ["error", 2],
+    "quotes": ["error", "double"],
+  },
+}

@@ -31,11 +31,11 @@ var otrAddFinger = {
     if (finger.isNull())
       return;
     try {
-        // Ignore the return, this is just a test.
-        otr.getUIConvFromContext(context);
+      // Ignore the return, this is just a test.
+      otr.getUIConvFromContext(context);
     } catch(e) {
-        // We expect that a conversation may not have been started.
-        context = null;
+      // We expect that a conversation may not have been started.
+      context = null;
     }
     otr.setTrust(finger, true, context);
   },

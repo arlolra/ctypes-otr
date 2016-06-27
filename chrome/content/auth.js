@@ -60,29 +60,29 @@ var otrAuth = {
   onload: function() {
     let context, theirs;
     switch(mode) {
-      case "start":
-        context = otr.getContext(uiConv.target);
-        theirs = otr.hashToHuman(context.fingerprint);
-        populateFingers(context, theirs, context.trust);
-        showSection("questionAndAnswer");
-        break;
-      case "pref":
-        context = otr.getContextFromRecipient(
-          aObject.account,
-          aObject.protocol,
-          aObject.screenname
-        );
-        theirs = aObject.fingerprint;
-        populateFingers(context, theirs, aObject.trust);
-        showSection("manualVerification", true);
-        this.oninput({ value: true });
-        break;
-      case "ask":
-        document.getElementById("askLabel").textContent = aObject.question
-          ? _("auth.question", aObject.question)
-          : _("auth.secret");
-        showSection("ask", true);
-        break;
+    case "start":
+      context = otr.getContext(uiConv.target);
+      theirs = otr.hashToHuman(context.fingerprint);
+      populateFingers(context, theirs, context.trust);
+      showSection("questionAndAnswer");
+      break;
+    case "pref":
+      context = otr.getContextFromRecipient(
+        aObject.account,
+        aObject.protocol,
+        aObject.screenname
+      );
+      theirs = aObject.fingerprint;
+      populateFingers(context, theirs, aObject.trust);
+      showSection("manualVerification", true);
+      this.oninput({ value: true });
+      break;
+    case "ask":
+      document.getElementById("askLabel").textContent = aObject.question
+        ? _("auth.question", aObject.question)
+        : _("auth.secret");
+      showSection("ask", true);
+      break;
     }
   },
 
@@ -95,27 +95,27 @@ var otrAuth = {
     } else if (mode === "start") {
       let how = document.getElementById("howOption");
       switch(how.selectedItem.value) {
-        case "questionAndAnswer":
-          let question = document.getElementById("question").value;
-          let answer = document.getElementById("answer").value;
-          startSMP(context, answer, question);
-          break;
-        case "sharedSecret":
-          let secret = document.getElementById("secret").value;
-          startSMP(context, secret);
-          break;
-        case "manualVerification":
-          manualVerification(context.fingerprint, context);
-          break;
-        default:
-          throw new Error('Unreachable!');
+      case "questionAndAnswer":
+        let question = document.getElementById("question").value;
+        let answer = document.getElementById("answer").value;
+        startSMP(context, answer, question);
+        break;
+      case "sharedSecret":
+        let secret = document.getElementById("secret").value;
+        startSMP(context, secret);
+        break;
+      case "manualVerification":
+        manualVerification(context.fingerprint, context);
+        break;
+      default:
+        throw new Error("Unreachable!");
       }
     } else if (mode === "ask") {
       let response = document.getElementById("response").value;
       otr.sendResponse(context, response);
       otr.authUpdate(context, aObject.progress);
     } else {
-      throw new Error('Unreachable!');
+      throw new Error("Unreachable!");
     }
     return true;
   },

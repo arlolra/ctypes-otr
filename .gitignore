@@ -2,3 +2,5 @@
 libotr.dylib
 /libotr*
 build/
+node_modules/
+npm-debug.log

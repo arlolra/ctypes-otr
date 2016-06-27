@@ -17,7 +17,7 @@ var otrPref = {
 
   onload: function() {
     let accountList = document.getElementById("accountlist");
-    for (let acc in this.getAccounts()) {
+    for (let acc of this.getAccounts()) {
       let menuItem = accountList.appendItem(
         `${acc.normalizedName} (${otr.protocolName(acc.protocol.normalizedName)})`,
         acc.id
@@ -40,7 +40,7 @@ var otrPref = {
     }
   },
 
-  getAccounts: function am_getAccounts() {
+  getAccounts: function* () {
     let accounts = Services.accounts.getAccounts();
     while (accounts.hasMoreElements())
       yield accounts.getNext();

@@ -21,12 +21,12 @@ var fingerTreeView = {
   getCellText: function(row, column) {
     let finger = fingers[row];
     switch(column.id) {
-      case "verified":
-        return finger.trust ? _("verified.yes") : _("verified.no");
-      case "protocol":
-        return otr.protocolName(finger.protocol);
-      default:
-        return finger[column.id] || "";
+    case "verified":
+      return finger.trust ? _("verified.yes") : _("verified.no");
+    case "protocol":
+      return otr.protocolName(finger.protocol);
+    default:
+      return finger[column.id] || "";
     }
   },
   isSeparator: function(index) { return false; },

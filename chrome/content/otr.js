@@ -603,30 +603,30 @@ var otr = {
     context = new Context(context);
     // These values are, for the most part, from pidgin-otr's mms_table.
     switch(context.protocol) {
-      case "irc":
-      case "prpl-irc":
-        return 417;
-      case "facebook":
-      case "gtalk":
-      case "odnoklassniki":
-      case "jabber":
-      case "xmpp":
-        return 65536;
-      case "prpl-yahoo":
-        return 799;
-      case "prpl-msn":
-        return 1409;
-      case "prpl-icq":
-        return 2346;
-      case "prpl-gg":
-        return 1999;
-      case "prpl-aim":
-      case "prpl-oscar":
-        return 2343;
-      case "prpl-novell":
-        return 1792;
-      default:
-        return 0;
+    case "irc":
+    case "prpl-irc":
+      return 417;
+    case "facebook":
+    case "gtalk":
+    case "odnoklassniki":
+    case "jabber":
+    case "xmpp":
+      return 65536;
+    case "prpl-yahoo":
+      return 799;
+    case "prpl-msn":
+      return 1409;
+    case "prpl-icq":
+      return 2346;
+    case "prpl-gg":
+      return 1999;
+    case "prpl-aim":
+    case "prpl-oscar":
+      return 2343;
+    case "prpl-novell":
+      return 1792;
+    default:
+      return 0;
     }
   },
 
@@ -1041,7 +1041,7 @@ var otr = {
   },
 
   notifyObservers: function(aSubject, aTopic, aData) {
-    for each (let observer in this._observers) {
+    for (let observer of this._observers) {
       observer.observe(aSubject, aTopic, aData);
     }
   },

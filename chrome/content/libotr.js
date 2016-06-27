@@ -11,23 +11,23 @@ var abi = ctypes.default_abi;
 var libcAbi, libcPath, strdup;
 var OS = Services.appinfo.OS;
 switch(OS) {
-  case "WINNT":
-    libcAbi = ctypes.winapi_abi;
-    libcPath = ctypes.libraryName("msvcrt");
-    strdup = "_strdup";
-    break;
-  case "Darwin":
-    libcAbi = ctypes.default_abi;
-    libcPath = ctypes.libraryName("c");
-    strdup = "strdup";
-    break;
-  case "Linux":
-    libcAbi = ctypes.default_abi;
-    libcPath = "libc.so.6";
-    strdup = "strdup";
-    break;
-  default:
-    throw new Error("Unknown OS");
+case "WINNT":
+  libcAbi = ctypes.winapi_abi;
+  libcPath = ctypes.libraryName("msvcrt");
+  strdup = "_strdup";
+  break;
+case "Darwin":
+  libcAbi = ctypes.default_abi;
+  libcPath = ctypes.libraryName("c");
+  strdup = "strdup";
+  break;
+case "Linux":
+  libcAbi = ctypes.default_abi;
+  libcPath = "libc.so.6";
+  strdup = "strdup";
+  break;
+default:
+  throw new Error("Unknown OS");
 }
 
 // Open libotr. Determine the path to the chrome directory and look for it

@@ -1,0 +1,22 @@
+{
+  "name": "ctypes-otr",
+  "version": "0.0.0+git",
+  "description": "js-ctypes wrapper for libotr",
+  "main": "",
+  "scripts": {
+    "lint": "eslint --ext .js ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arlolra/ctypes-otr.git"
+  },
+  "author": "Arlo Breault <arlolra@gmail.com>",
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/arlolra/ctypes-otr/issues"
+  },
+  "devDependencies": {
+    "eslint": "^2.13.1",
+    "eslint-plugin-mozilla": "0.0.3"
+  }
+}
