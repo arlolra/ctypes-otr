@@ -1,7 +1,30 @@
 language: node_js
 
+sudo: required
+dist: trusty
+
 node_js:
-    - "6"
+  - "6"
+
+addons:
+  firefox: latest-esr
+
+env: DISPLAY=":99.0" IN_TRAVIS="1"
+
+install:
+  - sudo apt-get update
+  - sudo apt-get install -qq libotr5-dev rng-tools
+  - npm install
+
+before_script:
+  - sudo rm -f /dev/random
+  - sudo mknod -m 0666 /dev/random c 1 9
+  - echo HRNGDEVICE=/dev/urandom | sudo tee /etc/default/rng-tools
+  - sudo /etc/init.d/rng-tools restart
+  - sh -e /etc/init.d/xvfb start
+  - sleep 3
 
 script:
-    npm run lint
+  - npm run lint
+  - npm run mocha
+  - npm run jpm-travis

@@ -1,40 +1,35 @@
-this.EXPORTED_SYMBOLS = ["libOTR", "libC"];
+var isNode = (typeof process === "object");
+var isJpm = !isNode && (typeof require === "function");
 
-var { interfaces: Ci, utils: Cu, classes: Cc } = Components;
+var ctypes, OS;
+var otrl_version = [4, 1, 0];
 
-Cu.import("resource://gre/modules/ctypes.jsm");
-Cu.import("resource://gre/modules/Services.jsm");
+if (isNode) {
+  ctypes = require("ctypes");
+  // FIXME: This isn't implemented upstream yet.
+  ctypes.size_t = ctypes.unsigned_int;
+  OS = process.platform;
+} else {
+  var Ci, Cu, Cc;
+  if (isJpm) {
+    ({ Ci, Cu, Cc } = require("chrome"));
+    if (require("sdk/system").env.IN_TRAVIS)
+      otrl_version = [4, 0, 0];  // 4.1 isn't available in trusty
+  } else {
+    ({ interfaces: Ci, utils: Cu, classes: Cc } = Components);
+  }
+  Cu.import("resource://gre/modules/ctypes.jsm");
+  Cu.import("resource://gre/modules/Services.jsm");
+  OS = Services.appinfo.OS.toLowerCase();
+}
 
 var abi = ctypes.default_abi;
-
-// Set the abi and path to libc based on the OS.
-var libcAbi, libcPath, strdup;
-var OS = Services.appinfo.OS;
-switch(OS) {
-case "WINNT":
-  libcAbi = ctypes.winapi_abi;
-  libcPath = ctypes.libraryName("msvcrt");
-  strdup = "_strdup";
-  break;
-case "Darwin":
-  libcAbi = ctypes.default_abi;
-  libcPath = ctypes.libraryName("c");
-  strdup = "strdup";
-  break;
-case "Linux":
-  libcAbi = ctypes.default_abi;
-  libcPath = "libc.so.6";
-  strdup = "strdup";
-  break;
-default:
-  throw new Error("Unknown OS");
-}
 
 // Open libotr. Determine the path to the chrome directory and look for it
 // there first. If not, fallback to searching the standard locations.
 var libotr, libotrPath;
 try {
-  // try in chrome
+  // try in chrome ... this'll throw in node
   let uri = "chrome://otr/content/" + ctypes.libraryName("otr");
   let chromeReg = Cc["@mozilla.org/chrome/chrome-registry;1"].getService(Ci.nsIXULChromeRegistry);
   uri = chromeReg.convertChromeURL(Services.io.newURI(uri, null, null));
@@ -49,7 +44,7 @@ try {
 // Helper function to open files with the path properly encoded.
 var callWithFILEp = function() {
   // Windows filenames are in UTF-16.
-  var charType = (OS === "WINNT") ? "jschar" : "char";
+  var charType = (OS === "winnt") ? "jschar" : "char";
 
   var args = Array.from(arguments);
   var func = args.shift() + "_FILEp";
@@ -364,7 +359,7 @@ var libOTR = {
   path: libotrPath,
 
   // libotr API version
-  otrl_version: [4, 1, 0],
+  otrl_version: otrl_version,
 
   init: function() {
     // apply version array as arguments to the init function
@@ -856,7 +851,35 @@ var libOTR = {
 
 };
 
+
 // libc
+
+// Set the abi and path to libc based on the OS.
+var libcAbi, libcPath;
+var strdup = "strdup";
+var fopen = "fopen";
+var fname_t = ctypes.char.ptr;
+
+switch(OS) {
+case "win32":
+case "winnt":
+  libcAbi = ctypes.winapi_abi;
+  libcPath = ctypes.libraryName("msvcrt");
+  strdup = "_strdup";
+  fopen = "_wfopen";
+  fname_t = wchar_t.ptr;
+  break;
+case "darwin":
+  libcAbi = ctypes.default_abi;
+  libcPath = ctypes.libraryName("c");
+  break;
+case "linux":
+  libcAbi = ctypes.default_abi;
+  libcPath = "libc.so.6";
+  break;
+default:
+  throw new Error("Unknown OS");
+}
 
 var libc = ctypes.open(libcPath);
 
@@ -879,18 +902,21 @@ var libC = {
     "fclose", libcAbi, ctypes.int,
     FILE.ptr
   ),
+  fopen: libc.declare(
+    fopen, libcAbi, FILE.ptr,
+    fname_t,
+    fname_t
+  ),
 };
 
-if (OS === "WINNT") {
-  libC.fopen = libc.declare(
-    "_wfopen", libcAbi, FILE.ptr,
-    wchar_t.ptr,
-    wchar_t.ptr
-  );
+
+// exports
+
+if (isNode) {
+  module.exports = { libOTR: libOTR, libC: libC };
+} else if (isJpm) {
+  exports.libOTR = libOTR;
+  exports.libC = libC;
 } else {
-  libC.fopen = libc.declare(
-    "fopen", libcAbi, FILE.ptr,
-    ctypes.char.ptr,
-    ctypes.char.ptr
-  );
+  this.EXPORTED_SYMBOLS = ["libOTR", "libC"];
 }

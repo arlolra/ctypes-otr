@@ -1,0 +1,10 @@
+{
+  "name": "addon",
+  "version": "0.0.0+git",
+  "description": "",
+  "main": "../chrome/content/libotr.js",
+  "engines": {
+    "firefox": ">=38.0a1"
+  },
+  "license": "MPL-2.0"
+}

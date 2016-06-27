@@ -2,9 +2,13 @@
   "name": "ctypes-otr",
   "version": "0.0.0+git",
   "description": "js-ctypes wrapper for libotr",
-  "main": "",
+  "main": "chrome/content/otr.js",
   "scripts": {
-    "lint": "eslint --ext .js ."
+    "jpm": "jpm --addon-dir addon/ test",
+    "jpm-travis": "jpm --addon-dir addon/ --binary `which firefox` test",
+    "lint": "eslint --ext .js .",
+    "mocha": "mocha --opts test/mocha.opts test/",
+    "test": "npm run lint && npm run mocha && npm run jpm"
   },
   "repository": {
     "type": "git",
@@ -15,8 +19,13 @@
   "bugs": {
     "url": "https://github.com/arlolra/ctypes-otr/issues"
   },
+  "dependencies": {
+    "ctypes": "git+https://github.com/TooTallNate/node-ctypes#987ba78db449c402ea4d86a831adb01b455e9209"
+  },
   "devDependencies": {
     "eslint": "^2.13.1",
-    "eslint-plugin-mozilla": "0.0.3"
+    "eslint-plugin-mozilla": "^0.0.3",
+    "jpm": "^1.0.7",
+    "mocha": "^2.5.3"
   }
 }

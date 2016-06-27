@@ -1,17 +1,31 @@
-this.EXPORTED_SYMBOLS = ["otr"];
+var isNode = (typeof process === "object");
+var isJpm = !isNode && (typeof require === "function");
 
-var { interfaces: Ci, utils: Cu, classes: Cc } = Components;
+var libOTR, libOTC, OS;
 
-Cu.import("resource:///modules/imServices.jsm");
-Cu.import("resource:///modules/imXPCOMUtils.jsm");
-Cu.import("resource://gre/modules/PromiseWorker.jsm");
-Cu.import("resource://gre/modules/ctypes.jsm");
-Cu.import("resource://gre/modules/osfile.jsm");
-Cu.import("chrome://otr/content/libotr.js");
+if (isNode) {
+  ({ libOTR, libC } = require("./libotr.js"));
+  var path = require("path");
+} else {
+  var Ci, Cu, Cc;
+  if (isJpm) {
+    ({ Ci, Cu, Cc } = require("chrome"));
+  } else {
+    ({ interfaces: Ci, utils: Cu, classes: Cc } = Components);
+  }
 
-XPCOMUtils.defineLazyGetter(this, "_", () =>
-  l10nHelper("chrome://otr/locale/otr.properties")
-);
+  Cu.import("resource:///modules/imServices.jsm");
+  Cu.import("resource:///modules/imXPCOMUtils.jsm");
+  Cu.import("resource://gre/modules/PromiseWorker.jsm");
+  Cu.import("resource://gre/modules/ctypes.jsm");
+  Cu.import("resource://gre/modules/osfile.jsm");
+  Cu.import("chrome://otr/content/libotr.js");
+
+  XPCOMUtils.defineLazyGetter(this, "_", () =>
+    l10nHelper("chrome://otr/locale/otr.properties")
+  );
+}
+
 
 // some helpers
 
@@ -26,7 +40,9 @@ function clearInterval(timer) {
 }
 
 function profilePath(filename) {
-  return OS.Path.join(OS.Constants.Path.profileDir, filename);
+  return isNode ?
+    path.resolve(__dirname, filename) :
+    OS.Path.join(OS.Constants.Path.profileDir, filename);
 }
 
 // See: https://developer.mozilla.org/en-US/docs/Mozilla/js-ctypes/Using_js-ctypes/Working_with_data#Determining_if_two_pointers_are_equal
@@ -65,6 +81,7 @@ function protocolName(aNormalizedName) {
   return names.get(aNormalizedName) || aNormalizedName;
 }
 
+
 // libotr context wrapper
 
 function Context(context) {
@@ -80,6 +97,7 @@ Context.prototype = {
   get fingerprint() { return this._context.contents.active_fingerprint; },
   get trust() { return trustFingerprint(this.fingerprint); },
 };
+
 
 // otr module
 
@@ -1078,3 +1096,12 @@ var otr = {
   }
 
 };
+
+
+// exports
+
+if (isNode) {
+  module.exports = otr;
+} else {
+  this.EXPORTED_SYMBOLS = ["otr"];
+}
