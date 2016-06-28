@@ -1,5 +1,6 @@
 var isNode = (typeof process === "object");
 var isJpm = !isNode && (typeof require === "function");
+var isIb = !isNode && !isJpm;
 
 var libC, libOTR, ctypes, OS;
 
@@ -11,23 +12,22 @@ if (isNode) {
   libOTR = require("./libotr.js");
   var path = require("path");
 } else {
-  var Ci, Cu, Cc;
+  var Ci, Cu, Cc, XPCOMUtils, l10nHelper;
   if (isJpm) {
     ({ Ci, Cu, Cc } = require("chrome"));
     ({ libC } = require("./libc.js"));
     ({ libOTR } = require("./libotr.js"));
+    ({ XPCOMUtils, l10nHelper } = require("./imXPCOMUtils.js"));
   } else {
     ({ interfaces: Ci, utils: Cu, classes: Cc } = Components);
     Cu.import("chrome://otr/content/libc.js");
     Cu.import("chrome://otr/content/libotr.js");
+    Cu.import("resource:///modules/imServices.jsm");
+    Cu.import("resource:///modules/imXPCOMUtils.jsm");
   }
-
-  Cu.import("resource:///modules/imServices.jsm");
-  Cu.import("resource:///modules/imXPCOMUtils.jsm");
   Cu.import("resource://gre/modules/PromiseWorker.jsm");
   Cu.import("resource://gre/modules/ctypes.jsm");
   Cu.import("resource://gre/modules/osfile.jsm");
-
   XPCOMUtils.defineLazyGetter(this, "_", () =>
     l10nHelper("chrome://otr/locale/otr.properties")
   );
@@ -129,8 +129,10 @@ var otr = {
 
     this.verifyNudge = !!opts.verifyNudge;
     this.setPolicy(opts.requireEncryption);
-    this.registerCommands();
     this.userstate = libOTR.otrl_userstate_create();
+
+    if (isIb)
+      this.registerCommands();
 
     // A map of UIConvs, keyed on the target.id
     this._convos = new Map();
@@ -1109,6 +1111,8 @@ var otr = {
 
 if (isNode) {
   module.exports = otr;
+} else if (isJpm) {
+  exports.otr = otr;
 } else {
   this.EXPORTED_SYMBOLS = ["otr"];
 }
