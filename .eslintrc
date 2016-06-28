@@ -1,4 +1,5 @@
 {
+  "extends": "eslint:recommended",
   "plugins": [
     "mozilla",
   ],
@@ -8,5 +9,12 @@
   "rules": {
     "indent": ["error", 2],
     "quotes": ["error", "double"],
+
+    // for now ...
+    "no-unused-vars": ["off"],
+    "no-undef": ["off"],
+    "comma-dangle": ["off"],
+    "no-empty": ["off"],
+    "no-case-declarations": ["off"],
   },
 }

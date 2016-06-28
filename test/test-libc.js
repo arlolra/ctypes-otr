@@ -1,10 +1,11 @@
 var isNode = (typeof process === "object");
+var libC, ctypes;
 
 if (isNode) {
-  var libC = require("../chrome/content/libc.js");
-  var ctypes = require("ctypes");
+  libC = require("../chrome/content/libc.js");
+  ctypes = require("ctypes");
 } else {
-  var { libC } = require("../libc.js");
+  ({ libC } = require("../libc.js"));
   var { Cu } = require("chrome");
   Cu.import("resource://gre/modules/ctypes.jsm");
 }

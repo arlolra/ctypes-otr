@@ -1,10 +1,11 @@
 var isNode = (typeof process === "object");
+var libOTR, ctypes;
 
 if (isNode) {
-  var libOTR = require("../chrome/content/libotr.js");
-  var ctypes = require("ctypes");
+  libOTR = require("../chrome/content/libotr.js");
+  ctypes = require("ctypes");
 } else {
-  var { libOTR } = require("../libotr.js");
+  ({ libOTR } = require("../libotr.js"));
   var { Cu } = require("chrome");
   Cu.import("resource://gre/modules/ctypes.jsm");
 }

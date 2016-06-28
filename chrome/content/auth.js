@@ -52,7 +52,7 @@ function populateFingers(context, theirs, trust) {
       opts.selectedItem = item;
       break;
     }
-  };
+  }
 }
 
 var otrAuth = {
