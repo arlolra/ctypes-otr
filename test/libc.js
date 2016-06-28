@@ -1,7 +1,6 @@
 var assert = require("assert");
 var ctypes = require("ctypes");
-
-var { libC } = require("../chrome/content/libotr.js");
+var libC = require("../chrome/content/libc.js");
 
 function fromStr(str) {
   var arr = str.split("").concat("\0");
@@ -15,5 +14,6 @@ describe.skip("libc", function() {
     var dup = libC.strdup(t);
     assert.ok(!dup.isNull());
     assert.equal(dup.readString(), str);
+    libC.free(dup);
   });
 });

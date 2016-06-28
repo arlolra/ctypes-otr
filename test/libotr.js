@@ -1,7 +1,6 @@
 var assert = require("assert");
 var ctypes = require("ctypes");
-
-var { libOTR } = require("../chrome/content/libotr.js");
+var libOTR = require("../chrome/content/libotr.js");
 
 // FIXME: node-ctypes doesn't convert strings automatically as in,
 // https://developer.mozilla.org/en-US/docs/Mozilla/js-ctypes/Using_js-ctypes/Working_with_data#Using_strings_with_C_functions

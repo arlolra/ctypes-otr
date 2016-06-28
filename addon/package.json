@@ -2,7 +2,7 @@
   "name": "addon",
   "version": "0.0.0+git",
   "description": "",
-  "main": "../chrome/content/libotr.js",
+  "main": "./libotr.js",
   "engines": {
     "firefox": ">=38.0a1"
   },

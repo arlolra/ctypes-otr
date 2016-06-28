@@ -1,17 +1,25 @@
 var isNode = (typeof process === "object");
 var isJpm = !isNode && (typeof require === "function");
 
-var libOTR, libOTC, OS;
+var libC, libOTR, ctypes, OS;
 
 if (isNode) {
-  ({ libOTR, libC } = require("./libotr.js"));
+  ctypes = require("ctypes");
+  // FIXME: This isn't implemented upstream yet.
+  ctypes.size_t = ctypes.unsigned_int;
+  libC = require("./libc.js");
+  libOTR = require("./libotr.js");
   var path = require("path");
 } else {
   var Ci, Cu, Cc;
   if (isJpm) {
     ({ Ci, Cu, Cc } = require("chrome"));
+    ({ libC } = require("./libc.js"));
+    ({ libOTR } = require("./libotr.js"));
   } else {
     ({ interfaces: Ci, utils: Cu, classes: Cc } = Components);
+    Cu.import("chrome://otr/content/libc.js");
+    Cu.import("chrome://otr/content/libotr.js");
   }
 
   Cu.import("resource:///modules/imServices.jsm");
@@ -19,7 +27,6 @@ if (isNode) {
   Cu.import("resource://gre/modules/PromiseWorker.jsm");
   Cu.import("resource://gre/modules/ctypes.jsm");
   Cu.import("resource://gre/modules/osfile.jsm");
-  Cu.import("chrome://otr/content/libotr.js");
 
   XPCOMUtils.defineLazyGetter(this, "_", () =>
     l10nHelper("chrome://otr/locale/otr.properties")
