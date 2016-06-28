@@ -1,22 +1,23 @@
 var isNode = (typeof process === "object");
 var isJpm = !isNode && (typeof require === "function");
 
+var inTravis = false;
 var libC, ctypes, OS;
-var otrl_version = [4, 1, 0];
+var otrl_version = [4, 1, 1];
 
 if (isNode) {
   ctypes = require("ctypes");
   // FIXME: This isn't implemented upstream yet.
   ctypes.size_t = ctypes.unsigned_int;
   libC = require("./libc.js");
+  inTravis = !!process.env.IN_TRAVIS;
   OS = process.platform;
 } else {
   var Ci, Cu, Cc;
   if (isJpm) {
     ({ Ci, Cu, Cc } = require("chrome"));
     ({ libC } = require("./libc.js"));
-    if (require("sdk/system").env.IN_TRAVIS)
-      otrl_version = [4, 0, 0];  // 4.1 isn't available in trusty
+    inTravis = !!require("sdk/system").env.IN_TRAVIS;
   } else {
     ({ interfaces: Ci, utils: Cu, classes: Cc } = Components);
     Cu.import("chrome://otr/content/libc.js");
@@ -25,6 +26,9 @@ if (isNode) {
   Cu.import("resource://gre/modules/Services.jsm");
   OS = Services.appinfo.OS.toLowerCase();
 }
+
+if (inTravis)
+  otrl_version = [4, 0, 0];  // 4.1.1 isn't available in trusty
 
 var abi = ctypes.default_abi;
 
