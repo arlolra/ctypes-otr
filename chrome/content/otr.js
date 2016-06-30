@@ -2,7 +2,7 @@ var isNode = (typeof process === "object");
 var isJpm = !isNode && (typeof require === "function");
 var isIb = !isNode && !isJpm;
 
-var libC, libOTR, ctypes, OS;
+var libC, libOTR, ctypes, OS, workerPath;
 
 if (isNode) {
   ctypes = require("ctypes");
@@ -18,10 +18,12 @@ if (isNode) {
     ({ libC } = require("./libc.js"));
     ({ libOTR } = require("./libotr.js"));
     ({ XPCOMUtils, l10nHelper } = require("./imXPCOMUtils.js"));
+    workerPath = "resource://addon/worker.js";
   } else {
     ({ interfaces: Ci, utils: Cu, classes: Cc } = Components);
     Cu.import("chrome://otr/content/libc.js");
     Cu.import("chrome://otr/content/libotr.js");
+    workerPath = "chrome://otr/content/worker.js";
     Cu.import("resource:///modules/imServices.jsm");
     Cu.import("resource:///modules/imXPCOMUtils.jsm");
   }
@@ -226,7 +228,7 @@ var otr = {
     );
     if (err || newkey.isNull())
       return Promise.reject("otrl_privkey_generate_start (" + err + ")");
-    let worker = new BasePromiseWorker("chrome://otr/content/worker.js");
+    let worker = new BasePromiseWorker(workerPath);
     return worker.post("generateKey", [
       libOTR.path, libOTR.otrl_version, newkey.toSource()
     ]).then(function() {

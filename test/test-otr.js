@@ -13,13 +13,15 @@ function FakeConv(sendMsg) {
   this.sendMsg = sendMsg;
 }
 
-exports["test otr init"] = function(assert) {
+// Note these tests seem to be run by jpm in lexical order.
+
+exports["test 01 otr init"] = function(assert) {
   assert.ok(!otr.hasRan);
   otr.init();
   assert.ok(otr.hasRan);
 };
 
-exports["test send query message"] = function(assert) {
+exports["test 02 send query message"] = function(assert) {
   var msg;
   var sendMsg = function(_msg) { msg = _msg; };
   var conv = new FakeConv(sendMsg);
@@ -29,6 +31,16 @@ exports["test send query message"] = function(assert) {
     "See http://otr.cypherpunks.ca/ for more information.";
   otr.sendQueryMsg(conv);
   assert.equal(msg, query);
+};
+
+exports["test 03 generate a key"] = function(assert, done) {
+  var account = "test1";
+  var protocol = "protocol1";
+  assert.equal(otr.privateKeyFingerprint(account, protocol), null);
+  otr.generatePrivateKey(account, protocol).then(function() {
+    assert.notEqual(otr.privateKeyFingerprint(account, protocol), null);
+    done();
+  });
 };
 
 

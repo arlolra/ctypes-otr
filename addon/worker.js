@@ -1,0 +1,1 @@
+../chrome/content/worker.js
