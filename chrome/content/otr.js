@@ -285,6 +285,24 @@ var otr = {
     return human.readString();
   },
 
+  base64encode: function(data, dataLen) {
+    // CData objects are initialized with zeroes.  The plus one gives us
+    // our null byte so that readString below is safe.
+    let buf = ctypes.char.array(Math.floor((dataLen+2)/3)*4 + 1)();
+    let size = libOTR.otrl_base64_encode(buf, data, dataLen);
+    return buf.readString();  // str
+  },
+
+  base64decode: function(str) {
+    let size = str.length;
+    // +1 here so that we're safe in calling readString on data in the tests.
+    let data = ctypes.unsigned_char.array(Math.floor((size+3)/4)*3 + 1)();
+    let dataLen = libOTR.otrl_base64_decode(data, str, size);
+    // We aren't returning the dataLen since we know the hash length in our
+    // one use case so far.
+    return data;
+  },
+
   getTrustLevel: function(context) {
     let best_level = otr.trustState.TRUST_NOT_PRIVATE;
     let level = otr.trust(context);

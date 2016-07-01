@@ -464,6 +464,26 @@ var libOTR = {
     OTRL_AUTHSTATE_V1_SETUP: 4
   },
 
+  // b64.h
+
+  // base64 encode data.  Insert no linebreaks or whitespace.
+  // The buffer base64data must contain at least ((datalen+2)/3)*4 bytes of
+  // space. This function will return the number of bytes actually used.
+  otrl_base64_encode: libotr.declare(
+    "otrl_base64_encode", abi, ctypes.size_t,
+    ctypes.char.ptr, ctypes.unsigned_char.ptr, ctypes.size_t
+  ),
+
+  // base64 decode data.  Skip non-base64 chars, and terminate at the
+  // first '=', or the end of the buffer.
+  // The buffer data must contain at least ((base64len+3) / 4) * 3 bytes
+  // of space. This function will return the number of bytes actually
+  // used.
+  otrl_base64_decode: libotr.declare(
+    "otrl_base64_decode", abi, ctypes.size_t,
+    ctypes.unsigned_char.ptr, ctypes.char.ptr, ctypes.size_t
+  ),
+
   // context.h
 
   otr_offer: {

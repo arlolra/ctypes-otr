@@ -50,6 +50,16 @@ exports["test 04 get fingerprint raw"] = function(assert) {
   assert.ok(!raw.isNull());
 };
 
+exports["test 05 base64 encode & decode"] = function(assert) {
+  var decoded = ["", "f", "fo", "foo", "foob", "fooba", "foobar"];
+  var encoded = ["", "Zg==", "Zm8=", "Zm9v", "Zm9vYg==", "Zm9vYmE=", "Zm9vYmFy"];
+  for (var i = decoded.length - 1; i >= 0; i--) {
+    var str = otr.base64encode(decoded[i], decoded[i].length);
+    assert.equal(str, encoded[i]);
+    var data = otr.base64decode(encoded[i]);
+    assert.equal(data.readString(), decoded[i]);
+  }
+};
 
 if (isNode) {
   describe.skip("otr", function() {
