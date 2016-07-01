@@ -43,6 +43,13 @@ exports["test 03 generate a key"] = function(assert, done) {
   });
 };
 
+exports["test 04 get fingerprint raw"] = function(assert) {
+  var account = "test1";
+  var protocol = "protocol1";
+  var raw = otr.privateKeyFingerprintRaw(account, protocol);
+  assert.ok(!raw.isNull());
+};
+
 
 if (isNode) {
   describe.skip("otr", function() {

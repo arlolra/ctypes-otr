@@ -266,6 +266,15 @@ var otr = {
     return fingerprint.isNull() ? null : fingerprint.readString();
   },
 
+  // get my raw fingerprint
+  privateKeyFingerprintRaw: function(account, protocol) {
+    let hash = libOTR.otrl_privkey_fingerprint_raw(
+      this.userstate, new libOTR.hash_t(), account, protocol);
+    if (hash.isNull())
+      throw Error("No fingerprint found.");
+    return hash;
+  },
+
   // return a human readable string for a fingerprint
   hashToHuman: function(fingerprint) {
     let hash = fingerprint.contents.fingerprint;

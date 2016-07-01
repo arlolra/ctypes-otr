@@ -643,6 +643,14 @@ var libOTR = {
     fingerprint_t, hash_t
   ),
 
+  // Calculate a raw hash of our DSA public key.  Return it in the passed
+  // fingerprint buffer.  Return NULL on error, or a pointer to the given
+  // buffer on success.
+  otrl_privkey_fingerprint_raw: libotr.declare(
+    "otrl_privkey_fingerprint_raw", abi, ctypes.unsigned_char.ptr,
+    OtrlUserState, hash_t, ctypes.char.ptr, ctypes.char.ptr
+  ),
+
   // uiOps callbacks
   policy_cb_t: policy_cb_t,
   create_privkey_cb_t: create_privkey_cb_t,
