@@ -9,6 +9,8 @@
   "rules": {
     "indent": ["error", 2],
     "quotes": ["error", "double"],
+    "no-trailing-spaces": ["error"],
+    "semi": ["error", "always"],
 
     // for now ...
     "no-unused-vars": ["off"],

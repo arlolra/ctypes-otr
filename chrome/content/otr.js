@@ -213,7 +213,7 @@ var otr = {
       cmd.QueryInterface = XPCOMUtils.generateQI([Ci.imICommand]);
       // don't replace the former command by specifying a protocol id
       Services.cmd.registerCommand(cmd);
-    })
+    });
   },
 
   unregisterCommands: function() {
@@ -409,7 +409,7 @@ var otr = {
   setTrust: function(fingerprint, trust, context) {
     // ignore if no change in trust
     if (context && (trust === context.trust))
-      return
+      return;
     libOTR.otrl_context_set_trust(fingerprint, trust ? "verified" : "");
     this.writeFingerprints();
     if (context)
@@ -488,7 +488,7 @@ var otr = {
       libOTR.instag.OTRL_INSTAG_BEST
     );
     if (remove) {
-      let uiConv = this.getUIConvFromConv(conv)
+      let uiConv = this.getUIConvFromConv(conv);
       if (uiConv)
         this.removeConversation(uiConv);
     } else

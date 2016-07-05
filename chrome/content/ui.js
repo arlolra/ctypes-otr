@@ -98,7 +98,7 @@ var ui = {
       let listen = function() {
         win.removeEventListener("load", listen);
         ui.addPrefMenu(win);
-      }
+      };
       win.addEventListener("load", listen);
       return;
     }
@@ -150,7 +150,7 @@ var ui = {
         let listen = function() {
           win.removeEventListener("load", listen);
           ui.addBuddyContextMenu();
-        }
+        };
         win.addEventListener("load", listen);
         return;
       }
