@@ -1,6 +1,8 @@
 .DS_Store
 libotr.dylib
-/libotr*
+libotr.so
+libconiks.dylib
+libconiks.so
 build/
 node_modules/
 npm-debug.log

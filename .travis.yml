@@ -9,12 +9,13 @@ node_js:
 addons:
   firefox: latest-esr
 
-env: DISPLAY=":99.0" IN_TRAVIS="1"
+env: DISPLAY=":99.0" IN_TRAVIS="1" GOPATH="${HOME}/go"
 
 install:
   - sudo apt-get update
   - sudo apt-get install -qq libotr5-dev rng-tools
   - npm install
+  - go get github.com/coniks-sys/coniks-go/client/cgo
 
 before_script:
   - sudo rm -f /dev/random
@@ -23,6 +24,10 @@ before_script:
   - sudo /etc/init.d/rng-tools restart
   - sh -e /etc/init.d/xvfb start
   - sleep 3
+  - pushd $GOPATH/src/github.com/coniks-sys/coniks-go/client/cgo
+  - make
+  - cp libconiks.so $HOME/build/arlolra/ctypes-otr/addon
+  - popd
 
 script:
   - npm run lint
