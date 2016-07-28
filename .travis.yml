@@ -26,5 +26,4 @@ before_script:
 
 script:
   - npm run lint
-  - npm run mocha
   - npm run jpm-travis

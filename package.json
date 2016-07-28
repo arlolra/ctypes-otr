@@ -8,7 +8,7 @@
     "jpm-travis": "jpm --addon-dir addon/ --binary `which firefox` test",
     "lint": "eslint --ext .js .",
     "mocha": "mocha --opts test/mocha.opts test/",
-    "test": "npm run lint && npm run mocha && npm run jpm"
+    "test": "npm run lint && npm run jpm"
   },
   "repository": {
     "type": "git",
