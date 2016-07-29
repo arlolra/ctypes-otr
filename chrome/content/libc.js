@@ -20,12 +20,16 @@ if (isNode) {
   OS = Services.appinfo.OS.toLowerCase();
 }
 
+// type defs
+
+var FILE = ctypes.StructType("FILE");
+var fname_t = ctypes.char.ptr;
+var wchar_t = ctypes.char16_t;
 
 // Set the abi and path to libc based on the OS.
 var libcAbi, libcPath;
 var strdup = "strdup";
 var fopen = "fopen";
-var fname_t = ctypes.char.ptr;
 
 switch(OS) {
 case "win32":
@@ -49,11 +53,6 @@ default:
 }
 
 var libc = ctypes.open(libcPath);
-
-// type defs
-
-const wchar_t = ctypes.char16_t;
-const FILE = ctypes.StructType("FILE");
 
 var libC = {
   FILE: FILE,

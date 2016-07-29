@@ -33,7 +33,7 @@ var otrAddFinger = {
     try {
       // Ignore the return, this is just a test.
       otr.getUIConvFromContext(context);
-    } catch(e) {
+    } catch(error) {
       // We expect that a conversation may not have been started.
       context = null;
     }

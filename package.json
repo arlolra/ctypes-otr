@@ -6,7 +6,9 @@
   "scripts": {
     "jpm": "jpm --addon-dir addon/ test",
     "jpm-travis": "jpm --addon-dir addon/ --binary `which firefox` test",
-    "lint": "eslint --ext .js .",
+    "jshint": "jshint bootstrap.js test/ chrome/content/",
+    "eslint": "eslint --ext .js .",
+    "lint": "npm run eslint && npm run jshint",
     "mocha": "mocha --opts test/mocha.opts test/",
     "test": "npm run lint && npm run jpm"
   },
@@ -23,9 +25,10 @@
     "ctypes": "git+https://github.com/TooTallNate/node-ctypes#987ba78db449c402ea4d86a831adb01b455e9209"
   },
   "devDependencies": {
-    "eslint": "^2.13.1",
+    "eslint": "^3.1.1",
     "eslint-plugin-mozilla": "^0.0.3",
-    "jpm": "^1.0.7",
+    "jpm": "^1.1.3",
+    "jshint": "^2.9.2",
     "mocha": "^2.5.3"
   }
 }

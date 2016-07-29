@@ -6,7 +6,7 @@ var Funcs = {};
 
 // Only what we need from libotr.js
 Funcs.generateKey = function(path, otrl_version, newkeySource) {
-  let newkey = eval(newkeySource);
+  let newkey = eval(newkeySource);  // jshint ignore:line
   let libotr = ctypes.open(path);
 
   let abi = ctypes.default_abi;

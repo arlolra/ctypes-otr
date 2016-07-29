@@ -748,7 +748,7 @@ var otr = {
       break;
     case libOTR.smpEvent.OTRL_SMPEVENT_CHEATED:
       otr.abortSMP(context);
-      // fall through
+      /* falls through */
     case libOTR.smpEvent.OTRL_SMPEVENT_IN_PROGRESS:
     case libOTR.smpEvent.OTRL_SMPEVENT_SUCCESS:
     case libOTR.smpEvent.OTRL_SMPEVENT_FAILURE:
