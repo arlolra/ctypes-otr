@@ -9,7 +9,7 @@ if (isNode) {
   ctypes = require("ctypes");
   // FIXME: This isn't implemented upstream yet.
   ctypes.size_t = ctypes.unsigned_int;
-  libC = require("./libc.js");
+  ({ libC } = require("./libc.js"));
   inTravis = !!process.env.IN_TRAVIS;
   OS = process.platform;
 } else {
@@ -890,7 +890,7 @@ var libOTR = {
 // exports
 
 if (isNode) {
-  module.exports = libOTR;
+  module.exports = { libOTR: libOTR };
 } else if (isJpm) {
   exports.libOTR = libOTR;
 } else {

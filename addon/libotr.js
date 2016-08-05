@@ -1,1 +1,0 @@
-../chrome/content/libotr.js

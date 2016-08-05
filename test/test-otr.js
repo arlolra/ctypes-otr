@@ -1,10 +1,10 @@
 var isNode = (typeof process === "object");
-var otr;
 
+var otr;
 if (isNode) {
   otr = require("../chrome/content/otr.js");
 } else {
-  ({ otr } = require("../otr.js"));
+  ({ otr } = require("../chrome/content/otr.js"));
 }
 
 

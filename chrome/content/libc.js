@@ -85,7 +85,7 @@ var libC = {
 // exports
 
 if (isNode) {
-  module.exports = libC;
+  module.exports = { libC: libC };
 } else if (isJpm) {
   exports.libC = libC;
 } else {

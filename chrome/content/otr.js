@@ -8,8 +8,8 @@ if (isNode) {
   ctypes = require("ctypes");
   // FIXME: This isn't implemented upstream yet.
   ctypes.size_t = ctypes.unsigned_int;
-  libC = require("./libc.js");
-  libOTR = require("./libotr.js");
+  ({ libC } = require("./libc.js"));
+  ({ libOTR } = require("./libotr.js"));
   var path = require("path");
 } else {
   var Ci, Cu, Cc, XPCOMUtils, l10nHelper;
@@ -17,8 +17,8 @@ if (isNode) {
     ({ Ci, Cu, Cc } = require("chrome"));
     ({ libC } = require("./libc.js"));
     ({ libOTR } = require("./libotr.js"));
-    ({ XPCOMUtils, l10nHelper } = require("./imXPCOMUtils.js"));
-    workerPath = "resource://addon/worker.js";
+    ({ XPCOMUtils, l10nHelper } = require("../../imXPCOMUtils.js"));
+    workerPath = "resource://addon/chrome/content/worker.js";
   } else {
     ({ interfaces: Ci, utils: Cu, classes: Cc } = Components);
     Cu.import("chrome://otr/content/libc.js");

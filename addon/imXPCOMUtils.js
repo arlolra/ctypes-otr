@@ -4,7 +4,7 @@ Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
 function l10nHelper(aChromeURL) {
   // Hackity, hack, hack!
-  aChromeURL = aChromeURL.replace("chrome://otr/locale/", "resource://addon/locale/en/");
+  aChromeURL = aChromeURL.replace("chrome://otr/locale/", "resource://addon/chrome/locale/en/");
   let bundle = Services.strings.createBundle(aChromeURL);
   return function (aStringId) {
     try {
