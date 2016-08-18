@@ -537,10 +537,6 @@ var ui = {
     if (otr.getFingerprintsForRecipient(args.account, args.protocol, args.screenname).length > 0)
       return;
     args.wrappedJSObject = args;
-    let wm = Cc["@mozilla.org/appshell/window-mediator;1"]
-                   .getService(Ci.nsIWindowMediator);
-    let window = wm.getMostRecentWindow(null);
-    window.close();
     let features = "chrome,modal,titlebar,centerscreen,resizable=no,minimizable=no";
     Services.ww.openWindow(null, addFingerDialog, "", features, args);
   },
