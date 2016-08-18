@@ -202,7 +202,8 @@ var ui = {
     otr.addObserver(ui);
     otr.loadFiles().then(function() {
       Services.obs.addObserver(otr, "new-ui-conversation", false);
-      Services.obs.addObserver(ui, "contact-added", false);
+      // Disabled until #76 is resolved.
+      // Services.obs.addObserver(ui, "contact-added", false);
       Services.obs.addObserver(ui, "account-added", false);
       Services.obs.addObserver(ui, "conversation-loaded", false);
       Services.obs.addObserver(ui, "conversation-closed", false);
@@ -619,7 +620,7 @@ var ui = {
   destroy: function() {
     ui.disconnect(null);
     Services.obs.removeObserver(otr, "new-ui-conversation");
-    Services.obs.removeObserver(ui, "contact-added");
+    // Services.obs.removeObserver(ui, "contact-added");
     Services.obs.removeObserver(ui, "account-added");
     Services.obs.removeObserver(ui, "conversation-loaded");
     Services.obs.removeObserver(ui, "conversation-closed");
