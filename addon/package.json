@@ -1,6 +1,6 @@
 {
   "name": "addon",
-  "version": "0.0.0+git",
+  "version": "0.0.1",
   "description": "",
   "main": "./chrome/content/libotr.js",
   "engines": {
