@@ -7,7 +7,7 @@
     <!-- Required -->
     <em:id>ctypes-otr@tormessenger</em:id>
     <em:name>ctypes-otr</em:name>
-    <em:version>0.0.1</em:version>
+    <em:version>0.0.1+git</em:version>
     <em:type>2</em:type>
     <em:unpack>true</em:unpack>
     <em:bootstrap>true</em:bootstrap>
