@@ -17,6 +17,10 @@ if (window && window.arguments) {
 var otrPref = {
 
   onload: function() {
+    otrPref.otrTabInit();
+  },
+
+  otrTabInit: function() {
     let accountList = document.getElementById("accountlist");
     for (let acc of helpers.getAccounts()) {
       let menuItem = accountList.appendItem(

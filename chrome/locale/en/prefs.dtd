@@ -1,4 +1,5 @@
 <!ENTITY prefs.otrPreferences "OTR Preferences">
+<!ENTITY prefs.otrLabel "OTR">
 <!ENTITY prefs.otrSettings "OTR Settings">
 <!ENTITY prefs.requireEncryption "Require encryption">
 <!ENTITY prefs.otrKeys "My Private Keys">

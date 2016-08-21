@@ -113,7 +113,7 @@ var ui = {
     menuitem.setAttribute("label", _("prefs.label"));
     menuitem.addEventListener("command", function(e) {
       e.preventDefault();
-      let features = "centerscreen,resizable=no,minimizable=no";
+      let features = "chrome,centerscreen,dialog=no,resizable=no,minimizable=no";
       Services.ww.openWindow(null, prefsDialog, "otrPrefs", features, null);
     });
 
@@ -169,7 +169,7 @@ var ui = {
           let contact = target.contact;
           let args = ui.contactWrapper(contact);
           args.wrappedJSObject = args;
-          let features = "chrome,modal,titlebar,centerscreen,resizable=no,minimizable=no";
+          let features = "chrome,modal,centerscreen,resizable=no,minimizable=no";
           Services.ww.openWindow(null, addFingerDialog, "", features, args);
         }
       });
@@ -313,7 +313,7 @@ var ui = {
     otrPrefs.setAttribute("label", _("prefs.label"));
     otrPrefs.addEventListener("click", function(e) {
       e.preventDefault();
-      let features = "centerscreen,resizable=no,minimizable=no";
+      let features = "chrome,centerscreen,dialog=no,resizable=no,minimizable=no";
       let args = {
         account: conv.account.normalizedName,
         protocol: conv.account.protocol.normalizedName,
@@ -510,7 +510,7 @@ var ui = {
   },
 
   generate: function(args) {
-    let features = "modal,centerscreen,resizable=no,minimizable=no";
+    let features = "chrome,modal,centerscreen,resizable=no,minimizable=no";
     args.wrappedJSObject = args;
     Services.ww.openWindow(null, privDialog, "", features, args);
   },
@@ -538,7 +538,7 @@ var ui = {
     if (otr.getFingerprintsForRecipient(args.account, args.protocol, args.screenname).length > 0)
       return;
     args.wrappedJSObject = args;
-    let features = "chrome,modal,titlebar,centerscreen,resizable=no,minimizable=no";
+    let features = "chrome,modal,centerscreen,resizable=no,minimizable=no";
     Services.ww.openWindow(null, addFingerDialog, "", features, args);
   },
 

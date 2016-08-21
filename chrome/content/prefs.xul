@@ -17,44 +17,57 @@
 
     <script type="application/javascript" src="chrome://otr/content/prefs.js" />
 
-    <groupbox>
-      <caption label="&prefs.otrKeys;" />
-      <vbox id="myKeys" hidden="true" width="460">
-        <hbox align="baseline">
-          <label control="accountlist" value="&prefs.keyForAccount;" />
-          <menulist id="accountlist" oncommand="otrPref.displayFinger();" flex="1"></menulist>
-        </hbox>
-        <hbox align="baseline">
-          <vbox flex="1">
-            <hbox id="display" hidden="true">
-              <label control="fingerprint" value="&prefs.fingerprint;" />
-              <textbox id="fingerprint" class="plain" size="56" flex="1" align="right" readonly="true" />
-            </hbox>
-            <hbox id="generate" hidden="true" flex="1">
-              <button label="&prefs.generate;" oncommand="otrPref.generate();" flex="1" />
-            </hbox>
-          </vbox>
-        </hbox>
-      </vbox>
-      <textbox id="emptyal" class="plain" flex="1" readonly="true"
-        value="&prefs.emptyAccountList;" />
-    </groupbox>
+    <tabbox id="otrPrefs" flex="1">
+      <tabs id="tabsElement">
+        <tab id="otrTab" label="&prefs.otrLabel;"/>
+      </tabs>
 
-    <groupbox>
-      <caption label="&prefs.knownFingers;" />
-      <description>&prefs.introFingers;</description>
-      <hbox>
-        <spacer flex="1" />
-        <button label="&prefs.showFingers;" oncommand="otrPref.showFingers();" />
-      </hbox>
-    </groupbox>
+      <tabpanels flex="1">
+        <!-- OTR -->
+        <tabpanel id="otrTab" orient="vertical">
+          <groupbox>
+            <caption label="&prefs.otrKeys;" />
+            <vbox id="myKeys" hidden="true" width="460">
+              <hbox align="baseline">
+                <label control="accountlist" value="&prefs.keyForAccount;" />
+                <menulist id="accountlist" oncommand="otrPref.displayFinger();" flex="1"></menulist>
+              </hbox>
+              <hbox align="baseline">
+                <vbox flex="1">
+                  <hbox id="display" hidden="true">
+                    <label control="fingerprint" value="&prefs.fingerprint;" />
+                    <textbox id="fingerprint" class="plain" size="56" flex="1" align="right" readonly="true" />
+                  </hbox>
+                  <hbox id="generate" hidden="true" flex="1">
+                    <button label="&prefs.generate;" oncommand="otrPref.generate();" flex="1" />
+                  </hbox>
+                </vbox>
+              </hbox>
+            </vbox>
+            <textbox id="emptyal" class="plain" flex="1" readonly="true"
+              value="&prefs.emptyAccountList;" />
+          </groupbox>
 
-    <groupbox>
-      <caption label="&prefs.otrSettings;" />
-      <description>&prefs.introSettings;</description>
-      <checkbox id="requireencryption" label="&prefs.requireEncryption;" preference="pref_require_encryption" />
-      <checkbox id="verifynudge" label="&prefs.verifyNudge;" preference="pref_verify_nudge" />
-    </groupbox>
+          <groupbox>
+            <caption label="&prefs.knownFingers;" />
+            <description>&prefs.introFingers;</description>
+            <hbox>
+              <spacer flex="1" />
+              <button label="&prefs.showFingers;" oncommand="otrPref.showFingers();" />
+            </hbox>
+          </groupbox>
+
+          <groupbox>
+            <caption label="&prefs.otrSettings;" />
+            <description>&prefs.introSettings;</description>
+            <checkbox id="requireencryption" label="&prefs.requireEncryption;" preference="pref_require_encryption" />
+            <checkbox id="verifynudge" label="&prefs.verifyNudge;" preference="pref_verify_nudge" />
+          </groupbox>
+        </tabpanel>
+
+      </tabpanels>
+
+    </tabbox>
 
   </prefpane>
 
