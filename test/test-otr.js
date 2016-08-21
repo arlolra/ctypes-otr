@@ -1,12 +1,6 @@
 var isNode = (typeof process === "object");
 
-var otr;
-if (isNode) {
-  otr = require("../chrome/content/otr.js");
-} else {
-  ({ otr } = require("../chrome/content/otr.js"));
-}
-
+var { otr } = require("../chrome/content/otr.js");
 
 function FakeConv(sendMsg) {
   this.account = { normalizedName: "test1" };

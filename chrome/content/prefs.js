@@ -3,6 +3,7 @@ var Cu = Components.utils;
 Cu.import("resource:///modules/imServices.jsm");
 Cu.import("resource:///modules/imXPCOMUtils.jsm");
 Cu.import("chrome://otr/content/otr.js");
+Cu.import("chrome://otr/content/helpers.js");
 
 var fingerDialog = "chrome://otr/content/finger.xul";
 var privDialog = "chrome://otr/content/priv.xul";
@@ -17,7 +18,7 @@ var otrPref = {
 
   onload: function() {
     let accountList = document.getElementById("accountlist");
-    for (let acc of this.getAccounts()) {
+    for (let acc of helpers.getAccounts()) {
       let menuItem = accountList.appendItem(
         `${acc.normalizedName} (${otr.protocolName(acc.protocol.normalizedName)})`,
         acc.id
@@ -38,12 +39,6 @@ var otrPref = {
       document.getElementById("emptyal").hidden = true;
       document.getElementById("myKeys").hidden = false;
     }
-  },
-
-  getAccounts: function* () {
-    let accounts = Services.accounts.getAccounts();
-    while (accounts.hasMoreElements())
-      yield accounts.getNext();
   },
 
   swapFinger: function(acc) {

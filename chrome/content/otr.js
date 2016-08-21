@@ -2,7 +2,7 @@ var isNode = (typeof process === "object");
 var isJpm = !isNode && (typeof require === "function");
 var isIb = !isNode && !isJpm;
 
-var libC, libOTR, ctypes, OS, workerPath;
+var libC, libOTR, ctypes, OS, workerPath, helpers;
 
 if (isNode) {
   ctypes = require("ctypes");
@@ -10,6 +10,7 @@ if (isNode) {
   ctypes.size_t = ctypes.unsigned_int;
   ({ libC } = require("./libc.js"));
   ({ libOTR } = require("./libotr.js"));
+  ({ helpers } = require("./helpers.js"));
   var path = require("path");
 } else {
   var Ci, Cu, Cc, XPCOMUtils, l10nHelper;
@@ -19,6 +20,7 @@ if (isNode) {
     ({ libOTR } = require("./libotr.js"));
     ({ XPCOMUtils, l10nHelper } = require("../../imXPCOMUtils.js"));
     workerPath = "resource://addon/chrome/content/worker.js";
+    ({ helpers } = require("./helpers.js"));
   } else {
     ({ interfaces: Ci, utils: Cu, classes: Cc } = Components);
     Cu.import("chrome://otr/content/libc.js");
@@ -26,6 +28,7 @@ if (isNode) {
     workerPath = "chrome://otr/content/worker.js";
     Cu.import("resource:///modules/imServices.jsm");
     Cu.import("resource:///modules/imXPCOMUtils.jsm");
+    Cu.import("chrome://otr/content/helpers.js");
   }
   Cu.import("resource://gre/modules/PromiseWorker.jsm");
   Cu.import("resource://gre/modules/ctypes.jsm");
@@ -46,12 +49,6 @@ function setInterval(fn, delay) {
 
 function clearInterval(timer) {
   timer.cancel();
-}
-
-function profilePath(filename) {
-  return isNode ?
-    path.resolve(__dirname, filename) :
-    OS.Path.join(OS.Constants.Path.profileDir, filename);
 }
 
 // See: https://developer.mozilla.org/en-US/docs/Mozilla/js-ctypes/Using_js-ctypes/Working_with_data#Determining_if_two_pointers_are_equal
@@ -119,9 +116,9 @@ var otr = {
     this.hasRan = true;
   },
 
-  privateKeyPath: profilePath("otr.private_key"),
-  fingerprintsPath: profilePath("otr.fingerprints"),
-  instanceTagsPath: profilePath("otr.instance_tags"),
+  privateKeyPath: helpers.profilePath("otr.private_key"),
+  fingerprintsPath: helpers.profilePath("otr.fingerprints"),
+  instanceTagsPath: helpers.profilePath("otr.instance_tags"),
 
   init: function(opts) {
     opts = opts || {};
@@ -1139,7 +1136,7 @@ var otr = {
 // exports
 
 if (isNode) {
-  module.exports = otr;
+  module.exports = { otr: otr };
 } else if (isJpm) {
   exports.otr = otr;
 } else {
