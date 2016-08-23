@@ -520,13 +520,15 @@ var ui = {
   onAccountCreated: function(acc) {
     let account = acc.normalizedName;
     let protocol = acc.protocol.normalizedName;
+    let p = Promise.resolve();
     if (otr.privateKeyFingerprint(account, protocol) === null)
-      otr.generatePrivateKey(account, protocol).then(function() {
-        if (coniks.isEnabled)
-          return coniks.onAccountCreated(acc);
-      }).catch(function(err) {
-        Cu.reportError(err);
-      });
+      p = otr.generatePrivateKey(account, protocol);
+    p.then(function() {
+      if (coniks.isEnabled)
+        return coniks.onAccountCreated(acc);
+    }).catch(function(err) {
+      Cu.reportError(err);
+    });
   },
 
   contactWrapper: function(contact) {

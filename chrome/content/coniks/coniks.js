@@ -109,7 +109,7 @@ var coniks = {
   },
 
   store: function(contexts) {
-    let data = JSON.stringify([...contexts.values()]);
+    let data = JSON.stringify([...contexts.values()], null, "\t");
     return helpers.writeTextFile(coniks.path, data);
   },
 
