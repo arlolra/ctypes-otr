@@ -57,6 +57,20 @@ The default policies can be changed in `Tools > Add-ons > ctypes-otr > Preferenc
 
 [3]: http://ftp.instantbird.com/instantbird/nightly/latest-trunk/
 
+Release
+-------
+
+```
+export VERSION="X.X.X"
+// bump the version numbers in package.json / install.rdf
+git changelog  // edit
+git commit -S -m "Release version $VERSION"
+git tag -s $VERSION -m $VERSION
+git push origin master
+git push --tags
+// bump the version numbers (+git) after the release
+```
+
 Credits
 -------
 
