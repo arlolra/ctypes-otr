@@ -26,7 +26,8 @@
     <em:description>js-ctypes wrapper for libotr</em:description>
     <em:homepageURL>https://github.com/arlolra/ctypes-otr</em:homepageURL>
     <em:optionsURL>chrome://otr/content/prefs.xul</em:optionsURL>
-    <em:updateURL>https://127.0.0.1/</em:updateURL>
+    <em:updateURL>data:text/plain,</em:updateURL>
+    <em:updateKey>-</em:updateKey>
 
   </Description>
 
