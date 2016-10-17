@@ -25,6 +25,7 @@ before_script:
   - sh -e /etc/init.d/xvfb start
   - sleep 3
   - pushd $GOPATH/src/github.com/coniks-sys/coniks-go/client/cgo
+  - git checkout 90075472
   - make
   - cp libconiks.so $HOME/build/arlolra/ctypes-otr/addon
   - popd
