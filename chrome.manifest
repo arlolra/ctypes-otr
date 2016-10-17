@@ -1,7 +1,4 @@
 content otr chrome/content/
 skin otr classic/1.0 chrome/skin/
 
-locale otr ar chrome/locale/ar/
-locale otr de chrome/locale/de/
 locale otr en chrome/locale/en/
-locale otr zh-CN chrome/locale/zh-CN/

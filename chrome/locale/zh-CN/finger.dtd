@@ -1,9 +1,0 @@
-<!ENTITY finger.title "已知指纹">
-<!ENTITY finger.screenName "显示名">
-<!ENTITY finger.status "状态">
-<!ENTITY finger.verified "已验证">
-<!ENTITY finger.fingerprint "指纹">
-<!ENTITY finger.account "账号">
-<!ENTITY finger.verify " 验证">
-<!ENTITY finger.remove "移除">
-<!ENTITY finger.intro "此次留空。">

@@ -1,6 +1,0 @@
-<!ENTITY prefs.otrPreferences "OTR-Einstellungen">
-<!ENTITY prefs.otrSettings "OTR-Einstellungen">
-<!ENTITY prefs.requireEncryption "Verschlüsselung ist erforderlich">
-<!ENTITY prefs.otrKeys "Meine privaten Schlüssel">
-<!ENTITY prefs.keyForAccount "Schlüssel für Konto:">
-<!ENTITY prefs.fingerprint "Fingerabdruck:">
