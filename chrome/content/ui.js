@@ -125,7 +125,7 @@ var ui = {
     ui._addedNodes.push(menuitem);
   },
 
-  removePrefMenus: function() {
+  removeMenus: function() {
     ui._addedNodes.forEach(n => {
       let p = n.parentNode;
       if (p) p.removeChild(n);
@@ -141,57 +141,61 @@ var ui = {
     Services.obs.addObserver(ui, "domwindowopened", false);
   },
 
-  addBuddyContextMenu: function() {
+  addBuddyContextMenus: function() {
     let blistWindow = Services.wm.getEnumerator("Messenger:blist");
     while (blistWindow.hasMoreElements()) {
       let win = blistWindow.getNext();
-      let document = win.document;
-
-      if (document.readyState !== "complete") {
-        let listen = function() {
-          win.removeEventListener("load", listen);
-          ui.addBuddyContextMenu();
-        };
-        win.addEventListener("load", listen);
-        return;
-      }
-
-      let buddyContextMenu = document.getElementById("buddyListContextMenu");
-      if (!buddyContextMenu)
-        return;
-
-      let sep = document.createElement("menuseparator");
-      let menuitem = document.createElement("menuitem");
-
-      menuitem.setAttribute("label", _("buddycontextmenu.label"));
-      menuitem.addEventListener("command", function() {
-        let target = buddyContextMenu.triggerNode;
-        if (target.localName == "contact") {
-          let contact = target.contact;
-          let args = ui.contactWrapper(contact);
-          args.wrappedJSObject = args;
-          let features = "chrome,modal,centerscreen,resizable=no,minimizable=no";
-          Services.ww.openWindow(null, addFingerDialog, "", features, args);
-        }
-      });
-
-      buddyContextMenu.addEventListener("popupshowing", function(e) {
-        let target = e.target.triggerNode;
-        if (target.localName == "contact") {
-          menuitem.hidden = false;
-          sep.hidden = false;
-        } else {
-          menuitem.hidden = true;
-          sep.hidden = true;
-        }
-      }, false);
-
-      buddyContextMenu.appendChild(sep);
-      buddyContextMenu.appendChild(menuitem);
-
-      ui._addedNodes.push(sep);
-      ui._addedNodes.push(menuitem);
+      ui.addBuddyContextMenu(win);
     }
+  },
+
+  addBuddyContextMenu: function(win) {
+    let doc = win.document;
+
+    if (doc.readyState !== "complete") {
+      let listen = function() {
+        win.removeEventListener("load", listen);
+        ui.addBuddyContextMenu(win);
+      };
+      win.addEventListener("load", listen);
+      return;
+    }
+
+    let buddyContextMenu = doc.getElementById("buddyListContextMenu");
+    if (!buddyContextMenu)
+      return;
+
+    let sep = doc.createElement("menuseparator");
+    let menuitem = doc.createElement("menuitem");
+
+    menuitem.setAttribute("label", _("buddycontextmenu.label"));
+    menuitem.addEventListener("command", function() {
+      let target = buddyContextMenu.triggerNode;
+      if (target.localName == "contact") {
+        let contact = target.contact;
+        let args = ui.contactWrapper(contact);
+        args.wrappedJSObject = args;
+        let features = "chrome,modal,centerscreen,resizable=no,minimizable=no";
+        Services.ww.openWindow(null, addFingerDialog, "", features, args);
+      }
+    });
+
+    buddyContextMenu.addEventListener("popupshowing", function(e) {
+      let target = e.target.triggerNode;
+      if (target.localName == "contact") {
+        menuitem.hidden = false;
+        sep.hidden = false;
+      } else {
+        menuitem.hidden = true;
+        sep.hidden = true;
+      }
+    }, false);
+
+    buddyContextMenu.appendChild(sep);
+    buddyContextMenu.appendChild(menuitem);
+
+    ui._addedNodes.push(sep);
+    ui._addedNodes.push(menuitem);
   },
 
   init: function() {
@@ -212,7 +216,7 @@ var ui = {
       ui.prefs.addObserver("", ui, false);
       Conversations._conversations.forEach(ui.initConv);
       ui.addPrefMenus();
-      ui.addBuddyContextMenu();
+      ui.addBuddyContextMenus();
       return coniks.init();
     }).catch(function(err) { throw err; });
   },
@@ -572,6 +576,7 @@ var ui = {
       break;
     case "domwindowopened":
       ui.addPrefMenu(aObject);
+      ui.addBuddyContextMenu(aObject);
       break;
     case "otr:generate":
       ui.generate(aObject);
@@ -636,7 +641,7 @@ var ui = {
     ui.prefs.removeObserver("", ui);
     otr.removeObserver(ui);
     otr.close();
-    ui.removePrefMenus();
+    ui.removeMenus();
     coniks.destroy();
   },
 
