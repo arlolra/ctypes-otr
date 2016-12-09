@@ -88,9 +88,6 @@ var ui = {
     ui.prefs = Services.prefs.getBranch(branch);
   },
 
-  // Kind of hacky but pretty effective.
-  _addedNodes: [],
-
   addMenuObserver: function() {
     let iter = Services.ww.getWindowEnumerator();
     while (iter.hasMoreElements())
@@ -99,17 +96,14 @@ var ui = {
   },
 
   removeMenuObserver: function() {
-    ui._addedNodes.forEach(n => {
-      let p = n.parentNode;
-      if (p) p.removeChild(n);
-    });
-    ui._addedNodes.length = 0;
+    let iter = Services.ww.getWindowEnumerator();
+    while (iter.hasMoreElements())
+      ui.removeMenus(iter.getNext());
     Services.obs.removeObserver(ui, "domwindowopened");
   },
 
   addMenus: function(win) {
     let doc = win.document;
-
     // Account for unready windows
     if (doc.readyState !== "complete") {
       let listen = function() {
@@ -119,42 +113,52 @@ var ui = {
       win.addEventListener("load", listen);
       return;
     }
-
     ui.addPrefMenu(doc);
     ui.addBuddyContextMenu(doc);
+  },
+
+  removeMenus: function(win) {
+    let doc = win.document;
+    ui.removePrefMenu(doc);
+    ui.removeBuddyContextMenu(doc);
   },
 
   addPrefMenu: function(doc) {
     let toolsMenuPopup = doc.getElementById("toolsMenuPopup");
     if (!toolsMenuPopup)
       return;  // Not the tools menu
-
     let sep = doc.createElement("menuseparator");
-
+    sep.setAttribute("id", "otrsep");
     let menuitem = doc.createElement("menuitem");
     menuitem.setAttribute("label", _("prefs.label"));
+    menuitem.setAttribute("id", "otrpref");
     menuitem.addEventListener("command", function(e) {
       e.preventDefault();
       let features = "chrome,centerscreen,dialog=no,resizable=no,minimizable=no";
       Services.ww.openWindow(null, prefsDialog, "otrPrefs", features, null);
     });
-
     toolsMenuPopup.appendChild(sep);
     toolsMenuPopup.appendChild(menuitem);
+  },
 
-    ui._addedNodes.push(sep);
-    ui._addedNodes.push(menuitem);
+  removePrefMenu: function(doc) {
+    let s = doc.getElementById("otrsep");
+    if (s)
+      s.parentNode.removeChild(s);
+    let p = doc.getElementById("otrpref");
+    if (p)
+      p.parentNode.removeChild(p);
   },
 
   addBuddyContextMenu: function(doc) {
     let buddyContextMenu = doc.getElementById("buddyListContextMenu");
     if (!buddyContextMenu)
       return;  // Not the buddy list context menu
-
     let sep = doc.createElement("menuseparator");
+    sep.setAttribute("id", "otrsep");
     let menuitem = doc.createElement("menuitem");
-
     menuitem.setAttribute("label", _("buddycontextmenu.label"));
+    menuitem.setAttribute("id", "otrcont");
     menuitem.addEventListener("command", function() {
       let target = buddyContextMenu.triggerNode;
       if (target.localName == "contact") {
@@ -165,7 +169,6 @@ var ui = {
         Services.ww.openWindow(null, addFingerDialog, "", features, args);
       }
     });
-
     buddyContextMenu.addEventListener("popupshowing", function(e) {
       let target = e.target.triggerNode;
       if (target.localName == "contact") {
@@ -176,12 +179,17 @@ var ui = {
         sep.hidden = true;
       }
     }, false);
-
     buddyContextMenu.appendChild(sep);
     buddyContextMenu.appendChild(menuitem);
+  },
 
-    ui._addedNodes.push(sep);
-    ui._addedNodes.push(menuitem);
+  removeBuddyContextMenu: function(doc) {
+    let s = doc.getElementById("otrsep");
+    if (s)
+      s.parentNode.removeChild(s);
+    let p = doc.getElementById("otrcont");
+    if (p)
+      p.parentNode.removeChild(p);
   },
 
   init: function() {
