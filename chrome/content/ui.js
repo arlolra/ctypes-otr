@@ -91,19 +91,40 @@ var ui = {
   // Kind of hacky but pretty effective.
   _addedNodes: [],
 
-  addPrefMenu: function(win) {
+  addMenuObserver: function() {
+    let iter = Services.ww.getWindowEnumerator();
+    while (iter.hasMoreElements())
+      ui.addMenus(iter.getNext());
+    Services.obs.addObserver(ui, "domwindowopened", false);
+  },
+
+  removeMenuObserver: function() {
+    ui._addedNodes.forEach(n => {
+      let p = n.parentNode;
+      if (p) p.removeChild(n);
+    });
+    ui._addedNodes.length = 0;
+    Services.obs.removeObserver(ui, "domwindowopened");
+  },
+
+  addMenus: function(win) {
     let doc = win.document;
 
     // Account for unready windows
     if (doc.readyState !== "complete") {
       let listen = function() {
         win.removeEventListener("load", listen);
-        ui.addPrefMenu(win);
+        ui.addMenus(win);
       };
       win.addEventListener("load", listen);
       return;
     }
 
+    ui.addPrefMenu(doc);
+    ui.addBuddyContextMenu(doc);
+  },
+
+  addPrefMenu: function(doc) {
     let toolsMenuPopup = doc.getElementById("toolsMenuPopup");
     if (!toolsMenuPopup)
       return;  // Not the tools menu
@@ -125,45 +146,10 @@ var ui = {
     ui._addedNodes.push(menuitem);
   },
 
-  removeMenus: function() {
-    ui._addedNodes.forEach(n => {
-      let p = n.parentNode;
-      if (p) p.removeChild(n);
-    });
-    ui._addedNodes.length = 0;
-    Services.obs.removeObserver(ui, "domwindowopened");
-  },
-
-  addPrefMenus: function() {
-    let iter = Services.ww.getWindowEnumerator();
-    while (iter.hasMoreElements())
-      ui.addPrefMenu(iter.getNext());
-    Services.obs.addObserver(ui, "domwindowopened", false);
-  },
-
-  addBuddyContextMenus: function() {
-    let blistWindow = Services.wm.getEnumerator("Messenger:blist");
-    while (blistWindow.hasMoreElements()) {
-      let win = blistWindow.getNext();
-      ui.addBuddyContextMenu(win);
-    }
-  },
-
-  addBuddyContextMenu: function(win) {
-    let doc = win.document;
-
-    if (doc.readyState !== "complete") {
-      let listen = function() {
-        win.removeEventListener("load", listen);
-        ui.addBuddyContextMenu(win);
-      };
-      win.addEventListener("load", listen);
-      return;
-    }
-
+  addBuddyContextMenu: function(doc) {
     let buddyContextMenu = doc.getElementById("buddyListContextMenu");
     if (!buddyContextMenu)
-      return;
+      return;  // Not the buddy list context menu
 
     let sep = doc.createElement("menuseparator");
     let menuitem = doc.createElement("menuitem");
@@ -215,8 +201,7 @@ var ui = {
       Services.obs.addObserver(ui, "prpl-quit", false);
       ui.prefs.addObserver("", ui, false);
       Conversations._conversations.forEach(ui.initConv);
-      ui.addPrefMenus();
-      ui.addBuddyContextMenus();
+      ui.addMenuObserver();
       return coniks.init();
     }).catch(function(err) { throw err; });
   },
@@ -575,8 +560,7 @@ var ui = {
       ui.disconnect(null);
       break;
     case "domwindowopened":
-      ui.addPrefMenu(aObject);
-      ui.addBuddyContextMenu(aObject);
+      ui.addMenus(aObject);
       break;
     case "otr:generate":
       ui.generate(aObject);
@@ -641,7 +625,7 @@ var ui = {
     ui.prefs.removeObserver("", ui);
     otr.removeObserver(ui);
     otr.close();
-    ui.removeMenus();
+    ui.removeMenuObserver();
     coniks.destroy();
   },
 
