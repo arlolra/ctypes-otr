@@ -1,4 +1,14 @@
 
+0.0.4 / 2016-12-14
+==================
+
+  * export-ignore .jshintrc
+  * Remove hacky _addedNodes
+  * Cleanup menu observers
+  * Fix Add Contact's Fingerprint menu item disappearing
+  * Fix some linting errors
+  * More reliably checkout the pin of coniks-go
+
 0.0.3 / 2016-11-11
 ==================
 
