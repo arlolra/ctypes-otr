@@ -1,6 +1,6 @@
 {
   "name": "ctypes-otr",
-  "version": "0.0.4",
+  "version": "0.0.4+git",
   "description": "js-ctypes wrapper for libotr",
   "main": "chrome/content/otr.js",
   "scripts": {
