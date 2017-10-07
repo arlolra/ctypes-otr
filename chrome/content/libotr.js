@@ -80,6 +80,7 @@ const gcry_error_t = ctypes.unsigned_int;
 const gcry_cipher_hd_t = ctypes.StructType("gcry_cipher_handle").ptr;
 const gcry_md_hd_t = ctypes.StructType("gcry_md_handle").ptr;
 const gcry_mpi_t = ctypes.StructType("gcry_mpi").ptr;
+const gcry_sexp_t = ctypes.StructType("gcry_sexp").ptr;
 
 const otrl_instag_t = ctypes.unsigned_int;
 const OtrlPolicy = ctypes.unsigned_int;
@@ -96,6 +97,9 @@ const DH_keypair = ctypes.StructType("DH_keypair");
 const OtrlPrivKey = ctypes.StructType("s_OtrlPrivKey");
 const OtrlInsTag = ctypes.StructType("s_OtrlInsTag");
 const OtrlPendingPrivKey = ctypes.StructType("s_OtrlPendingPrivKey");
+
+// privkey.c
+const s_pending_privkey_calc = ctypes.StructType("s_pending_privkey_calc");
 
 const OTRL_PRIVKEY_FPRINT_HUMAN_LEN = 45;
 const fingerprint_t = ctypes.char.array(OTRL_PRIVKEY_FPRINT_HUMAN_LEN);
@@ -351,6 +355,23 @@ OtrlTLV.define([
   { next: OtrlTLV.ptr }
 ]);
 
+OtrlPrivKey.define([
+  { next: OtrlPrivKey.ptr },
+  { tous: OtrlPrivKey.ptr.ptr },
+  { accountname: ctypes.char.ptr },
+  { protocol: ctypes.char.ptr },
+  { pubkey_type: ctypes.unsigned_short },
+  { privkey: gcry_sexp_t },
+  { pubkey_data: ctypes.unsigned_char.ptr },
+  { pubkey_datalen: ctypes.size_t },
+]);
+
+s_pending_privkey_calc.define([
+  { accountname: ctypes.char.ptr },
+  { protocol: ctypes.char.ptr },
+  { privkey: gcry_sexp_t },
+]);
+
 // policies
 
 const OTRL_POLICY_ALLOW_V1 = 0x01;
@@ -452,6 +473,19 @@ var libOTR = {
   otrl_instag_write_FILEp: libotr.declare(
     "otrl_instag_write_FILEp", abi, gcry_error_t,
     OtrlUserState, FILE.ptr
+  ),
+
+  // Forget the given instag.
+  otrl_instag_forget: libotr.declare(
+    "otrl_instag_forget", abi, ctypes.void_t,
+    OtrlInsTag.ptr
+  ),
+
+  // Fetch the instance tag from the given OtrlUserState associated with
+  // the given account.
+  otrl_instag_find: libotr.declare(
+    "otrl_instag_find", abi, OtrlInsTag.ptr,
+    OtrlUserState, ctypes.char.ptr, ctypes.char.ptr
   ),
 
   // auth.h
@@ -638,6 +672,21 @@ var libOTR = {
     "otrl_privkey_write_fingerprints_FILEp", abi, gcry_error_t,
     OtrlUserState, FILE.ptr
   ),
+
+  // Fetch the private key from the given OtrlUserState associated with
+  // the given account.
+  otrl_privkey_find: libotr.declare(
+    "otrl_privkey_find", abi, OtrlPrivKey.ptr,
+    OtrlUserState, ctypes.char.ptr, ctypes.char.ptr
+  ),
+
+  // Forget a private key.
+  otrl_privkey_forget: libotr.declare(
+    "otrl_privkey_forget", abi, ctypes.void_t,
+    OtrlPrivKey.ptr
+  ),
+
+  s_pending_privkey_calc: s_pending_privkey_calc,
 
   // The length of a string representing a human-readable version of a
   // fingerprint (including the trailing NUL).
@@ -884,6 +933,18 @@ var libOTR = {
     OtrlTLV.ptr
   ),
 
+  // libgcrypt
+  gcry_sexp_t: gcry_sexp_t,
+
+  gcry_sexp_sprint: libotr.declare(
+    "gcry_sexp_sprint", abi, ctypes.size_t,
+    gcry_sexp_t, ctypes.int, ctypes.void_t.ptr, ctypes.size_t
+  ),
+
+  gcry_sexp_new: libotr.declare(
+    "gcry_sexp_new", abi, gcry_error_t,
+    gcry_sexp_t.ptr, ctypes.void_t.ptr, ctypes.size_t, ctypes.int
+  ),
 };
 
 

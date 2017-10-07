@@ -240,6 +240,52 @@ var otr = {
     });
   },
 
+  // forget the private key and instance tag of
+  // the given account and clear them from files.
+  forgetPrivateKey: function(deletedAcc, deletedPrpl) {
+    // clear instance tag
+    let instag = libOTR.otrl_instag_find(this.userstate, deletedAcc, deletedPrpl);
+    if (!instag.isNull()) {
+      libOTR.otrl_instag_forget(instag);
+      if (libOTR.otrl_instag_write(this.userstate, this.instanceTagsPath)) {
+        throw new Error("Failed to write instance tags.");
+      }
+    }
+    // clear private key
+    let sk = libOTR.otrl_privkey_find(this.userstate, deletedAcc, deletedPrpl);
+    if (!sk.isNull()) {
+      libOTR.otrl_privkey_forget(sk);
+    }
+    // hacky
+    let accounts = Services.accounts.getAccounts();
+    if (!accounts.hasMoreElements()) {
+      helpers.removeFile(this.privateKeyPath);
+    } else {
+      for (let acc of helpers.getAccounts()) {
+        let account = acc.normalizedName;
+        let protocol = acc.protocol.normalizedName;
+        let key = libOTR.otrl_privkey_find(this.userstate, account, protocol);
+        if (key.isNull()) continue;
+        let newKey = new libOTR.s_pending_privkey_calc();
+        newKey.accountname = libC.strdup(key.contents.accountname);
+        newKey.protocol = libC.strdup(key.contents.protocol);
+        let length = libOTR.gcry_sexp_sprint(key.contents.privkey, 3, null, 0); // 3 = GCRYSEXP_FMT_ADVANCED
+        let buff = libC.malloc(length);
+        libOTR.gcry_sexp_sprint(key.contents.privkey, 3, buff, length);
+        buff = ctypes.cast(buff, ctypes.char.ptr);
+        let err = libOTR.gcry_sexp_new(newKey.privkey.address(), buff, length, 0);
+        if (err)
+          throw new Error("Bug: failed to clone the key.");
+        err = libOTR.otrl_privkey_generate_finish(
+          this.userstate, newKey.address(), this.privateKeyPath
+        );
+        if (err)
+          throw new Error("Failed to write private keys");
+        return;
+      }
+    }
+  },
+
   // write fingerprints to file synchronously
   writeFingerprints: function() {
     if (libOTR.otrl_privkey_write_fingerprints(

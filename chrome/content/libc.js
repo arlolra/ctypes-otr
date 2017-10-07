@@ -62,6 +62,16 @@ var libC = {
     ctypes.void_t.ptr,
     ctypes.size_t
   ),
+  memcpy: libc.declare(
+    "memcpy", libcAbi, ctypes.void_t.ptr,
+    ctypes.void_t.ptr,
+    ctypes.void_t.ptr,
+    ctypes.size_t
+  ),
+  malloc: libc.declare(
+    "malloc", libcAbi, ctypes.void_t.ptr,
+    ctypes.size_t
+  ),
   free: libc.declare(
     "free", libcAbi, ctypes.void_t,
     ctypes.void_t.ptr

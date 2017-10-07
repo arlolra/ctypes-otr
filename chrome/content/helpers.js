@@ -32,6 +32,10 @@ var helpers = {
     return OS.File.exists(filename);
   },
 
+  removeFile: function(filename) {
+    return OS.File.remove(filename);
+  },
+
   readTextFile: function(filename) {
     let decoder = new TextDecoder();
     return OS.File.read(filename).then(function(array) {

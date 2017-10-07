@@ -204,6 +204,7 @@ var ui = {
       // Disabled until #76 is resolved.
       // Services.obs.addObserver(ui, "contact-added", false);
       Services.obs.addObserver(ui, "account-added", false);
+      Services.obs.addObserver(ui, "account-removed", false);
       Services.obs.addObserver(ui, "conversation-loaded", false);
       Services.obs.addObserver(ui, "conversation-closed", false);
       Services.obs.addObserver(ui, "prpl-quit", false);
@@ -528,6 +529,16 @@ var ui = {
     });
   },
 
+  onAccountRemoved: function(acc, prplId) {
+    let account = acc.normalizedName;
+    let protocol = Services.core.getProtocolById(prplId).normalizedName;
+    try {
+      otr.forgetPrivateKey(account, protocol);
+    } catch(err) {
+      Cu.reportError(err);
+    }
+  },
+
   contactWrapper: function(contact) {
     let wrapper = {
       account: contact.preferredBuddy.preferredAccountBuddy.account.normalizedName,
@@ -595,6 +606,9 @@ var ui = {
     case "account-added":
       ui.onAccountCreated(aObject);
       break;
+    case "account-removed":
+      ui.onAccountRemoved(aObject, aMsg);
+      break;
     case "contact-added":
       ui.onContactAdded(aObject);
       break;
@@ -626,6 +640,7 @@ var ui = {
     Services.obs.removeObserver(otr, "new-ui-conversation");
     // Services.obs.removeObserver(ui, "contact-added");
     Services.obs.removeObserver(ui, "account-added");
+    Services.obs.removeObserver(ui, "account-removed");
     Services.obs.removeObserver(ui, "conversation-loaded");
     Services.obs.removeObserver(ui, "conversation-closed");
     Services.obs.removeObserver(ui, "prpl-quit");
